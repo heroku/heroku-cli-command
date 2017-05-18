@@ -6,6 +6,7 @@ type Options = $Shape<Flag<string>>
 export default function TeamFlag (options: Options = {}, env: typeof process.env = process.env): Flag<string> {
   const envTeam = env.HEROKU_TEAM || env.HEROKU_ORGANIZATION
   const defaultOptions: Options = {
+    name: 'team',
     char: 't',
     description: 'team to use',
     default: () => envTeam,
