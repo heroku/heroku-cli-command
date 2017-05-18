@@ -1,0 +1,68 @@
+{
+  "name": "cli-engine-heroku",
+  "description": "heroku specific functionality for the cli-engine",
+  "version": "0.0.0",
+  "author": "Jeff Dickey @dickeyxxx",
+  "bugs": "https://github.com/heroku/cli-engine-heroku/issues",
+  "dependencies": {
+    "cli-engine-command": "4.0.0"
+  },
+  "devDependencies": {
+    "babel-cli": "6.24.1",
+    "babel-eslint": "7.2.3",
+    "babel-jest": "20.0.1",
+    "babel-plugin-transform-class-properties": "6.24.1",
+    "babel-plugin-transform-es2015-modules-commonjs": "6.24.1",
+    "babel-plugin-transform-flow-strip-types": "6.22.0",
+    "flow-bin": "0.46.0",
+    "flow-copy-source": "1.1.0",
+    "flow-typed": "2.1.2",
+    "jest": "20.0.1",
+    "nodemon": "1.11.0",
+    "rimraf": "2.6.1",
+    "standard": "10.0.2"
+  },
+  "engines": {
+    "node": ">=7.6.0"
+  },
+  "files": [
+    "lib"
+  ],
+  "homepage": "https://github.com/heroku/cli-engine-heroku",
+  "jest": {
+    "testEnvironment": "node",
+    "rootDir": "./src",
+    "coveragePathIgnorePatterns": [],
+    "setupFiles": [
+      "../test/init.js"
+    ]
+  },
+  "keywords": [
+    "heroku"
+  ],
+  "license": "ISC",
+  "main": "lib/index.js",
+  "repository": "heroku/cli-engine-heroku",
+  "scripts": {
+    "build": "babel src -d lib --ignore '*.test.js'",
+    "clean": "rimraf lib",
+    "copy-flow": "flow-copy-source -v -i '**/*.test.js' src lib",
+    "prepare": "npm run clean && npm run build && npm run copy-flow",
+    "test": "jest && flow && standard",
+    "watch": "nodemon -e js -i lib --exec \"npm run prepare\""
+  },
+  "standard": {
+    "parser": "babel-eslint",
+    "env": [
+      "jest"
+    ],
+    "globals": [
+      "$Shape",
+      "Class"
+    ],
+    "ignore": [
+      "lib",
+      "flow-typed"
+    ]
+  }
+}
