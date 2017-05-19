@@ -289,15 +289,7 @@ babel-helpers@^6.24.1:
     babel-runtime "^6.22.0"
     babel-template "^6.24.1"
 
-babel-jest@20.0.1:
-  version "20.0.1"
-  resolved "https://registry.yarnpkg.com/babel-jest/-/babel-jest-20.0.1.tgz#9cbe9a15bbe3f1ca1b727dc8e45a4161771d3655"
-  dependencies:
-    babel-core "^6.0.0"
-    babel-plugin-istanbul "^4.0.0"
-    babel-preset-jest "^20.0.1"
-
-babel-jest@^20.0.3:
+babel-jest@20.0.3, babel-jest@^20.0.3:
   version "20.0.3"
   resolved "https://registry.yarnpkg.com/babel-jest/-/babel-jest-20.0.3.tgz#e4a03b13dc10389e140fc645d09ffc4ced301671"
   dependencies:
@@ -371,7 +363,7 @@ babel-polyfill@^6.23.0, babel-polyfill@^6.6.1:
     core-js "^2.4.0"
     regenerator-runtime "^0.10.0"
 
-babel-preset-jest@^20.0.1, babel-preset-jest@^20.0.3:
+babel-preset-jest@^20.0.3:
   version "20.0.3"
   resolved "https://registry.yarnpkg.com/babel-preset-jest/-/babel-preset-jest-20.0.3.tgz#cbacaadecb5d689ca1e1de1360ebfc66862c178a"
   dependencies:
@@ -608,9 +600,9 @@ cli-cursor@^1.0.1:
   dependencies:
     restore-cursor "^1.0.1"
 
-cli-engine-command@4.0.0:
-  version "4.0.0"
-  resolved "https://registry.yarnpkg.com/cli-engine-command/-/cli-engine-command-4.0.0.tgz#0f08e8f823dabe1fac2adb49f085056ec966e833"
+cli-engine-command@4.0.1:
+  version "4.0.1"
+  resolved "https://registry.yarnpkg.com/cli-engine-command/-/cli-engine-command-4.0.1.tgz#563e304bf76667370268bb7b5a0309453efe77a6"
   dependencies:
     ansi-escapes "2.0.0"
     cardinal "^1.0.0"
@@ -1958,7 +1950,7 @@ jest-changed-files@^20.0.3:
   version "20.0.3"
   resolved "https://registry.yarnpkg.com/jest-changed-files/-/jest-changed-files-20.0.3.tgz#9394d5cc65c438406149bef1bf4d52b68e03e3f8"
 
-jest-cli@^20.0.1:
+jest-cli@^20.0.3:
   version "20.0.3"
   resolved "https://registry.yarnpkg.com/jest-cli/-/jest-cli-20.0.3.tgz#fe88ddbb7a9f3a16d0ed55339a0a2424f7f0d361"
   dependencies:
@@ -2061,13 +2053,6 @@ jest-jasmine2@^20.0.3:
     once "^1.4.0"
     p-map "^1.1.1"
 
-jest-junit@1.5.1:
-  version "1.5.1"
-  resolved "https://registry.yarnpkg.com/jest-junit/-/jest-junit-1.5.1.tgz#f6e48203e691f827530f21fb509f8c0da75ca15b"
-  dependencies:
-    mkdirp "^0.5.1"
-    xml "^1.0.1"
-
 jest-matcher-utils@^20.0.3:
   version "20.0.3"
   resolved "https://registry.yarnpkg.com/jest-matcher-utils/-/jest-matcher-utils-20.0.3.tgz#b3a6b8e37ca577803b0832a98b164f44b7815612"
@@ -2166,11 +2151,11 @@ jest-validate@^20.0.3:
     leven "^2.1.0"
     pretty-format "^20.0.3"
 
-jest@20.0.1:
-  version "20.0.1"
-  resolved "https://registry.yarnpkg.com/jest/-/jest-20.0.1.tgz#4e268159ccc3b659966939de817c75bfe9e0157d"
+jest@20.0.3:
+  version "20.0.3"
+  resolved "https://registry.yarnpkg.com/jest/-/jest-20.0.3.tgz#e4fd054c4f1170a116a00761da4cfdb73f1cdc33"
   dependencies:
-    jest-cli "^20.0.1"
+    jest-cli "^20.0.3"
 
 jodid25519@^1.0.0:
   version "1.0.2"
@@ -3739,10 +3724,6 @@ xdg-basedir@^2.0.0:
 xml-name-validator@^2.0.1:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/xml-name-validator/-/xml-name-validator-2.0.1.tgz#4d8b8f1eccd3419aa362061becef515e1e559635"
-
-xml@^1.0.1:
-  version "1.0.1"
-  resolved "https://registry.yarnpkg.com/xml/-/xml-1.0.1.tgz#78ba72020029c5bc87b8a81a3cfcd74b4a2fc1e5"
 
 "xtend@>=4.0.0 <4.1.0-0", xtend@^4.0.0, xtend@^4.0.1:
   version "4.0.1"
