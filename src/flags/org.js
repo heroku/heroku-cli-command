@@ -11,6 +11,8 @@ export default function OrgFlag (options: Options = {}, env: typeof process.env 
     parse: (input, cmd) => {
       if (input) return input
       if (envTeam) return envTeam
+      let team = cmd ? cmd.flags.team : undefined
+      if (team) return team
       if (options.required) throw new Error('No org specified')
     }
   }
