@@ -2,6 +2,7 @@
 
 import Command from 'cli-engine-command'
 import TeamFlag from './team'
+import OrgFlag from './org'
 
 describe('required', () => {
   class TeamCommand extends Command {
@@ -61,6 +62,19 @@ describe('optional', () => {
     }
 
     const cmd = await TeamCommand.mock()
+    expect(cmd.team).toEqual('myteam')
+  })
+
+  test('reads --org as a backup', async () => {
+    class TeamCommand extends Command {
+      static flags = {team: TeamFlag({required: true}), org: OrgFlag()}
+      team: string
+      async run () {
+        this.team = this.flags.team
+      }
+    }
+
+    const cmd = await TeamCommand.mock('--org', 'myteam')
     expect(cmd.team).toEqual('myteam')
   })
 
