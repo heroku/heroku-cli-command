@@ -2,7 +2,6 @@
 
 import Command from 'cli-engine-command'
 import OrgFlag from './org'
-import TeamFlag from './team'
 
 describe('required', () => {
   class OrgCommand extends Command {
