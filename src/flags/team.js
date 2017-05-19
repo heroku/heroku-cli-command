@@ -11,8 +11,7 @@ export default function TeamFlag (options: Options = {}, env: typeof process.env
     parse: (input, cmd) => {
       if (input) return input
       if (envTeam) return envTeam
-      let org = cmd ? cmd.flags.org : undefined
-      if (org) return org
+      if (cmd && cmd.flags.org) return cmd.flags.org
       if (options.required) throw new Error('No team specified')
     }
   }

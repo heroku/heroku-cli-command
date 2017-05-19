@@ -60,17 +60,8 @@ describe('optional', () => {
     expect(cmd.org).toEqual('myorg')
   })
 
-  test('reads --flag as a backup', async () => {
-    class OrgCommand extends Command {
-      static flags = {org: OrgFlag({required: true}), team: TeamFlag()}
-      org: string
-      async run () {
-        this.org = this.flags.org
-      }
-    }
-
-    const cmd = await OrgCommand.mock('--team', 'myorg')
-    expect(cmd.org).toEqual('myorg')
+  test('is hidden by default', async () => {
+    expect(OrgCommand.flags.org.hidden).toBe(true)
   })
 
   test('does not error when org is not specified', async () => {
