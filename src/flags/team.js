@@ -8,7 +8,6 @@ export default function TeamFlag (options: Options = {}, env: typeof process.env
   const defaultOptions: Options = {
     char: 't',
     description: 'team to use',
-    default: () => envTeam,
     parse: (input) => {
       if (input) return input
       if (envTeam) return envTeam
