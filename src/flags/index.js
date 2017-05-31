@@ -6,3 +6,4 @@ export const flags = {
   team,
   org
 }
+export {default as merge} from 'lodash.merge'
