@@ -1,6 +1,6 @@
 // @flow
 
-import {type Flag} from 'cli-engine-command/lib/flags'
+import {merge, type Flag} from 'cli-engine-command/lib/flags'
 
 type Options = $Shape<Flag<string>>
 export default function TeamFlag (options: Options = {}, env: typeof process.env = process.env): Flag<string> {
@@ -16,5 +16,5 @@ export default function TeamFlag (options: Options = {}, env: typeof process.env
       if (options.required) throw new Error('No team specified')
     }
   }
-  return Object.assign(defaultOptions, options)
+  return merge(defaultOptions, options)
 }
