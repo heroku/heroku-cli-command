@@ -5,7 +5,7 @@
   "author": "Jeff Dickey @dickeyxxx",
   "bugs": "https://github.com/heroku/cli-engine-heroku/issues",
   "dependencies": {
-    "cli-engine-command": "4.0.3",
+    "cli-engine-command": "4.0.4",
     "heroku-client": "3.0.2",
     "lodash.merge": "4.6.0"
   },
@@ -16,10 +16,10 @@
     "babel-plugin-transform-class-properties": "6.24.1",
     "babel-plugin-transform-es2015-modules-commonjs": "6.24.1",
     "babel-plugin-transform-flow-strip-types": "6.22.0",
-    "flow-bin": "0.46.0",
+    "flow-bin": "0.47.0",
     "flow-copy-source": "1.1.0",
     "flow-typed": "2.1.2",
-    "jest": "20.0.3",
+    "jest": "20.0.4",
     "nock": "9.0.13",
     "nodemon": "1.11.0",
     "rimraf": "2.6.1",
