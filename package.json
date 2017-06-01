@@ -16,14 +16,21 @@
     "babel-plugin-transform-class-properties": "6.24.1",
     "babel-plugin-transform-es2015-modules-commonjs": "6.24.1",
     "babel-plugin-transform-flow-strip-types": "6.22.0",
+    "eslint": "3.19.0",
+    "eslint-config-standard": "10.2.1",
+    "eslint-plugin-flowtype": "2.34.0",
+    "eslint-plugin-import": "2.3.0",
+    "eslint-plugin-jest": "20.0.3",
+    "eslint-plugin-node": "4.2.2",
+    "eslint-plugin-promise": "3.5.0",
+    "eslint-plugin-standard": "3.0.1",
     "flow-bin": "0.47.0",
     "flow-copy-source": "1.1.0",
     "flow-typed": "2.1.2",
     "jest": "20.0.4",
     "nock": "9.0.13",
     "nodemon": "1.11.0",
-    "rimraf": "2.6.1",
-    "standard": "10.0.2"
+    "rimraf": "2.6.1"
   },
   "engines": {
     "node": ">=7.6.0"
@@ -51,21 +58,7 @@
     "clean": "rimraf lib",
     "copy-flow": "flow-copy-source -v -i '**/*.test.js' src lib",
     "prepare": "npm run clean && npm run build && npm run copy-flow",
-    "test": "jest && flow && standard",
+    "test": "jest && flow && eslint .",
     "watch": "nodemon -e js -i lib --exec \"npm run prepare\""
-  },
-  "standard": {
-    "parser": "babel-eslint",
-    "env": [
-      "jest"
-    ],
-    "globals": [
-      "$Shape",
-      "Class"
-    ],
-    "ignore": [
-      "lib",
-      "flow-typed"
-    ]
   }
 }
