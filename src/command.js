@@ -29,6 +29,6 @@ export default class HerokuCommand extends Command {
     }
 
     this._legacyHerokuClient = new HerokuClient(options)
-    return this._heroku
+    return this._legacyHerokuClient
   }
 }
