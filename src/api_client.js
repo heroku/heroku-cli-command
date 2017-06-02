@@ -59,7 +59,7 @@ export default class Heroku extends http {
     this.options = options
     this.requestOptions.host = 'api.heroku.com'
     this.requestOptions.protocol = 'https:'
-    if (this.auth) this.requestOptions.headers['authorization'] = `:${this.auth}`
+    if (this.auth) this.requestOptions.headers['authorization'] = `Bearer ${this.auth}`
     this.requestOptions.headers['user-agent'] = `heroku-cli/${this.out.config.version}`
     this.requestOptions.headers['accept'] = 'application/vnd.heroku+json; version=3'
   }
