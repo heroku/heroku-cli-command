@@ -1,7 +1,7 @@
 // @flow
 
 import Base from './command'
-import {flags} from 'cli-engine-command'
+import flags from './flags'
 
 class Command extends Base {
   static flags = {
