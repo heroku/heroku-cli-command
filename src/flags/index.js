@@ -5,7 +5,7 @@ import {app, remote} from './app'
 import team from './team'
 import org from './org'
 
-export {default as merge} from 'lodash.merge'
+export {merge} from 'cli-engine-command/lib/flags'
 
 export default {
   app,
