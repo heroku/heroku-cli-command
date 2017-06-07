@@ -5,6 +5,7 @@ import {merge, type Flag} from 'cli-engine-command/lib/flags'
 type Options = $Shape<Flag<string>>
 export default function TeamFlag (options: Options = {}, env: typeof process.env = process.env): Flag<string> {
   const defaultOptions: Options = {
+    name: 'team',
     char: 't',
     description: 'team to use',
     parse: (input, cmd) => {
