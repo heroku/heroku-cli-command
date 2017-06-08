@@ -597,15 +597,15 @@ cli-cursor@^1.0.1:
   dependencies:
     restore-cursor "^1.0.1"
 
-cli-engine-command@^5.0.2:
-  version "5.0.2"
-  resolved "https://registry.yarnpkg.com/cli-engine-command/-/cli-engine-command-5.0.2.tgz#804feb837e01407cf0058533b11d513f0588849f"
+cli-engine-command@5.0.3:
+  version "5.0.3"
+  resolved "https://registry.yarnpkg.com/cli-engine-command/-/cli-engine-command-5.0.3.tgz#db682e34f5b21efc78c143755953037f56611ea1"
   dependencies:
     ansi-escapes "2.x"
     cardinal "1.x"
     chalk "1.x"
     fs-extra "3.x"
-    http-call "^1.2.2"
+    http-call "2.0.0"
     lodash.maxby "4.x"
     lodash.merge "4.x"
     string "3.x"
@@ -1549,9 +1549,9 @@ html-encoding-sniffer@^1.0.1:
   dependencies:
     whatwg-encoding "^1.0.1"
 
-http-call@^1.2.2:
-  version "1.2.2"
-  resolved "https://registry.yarnpkg.com/http-call/-/http-call-1.2.2.tgz#b00d55ee9d9338ad8668135f2129e4a713a23c57"
+http-call@2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/http-call/-/http-call-2.0.0.tgz#692414ec30ceba12367692816ab99d971445ecda"
   dependencies:
     debug "^2.6.8"
     tunnel-agent "^0.6.0"
