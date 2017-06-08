@@ -15,7 +15,7 @@ export default class HerokuCommand extends Command {
 
   get heroku (): APIClient {
     if (this._heroku) return this._heroku
-    this._heroku = new APIClient(this.out)
+    this._heroku = new APIClient(this)
     return this._heroku
   }
   get legacyHerokuClient (): any {
