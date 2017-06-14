@@ -48,7 +48,7 @@ Usage: --remote ${gitRemotes[1].remote}
    or: --app ${gitRemotes[1].app}
 Your local git repository has more than 1 app referenced in git remotes.
 Because of this, we can't determine which app you want to run this command against.
-Specify the app you want with %s or %s.
+Specify the app you want with --app or --remote.
 Heroku remotes in repo:
 ${gitRemotes.map(r => `${r.app} (${r.remote})`).join('\n')}
 
