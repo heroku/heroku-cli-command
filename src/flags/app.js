@@ -17,8 +17,8 @@ export function app (options: Options = {}, env: typeof process.env = process.en
       if (input) return input
       if (envApp) return envApp
       if (cmd) {
-        if (cmd.flags.remote) return findGitRemoteApp(cmd.flags.remote)
-        let app = findGitRemoteApp()
+        if (cmd.flags.remote) return findGitRemoteApp(cmd.flags.remote, !!options.required)
+        let app = findGitRemoteApp(undefined, !!options.required)
         if (app) return app
       }
       if (options.required) throw new Error('No app specified')
@@ -36,13 +36,13 @@ export function remote (options: Options = {}): Flag<string> {
   return merge(defaultOptions, options)
 }
 
-function findGitRemoteApp (remote: ?string): ?string {
+function findGitRemoteApp (remote: ?string, required: boolean): ?string {
   let gitRemotes = getGitRemotes(remote || configRemote())
   if (gitRemotes.length === 0) {
     if (remote) throw new Error(`remote ${remote} not found in git remotes`)
     return
   }
-  if (gitRemotes.length > 1) {
+  if (gitRemotes.length > 1 && required) {
     throw new Error(`Multiple apps in git remotes
 Usage: --remote ${gitRemotes[1].remote}
    or: --app ${gitRemotes[1].app}
