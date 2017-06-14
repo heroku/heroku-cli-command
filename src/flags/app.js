@@ -17,8 +17,7 @@ export function app (options: Options = {}, env: typeof process.env = process.en
       if (input) return input
       if (envApp) return envApp
       if (cmd) {
-        if (cmd.flags.remote) return findGitRemoteApp(cmd.flags.remote, !!options.required)
-        let app = findGitRemoteApp(undefined, !!options.required)
+        let app = findGitRemoteApp(cmd.flags.remote, !!options.required)
         if (app) return app
       }
       if (options.required) throw new Error('No app specified')
