@@ -41,7 +41,8 @@ function findGitRemoteApp (remote: ?string, required: boolean): ?string {
     if (remote) throw new Error(`remote ${remote} not found in git remotes`)
     return
   }
-  if (gitRemotes.length > 1 && required) {
+  if (gitRemotes.length > 1) {
+    if (!required) return
     throw new Error(`Multiple apps in git remotes
 Usage: --remote ${gitRemotes[1].remote}
    or: --app ${gitRemotes[1].app}
