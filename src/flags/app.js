@@ -17,8 +17,23 @@ export function app (options: Options = {}, env: typeof process.env = process.en
       if (input) return input
       if (envApp) return envApp
       if (cmd) {
-        let app = findGitRemoteApp(cmd.flags.remote, !!options.required)
-        if (app) return app
+        let gitRemotes = findGitRemoteApp(cmd.flags.remote)
+        if (gitRemotes.length === 1) return gitRemotes[0].app
+        if (cmd.flags.remote && gitRemotes.length === 0) {
+          throw new Error(`remote ${cmd.flags.remote} not found in git remotes`)
+        }
+        if (gitRemotes.length > 1 && options.required) {
+          throw new Error(`Multiple apps in git remotes
+Usage: --remote ${gitRemotes[1].remote}
+   or: --app ${gitRemotes[1].app}
+Your local git repository has more than 1 app referenced in git remotes.
+Because of this, we can't determine which app you want to run this command against.
+Specify the app you want with --app or --remote.
+Heroku remotes in repo:
+${gitRemotes.map(r => `${r.app} (${r.remote})`).join('\n')}
+
+https://devcenter.heroku.com/articles/multiple-environments`)
+        }
       }
       if (options.required) throw new Error('No app specified')
     }
@@ -35,26 +50,8 @@ export function remote (options: Options = {}): Flag<string> {
   return merge(defaultOptions, options)
 }
 
-function findGitRemoteApp (remote: ?string, required: boolean): ?string {
-  let gitRemotes = getGitRemotes(remote || configRemote())
-  if (gitRemotes.length === 0) {
-    if (remote) throw new Error(`remote ${remote} not found in git remotes`)
-    return
-  }
-  if (gitRemotes.length > 1) {
-    if (!required) return
-    throw new Error(`Multiple apps in git remotes
-Usage: --remote ${gitRemotes[1].remote}
-   or: --app ${gitRemotes[1].app}
-Your local git repository has more than 1 app referenced in git remotes.
-Because of this, we can't determine which app you want to run this command against.
-Specify the app you want with --app or --remote.
-Heroku remotes in repo:
-${gitRemotes.map(r => `${r.app} (${r.remote})`).join('\n')}
-
-https://devcenter.heroku.com/articles/multiple-environments`)
-  }
-  return gitRemotes[0].app
+function findGitRemoteApp (remote: ?string): Array<Object> {
+  return getGitRemotes(remote || configRemote())
 }
 
 function configRemote () {
