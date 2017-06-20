@@ -72,6 +72,19 @@ describe('required', () => {
     }
   })
 
+  test('returns undefined with 2 git remotes when app not required', async () => {
+    class Command extends Base {
+      static flags = {app: app({required: false}), remote: remote()}
+    }
+
+    mockGitRemotes.mockReturnValueOnce([
+      {name: 'staging', url: 'https://git.heroku.com/myapp-staging.git'},
+      {name: 'production', url: 'https://git.heroku.com/myapp-production.git'}
+    ])
+    const cmd = await Command.mock()
+    expect(cmd.flags.app).toEqual(undefined)
+  })
+
   test('gets app from git config', async () => {
     mockGitRemotes.mockReturnValueOnce([{name: 'heroku', url: 'https://git.heroku.com/myapp.git'}])
     const cmd = await Command.mock()
