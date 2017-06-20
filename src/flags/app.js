@@ -30,7 +30,7 @@ export function app (options: Options = {}, env: typeof process.env = process.en
       if (input) return input
       if (envApp) return envApp
       if (cmd) {
-        let gitRemotes = findGitRemoteApp(cmd.flags.remote)
+        let gitRemotes = getGitRemotes(cmd.flags.remote || configRemote())
         if (gitRemotes.length === 1) return gitRemotes[0].app
         if (cmd.flags.remote && gitRemotes.length === 0) {
           throw new Error(`remote ${cmd.flags.remote} not found in git remotes`)
@@ -52,10 +52,6 @@ export function remote (options: Options = {}): Flag<string> {
     parse: input => input
   }
   return merge(defaultOptions, options)
-}
-
-function findGitRemoteApp (remote: ?string): Array<Object> {
-  return getGitRemotes(remote || configRemote())
 }
 
 function configRemote () {
