@@ -4,6 +4,7 @@ import vars from '../vars'
 import type {Flag} from 'cli-engine-command/lib/flags'
 import {merge} from '.'
 import Git from '../git'
+import Heroku from '../api_client'
 
 class MultipleRemotesError extends Error {
   constructor (gitRemotes) {
@@ -42,6 +43,13 @@ export function app (options: Options = {}, env: typeof process.env = process.en
         }
       }
       if (options.required) throw new Error('No app specified')
+    },
+    completion: {
+      cacheDuration: 60 * 60 * 24, // 1 day
+      options: () => {
+        const heroku = new Heroku()
+        return await heroku.get('/users/~/apps/')
+      }
     }
   }
   return merge(defaultOptions, options)
