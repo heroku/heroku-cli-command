@@ -1,17 +1,12 @@
 // @flow
 
 import Command from 'cli-engine-command'
-import type Output from 'cli-engine-command/lib/output'
 import APIClient from './api_client'
 
 export default class HerokuCommand extends Command {
   app: ?string
   _heroku: APIClient
   _legacyHerokuClient: any
-
-  constructor (out?: Output) {
-    super({output: out})
-  }
 
   async init () {
     await super.init()

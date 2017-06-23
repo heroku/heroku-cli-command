@@ -5,6 +5,12 @@ import {app, remote} from './app'
 
 let mockGitRemotes = jest.fn()
 
+jest.mock('../api_client', () => {
+  return class {
+    get () { return [{id: 1, name: 'foo'}, {id: 2, name: 'bar'}] }
+  }
+})
+
 jest.mock('../git', () => {
   return class {
     get remotes () { return mockGitRemotes() }
@@ -109,5 +115,24 @@ describe('optional', () => {
   test('does not error when app is not specified', async () => {
     const cmd = await Command.mock()
     expect(cmd.flags.app).toBeUndefined()
+  })
+})
+
+describe('completion', () => {
+  class Command extends Base {
+    static flags = {app: app({})}
+  }
+
+  test('cacheDuration defaults to 1 day', async () => {
+    const completion = Command.flags.app.completion || {}
+    const duration = completion.cacheDuration
+    expect(duration).toEqual(86400)
+  })
+
+  test('options returns all the apps', async () => {
+    const apps = [{id: 1, name: 'foo'}, {id:2, name: 'bar'}]
+    const completion = Command.flags.app.completion || {}
+    const options = await completion.options()
+    expect(options).toEqual(apps)
   })
 })

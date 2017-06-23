@@ -48,7 +48,8 @@ export function app (options: Options = {}, env: typeof process.env = process.en
     completion: {
       cacheDuration: 60 * 60 * 24, // 1 day
       options: async (out) => {
-        let cmd = new HerokuCommand(out)
+        let cmd = new HerokuCommand()
+        if (out) cmd.out = out
         const heroku = new Heroku(cmd)
         let apps = await heroku.get('/apps')
         return apps
