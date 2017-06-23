@@ -130,7 +130,7 @@ describe('completion', () => {
   })
 
   test('options returns all the apps', async () => {
-    const apps = [{id: 1, name: 'foo'}, {id:2, name: 'bar'}]
+    const apps = [{id: 1, name: 'foo'}, {id: 2, name: 'bar'}]
     const completion = Command.flags.app.completion || {}
     const options = await completion.options()
     expect(options).toEqual(apps)
