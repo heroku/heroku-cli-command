@@ -123,7 +123,7 @@ describe('completion', () => {
     static flags = {app: app({})}
   }
 
-  test('cacheDuration defaults to 1 day', async () => {
+  test('cacheDuration defaults to 1 day', () => {
     const completion = Command.flags.app.completion || {}
     const duration = completion.cacheDuration
     expect(duration).toEqual(86400)
