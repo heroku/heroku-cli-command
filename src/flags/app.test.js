@@ -7,12 +7,6 @@ import Output from 'cli-engine-command/lib/output'
 
 let mockGitRemotes = jest.fn()
 
-// jest.mock('../api_client', () => {
-//   return class {
-//     get () { return [{id: 1, name: 'foo'}, {id: 2, name: 'bar'}] }
-//   }
-// })
-
 jest.mock('../git', () => {
   return class {
     get remotes () { return mockGitRemotes() }
