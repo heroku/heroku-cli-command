@@ -2,14 +2,16 @@
 
 import Base from '../command'
 import {app, remote} from './app'
+import nock from 'nock'
+import Output from 'cli-engine-command/lib/output'
 
 let mockGitRemotes = jest.fn()
 
-jest.mock('../api_client', () => {
-  return class {
-    get () { return [{id: 1, name: 'foo'}, {id: 2, name: 'bar'}] }
-  }
-})
+// jest.mock('../api_client', () => {
+//   return class {
+//     get () { return [{id: 1, name: 'foo'}, {id: 2, name: 'bar'}] }
+//   }
+// })
 
 jest.mock('../git', () => {
   return class {
@@ -130,9 +132,11 @@ describe('completion', () => {
   })
 
   test('options returns all the apps', async () => {
+    let api = nock('https://api.heroku.com').get('/apps').reply(200, [{id: 1, name: 'foo'}, {id: 2, name: 'bar'}])
     const apps = [{id: 1, name: 'foo'}, {id: 2, name: 'bar'}]
     const completion = Command.flags.app.completion || {}
-    const options = await completion.options()
-    expect(options).toEqual(apps)
+    const options = await completion.options(new Output())
+    expect(options).toEqual(['bar', 'foo'])
+    api.done()
   })
 })
