@@ -2,7 +2,7 @@
 
 import vars from '../vars'
 import type {Flag} from 'cli-engine-command/lib/flags'
-import tupe Output from 'cli-engine-command/lib/output'
+import type Output from 'cli-engine-command/lib/output'
 import {merge} from '.'
 import Git from '../git'
 import Heroku from '../api_client'
