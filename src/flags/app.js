@@ -3,7 +3,6 @@
 import vars from '../vars'
 import type {Flag} from 'cli-engine-command/lib/flags'
 import Output from 'cli-engine-command/lib/output'
-import HerokuCommand from '../command'
 import {merge} from '.'
 import Git from '../git'
 import Heroku from '../api_client'
@@ -49,9 +48,7 @@ export function app (options: Options = {}, env: typeof process.env = process.en
     completion: {
       cacheDuration: 60 * 60 * 24, // 1 day
       options: async (out: Output) => {
-        let cmd = new HerokuCommand()
-        cmd.out = out
-        const heroku = new Heroku(cmd)
+        const heroku = new Heroku({out: out})
         let apps = await heroku.get('/apps')
         return apps.map(a => a.name).sort()
       }
