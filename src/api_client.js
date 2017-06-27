@@ -1,7 +1,7 @@
 // @flow
 
 import http from 'cli-engine-command/lib/http'
-import Output from 'cli-engine-command/lib/output'
+import type Output from 'cli-engine-command/lib/output'
 import type HTTPError from 'http-call'
 import yubikey from './yubikey'
 import Mutex from './mutex'
@@ -42,8 +42,8 @@ export default class Heroku extends http {
   twoFactorMutex: Mutex
   preauthPromises: {[k: string]: Promise<*>}
 
-  constructor (command: {out: Output}, options: Options = {}) {
-    super(command.out)
+  constructor ({out}: {out: Output}, options: Options = {}) {
+    super(out)
     if (options.required === undefined) options.required = true
     options.preauth = options.preauth !== false
     this.options = options
