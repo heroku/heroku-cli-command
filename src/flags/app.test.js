@@ -124,16 +124,23 @@ describe('completion', () => {
     completion = Command.flags.app.completion || {}
   })
 
+  let api
+  beforeEach(() => {
+    api = nock('https://api.heroku.com')
+  })
+  afterEach(() => {
+    api.done()
+  })
+
   test('cacheDuration defaults to 1 day', () => {
     const duration = completion.cacheDuration
     expect(duration).toEqual(86400)
   })
 
   test('options returns all the apps', async () => {
-    let api = nock('https://api.heroku.com').get('/apps').reply(200, [{id: 1, name: 'foo'}, {id: 2, name: 'bar'}])
+    api.get('/apps').reply(200, [{id: 1, name: 'foo'}, {id: 2, name: 'bar'}])
     const out = new Output()
     const options = await completion.options(out)
     expect(options).toEqual(['bar', 'foo'])
-    api.done()
   })
 })
