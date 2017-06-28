@@ -2,6 +2,8 @@
 
 import Base from '../command'
 import {app, remote} from './app'
+import nock from 'nock'
+import Output from 'cli-engine-command/lib/output'
 
 let mockGitRemotes = jest.fn()
 
@@ -109,5 +111,36 @@ describe('optional', () => {
   test('does not error when app is not specified', async () => {
     const cmd = await Command.mock()
     expect(cmd.flags.app).toBeUndefined()
+  })
+})
+
+describe('completion', () => {
+  class Command extends Base {
+    static flags = {app: app({})}
+  }
+
+  let completion
+  beforeAll(() => {
+    completion = Command.flags.app.completion || {}
+  })
+
+  let api
+  beforeEach(() => {
+    api = nock('https://api.heroku.com')
+  })
+  afterEach(() => {
+    api.done()
+  })
+
+  test('cacheDuration defaults to 1 day', () => {
+    const duration = completion.cacheDuration
+    expect(duration).toEqual(86400)
+  })
+
+  test('options returns all the apps', async () => {
+    api.get('/apps').reply(200, [{id: 1, name: 'foo'}, {id: 2, name: 'bar'}])
+    const out = new Output()
+    const options = await completion.options(out)
+    expect(options).toEqual(['bar', 'foo'])
   })
 })
