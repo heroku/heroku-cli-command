@@ -4,6 +4,7 @@ import {flags as baseFlags} from 'cli-engine-command'
 import {app, remote} from './app'
 import team from './team'
 import org from './org'
+import pipeline from './pipeline'
 
 export {merge} from 'cli-engine-command/lib/flags'
 
@@ -12,6 +13,7 @@ export default {
   remote,
   org,
   team,
+  pipeline,
   boolean: baseFlags.boolean,
   number: baseFlags.number,
   string: baseFlags.string
