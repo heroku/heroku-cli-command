@@ -17,8 +17,8 @@ afterEach(() => api.done())
 
 test('makes an HTTP request', async () => {
   api.get('/apps')
-  .matchHeader('authorization', 'Bearer mypass')
-  .reply(200, [{name: 'myapp'}])
+    .matchHeader('authorization', 'Bearer mypass')
+    .reply(200, [{name: 'myapp'}])
 
   const cmd = await Command.mock()
   const response = await cmd.heroku.get('/apps')
