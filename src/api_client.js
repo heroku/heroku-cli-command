@@ -43,6 +43,7 @@ export default class Heroku extends http {
   options: Options
   twoFactorMutex: Mutex
   preauthPromises: {[k: string]: Promise<*>}
+  host: string
 
   constructor ({out}: {out: Output}, options: Options = {}) {
     super(out)
@@ -50,7 +51,7 @@ export default class Heroku extends http {
     options.preauth = options.preauth !== false
     this.options = options
     let apiUrl = new URL(Vars.apiUrl)
-    this.requestOptions.host = apiUrl.host
+    this.requestOptions.host = this.host = apiUrl.host
     this.requestOptions.protocol = 'https:'
     if (this.auth) this.requestOptions.headers['authorization'] = `Bearer ${this.auth}`
     this.requestOptions.headers['user-agent'] = `heroku-cli/${this.out.config.version}`
