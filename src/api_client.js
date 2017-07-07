@@ -5,6 +5,8 @@ import type Output from 'cli-engine-command/lib/output'
 import type HTTPError from 'http-call'
 import yubikey from './yubikey'
 import Mutex from './mutex'
+import Vars from './vars'
+import {URL} from 'url'
 
 type Options = {
   required?: boolean,
@@ -47,7 +49,8 @@ export default class Heroku extends http {
     if (options.required === undefined) options.required = true
     options.preauth = options.preauth !== false
     this.options = options
-    this.requestOptions.host = 'api.heroku.com'
+    let apiUrl = new URL(Vars.apiUrl)
+    this.requestOptions.host = apiUrl.host
     this.requestOptions.protocol = 'https:'
     if (this.auth) this.requestOptions.headers['authorization'] = `Bearer ${this.auth}`
     this.requestOptions.headers['user-agent'] = `heroku-cli/${this.out.config.version}`
@@ -96,7 +99,7 @@ export default class Heroku extends http {
     if (!auth) {
       const Netrc = require('netrc-parser')
       const netrc = new Netrc()
-      auth = netrc.machines[require('./vars').default.apiHost].password
+      auth = netrc.machines[Vars.apiHost].password
     }
     // TODO: handle required
     return auth
