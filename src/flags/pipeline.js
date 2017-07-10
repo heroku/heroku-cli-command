@@ -6,6 +6,7 @@ type Options = $Shape<Flag<string>>
 export default function PipelineFlag (options: Options = {}, env: typeof process.env = process.env): Flag<string> {
   const defaultOptions: Options = {
     char: 'p',
+    description: 'name of pipeline',
     parse: (input, cmd) => {
       if (input) return input
       if (options.required) throw new Error('No pipeline specified')
