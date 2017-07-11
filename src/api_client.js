@@ -53,9 +53,14 @@ export default class Heroku extends http {
     let apiUrl = new URL(Vars.apiUrl)
     this.requestOptions.host = this.host = apiUrl.host
     this.requestOptions.protocol = 'https:'
-    if (this.auth) this.requestOptions.headers['authorization'] = `Bearer ${this.auth}`
-    this.requestOptions.headers['user-agent'] = `heroku-cli/${this.out.config.version}`
-    this.requestOptions.headers['accept'] = 'application/vnd.heroku+json; version=3'
+    let headers = this.requestOptions.headers
+    if (this.auth) headers['authorization'] = `Bearer ${this.auth}`
+    headers['user-agent'] = `heroku-cli/${this.out.config.version}`
+    headers['accept'] = headers['accept'] || 'application/vnd.heroku+json; version=3'
+    let envHeaders = JSON.parse(process.env.HEROKU_HEADERS || '{}')
+    for (let [k, v] of Object.entries(envHeaders)) {
+      if (!headers[k]) headers[k] = (v: any)
+    }
     this.twoFactorMutex = new Mutex()
     this.preauthPromises = {}
     let self = this
