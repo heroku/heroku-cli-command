@@ -55,7 +55,7 @@ export default class Heroku extends http {
     this.requestOptions.protocol = 'https:'
     let headers = this.requestOptions.headers
     if (this.auth) headers['authorization'] = `Bearer ${this.auth}`
-    headers['user-agent'] = `heroku-cli/${this.out.config.version}`
+    headers['user-agent'] = `heroku-cli/${this.out.config.version} ${this.out.config.platform}`
     headers['accept'] = headers['accept'] || 'application/vnd.heroku+json; version=3'
     let envHeaders = JSON.parse(process.env.HEROKU_HEADERS || '{}')
     for (let [k, v] of Object.entries(envHeaders)) {
