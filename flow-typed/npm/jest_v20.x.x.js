@@ -1,5 +1,5 @@
-// flow-typed signature: eb392bde0440325fce2421d18447acde
-// flow-typed version: 0786be2fed/jest_v20.x.x/flow_>=v0.33.x
+// flow-typed signature: 5daeb30d58a2beb3690cb4f6942df9bc
+// flow-typed version: b43dff3e0e/jest_v20.x.x/flow_>=v0.22.x
 
 type JestMockFn = {
   (...args: Array<any>): any,
@@ -30,6 +30,14 @@ type JestMockFn = {
    * completely restore a mock back to its initial state.
    */
   mockReset(): Function,
+  /**
+   * Removes the mock and restores the initial implementation. This is useful
+   * when you want to mock functions in certain test cases and restore the
+   * original implementation in others. Beware that mockFn.mockRestore only
+   * works when mock was created with jest.spyOn. Thus you have to take care of
+   * restoration yourself when manually assigning jest.fn().
+   */
+  mockRestore(): Function,
   /**
    * Accepts a function that should be used as the implementation of the mock.
    * The mock itself will still record all calls that go into and instances
@@ -77,7 +85,7 @@ type JestCallsType = {
 type JestClockType = {
   install(): void,
   mockDate(date: Date): void,
-  tick(): void,
+  tick(milliseconds?: number): void,
   uninstall(): void
 };
 
@@ -101,8 +109,31 @@ type JestPromiseType = {
   resolves: JestExpectType
 };
 
+/**
+ *  Plugin: jest-enzyme
+ */
+type EnzymeMatchersType = {
+  toBeChecked(): void,
+  toBeDisabled(): void,
+  toBeEmpty(): void,
+  toBePresent(): void,
+  toContainReact(element: React$Element<any>): void,
+  toHaveClassName(className: string): void,
+  toHaveHTML(html: string): void,
+  toHaveProp(propKey: string, propValue?: any): void,
+  toHaveRef(refName: string): void,
+  toHaveState(stateKey: string, stateValue?: any): void,
+  toHaveStyle(styleKey: string, styleValue?: any): void,
+  toHaveTagName(tagName: string): void,
+  toHaveText(text: string): void,
+  toIncludeText(text: string): void,
+  toHaveValue(value: any): void,
+  toMatchElement(element: React$Element<any>): void,
+  toMatchSelector(selector: string): void,
+};
+
 type JestExpectType = {
-  not: JestExpectType,
+  not: JestExpectType & EnzymeMatchersType,
   /**
    * If you have a mock function, you can use .lastCalledWith to test what
    * arguments it was last called with.
@@ -203,6 +234,11 @@ type JestExpectType = {
    */
   toHaveBeenCalledWith(...args: Array<any>): void,
   /**
+   * Use .toHaveBeenLastCalledWith to ensure that a mock function was last called
+   * with specific arguments.
+   */
+  toHaveBeenLastCalledWith(...args: Array<any>): void,
+  /**
    * Check that an object has a .length property and it is set to a certain
    * numeric value.
    */
@@ -212,9 +248,9 @@ type JestExpectType = {
    */
   toHaveProperty(propPath: string, value?: any): void,
   /**
-   * Use .toMatch to check that a string matches a regular expression.
+   * Use .toMatch to check that a string matches a regular expression or string.
    */
-  toMatch(regexp: RegExp): void,
+  toMatch(regexpOrString: RegExp | string): void,
   /**
    * Use .toMatchObject to check that a javascript object matches a subset of the properties of an object.
    */
@@ -225,13 +261,13 @@ type JestExpectType = {
   toMatchSnapshot(name?: string): void,
   /**
    * Use .toThrow to test that a function throws when it is called.
+   * If you want to test that a specific error gets thrown, you can provide an
+   * argument to toThrow. The argument can be a string for the error message,
+   * a class for the error, or a regex that should match the error.
+   *
+   * Alias: .toThrowError
    */
-  toThrow(message?: string | Error): void,
-  /**
-   * Use .toThrowError to test that a function throws a specific error when it
-   * is called. The argument can be a string for the error message, a class for
-   * the error, or a regex that should match the error.
-   */
+  toThrow(message?: string | Error | RegExp): void,
   toThrowError(message?: string | Error | RegExp): void,
   /**
    * Use .toThrowErrorMatchingSnapshot to test that a function throws a error
@@ -307,7 +343,11 @@ type JestObjectType = {
    * The third argument can be used to create virtual mocks -- mocks of modules
    * that don't exist anywhere in the system.
    */
-  mock(moduleName: string, moduleFactory?: any): JestObjectType,
+  mock(
+    moduleName: string,
+    moduleFactory?: any,
+    options?: Object
+  ): JestObjectType,
   /**
    * Resets the module registry - the cache of all required modules. This is
    * useful to isolate modules where local state might conflict between tests.
@@ -379,8 +419,25 @@ declare function beforeEach(fn: Function): void;
 declare function afterAll(fn: Function): void;
 /** Runs this function before any tests have started inside this context */
 declare function beforeAll(fn: Function): void;
+
 /** A context for grouping tests together */
-declare function describe(name: string, fn: Function): void;
+declare var describe: {
+  /**
+   * Creates a block that groups together several related tests in one "test suite"
+   */
+  (name: string, fn: Function): void,
+
+  /**
+   * Only run this describe block
+   */
+  only(name: string, fn: Function): void,
+
+  /**
+   * Skip running this describe block
+   */
+  skip(name: string, fn: Function): void,
+};
+
 
 /** An individual test unit */
 declare var it: {
@@ -428,7 +485,7 @@ declare var xtest: typeof it;
 /** The expect function is used every time you want to test a value */
 declare var expect: {
   /** The object that you want to make assertions against */
-  (value: any): JestExpectType & JestPromiseType,
+  (value: any): JestExpectType & JestPromiseType & EnzymeMatchersType,
   /** Add additional Jasmine matchers to Jest's roster */
   extend(matchers: { [name: string]: JestMatcher }): void,
   /** Add a module that formats application-specific data structures. */
