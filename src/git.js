@@ -21,7 +21,7 @@ export default class Git {
       return exec(`git ${cmd}`, {encoding: 'utf8', stdio: [null, 'pipe', null]})
     } catch (error) {
       if (error.code === 'ENOENT') {
-        error = new Error('Git must be installed to use the Heroku CLI.  See instructions here: http://git-scm.com')
+        throw new Error('Git must be installed to use the Heroku CLI.  See instructions here: http://git-scm.com')
       }
       throw error
     }

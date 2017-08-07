@@ -32,6 +32,7 @@ test('runs git', () => {
 
 test('traps git not found', () => {
   const err = new Error()
+  // flow$ignore
   err.code = 'ENOENT'
 
   childProcess.execSync.mockImplementationOnce(() => { throw err })
@@ -44,6 +45,7 @@ test('traps git not found', () => {
 
 test('rethrows other git error', () => {
   const err = new Error('some other message')
+  // flow$ignore
   err.code = 'NOTENOENT'
 
   childProcess.execSync.mockImplementationOnce(() => { throw err })
