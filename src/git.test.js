@@ -29,3 +29,29 @@ test('runs git', () => {
     stdio: [null, 'pipe', null]
   })
 })
+
+test('traps git not found', () => {
+  const err = new Error()
+  // flow$ignore
+  err.code = 'ENOENT'
+
+  childProcess.execSync.mockImplementationOnce(() => { throw err })
+
+  const git = new Git()
+  expect(() => {
+    git.exec('version')
+  }).toThrow('Git must be installed to use the Heroku CLI.  See instructions here: http://git-scm.com')
+})
+
+test('rethrows other git error', () => {
+  const err = new Error('some other message')
+  // flow$ignore
+  err.code = 'NOTENOENT'
+
+  childProcess.execSync.mockImplementationOnce(() => { throw err })
+
+  const git = new Git()
+  expect(() => {
+    git.exec('version')
+  }).toThrow(err.message)
+})

@@ -17,6 +17,13 @@ export default class Git {
 
   exec (cmd: string): string {
     const {execSync: exec} = require('child_process')
-    return exec(`git ${cmd}`, {encoding: 'utf8', stdio: [null, 'pipe', null]})
+    try {
+      return exec(`git ${cmd}`, {encoding: 'utf8', stdio: [null, 'pipe', null]})
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        throw new Error('Git must be installed to use the Heroku CLI.  See instructions here: http://git-scm.com')
+      }
+      throw error
+    }
   }
 }
