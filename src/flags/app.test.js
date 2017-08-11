@@ -140,7 +140,7 @@ describe('completion', () => {
   test('options returns all the apps', async () => {
     api.get('/apps').reply(200, [{id: 1, name: 'foo'}, {id: 2, name: 'bar'}])
     const out = new Output()
-    const options = await completion.options(out)
+    const options = await completion.options({out: out})
     expect(options).toEqual(['bar', 'foo'])
   })
 })
