@@ -1,7 +1,7 @@
 {
   "name": "cli-engine-heroku",
   "description": "heroku specific functionality for the cli-engine",
-  "version": "1.1.6",
+  "version": "1.1.7",
   "author": "Jeff Dickey @dickeyxxx",
   "bugs": "https://github.com/heroku/cli-engine-heroku/issues",
   "dependencies": {
