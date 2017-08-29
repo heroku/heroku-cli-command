@@ -6,7 +6,7 @@
   "bugs": "https://github.com/heroku/cli-engine-heroku/issues",
   "dependencies": {
     "heroku-client": "3.x",
-    "netrc-parser": "2.0.2"
+    "netrc-parser": "^2.0.3"
   },
   "devDependencies": {
     "babel-cli": "6.24.1",
