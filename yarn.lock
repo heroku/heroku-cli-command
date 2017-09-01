@@ -765,10 +765,12 @@ cli-engine-command@^6.0.1:
     string "3.x"
     supports-color "^4.2.1"
 
-cli-engine-config@^1.3.8:
-  version "1.3.8"
-  resolved "https://registry.yarnpkg.com/cli-engine-config/-/cli-engine-config-1.3.8.tgz#a795cea9abf4e992765ad8c58bcd411cf1e470ed"
+cli-engine-config@^1.6.1:
+  version "1.6.1"
+  resolved "https://registry.yarnpkg.com/cli-engine-config/-/cli-engine-config-1.6.1.tgz#87dc4114910f74073db97380ee56248d1d1f1702"
   dependencies:
+    fs-extra "^4.0.1"
+    jest-validate "^20.0.3"
     uuid "^3.1.0"
 
 cli-width@^2.0.0:
