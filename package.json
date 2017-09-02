@@ -6,7 +6,7 @@
   "bugs": "https://github.com/heroku/cli-engine-heroku/issues",
   "dependencies": {
     "heroku-client": "^3.0.3",
-    "http-call": "3.0.2",
+    "http-call": "^3.0.1",
     "netrc-parser": "^2.0.3"
   },
   "devDependencies": {
