@@ -3,8 +3,16 @@
 import Command from 'cli-engine-command'
 import OrgFlag from './org'
 
+let env = process.env
+beforeEach(() => {
+  process.env = {}
+})
+afterEach(() => {
+  process.env = env
+})
+
 describe('required', () => {
-  class OrgCommand extends Command {
+  class OrgCommand extends Command<*> {
     static flags = {org: OrgFlag({required: true})}
     org: string
     async run () {
@@ -22,13 +30,13 @@ describe('required', () => {
     try {
       await OrgCommand.mock()
     } catch (err) {
-      expect(err.message).toContain('No org specified')
+      expect(err.message).toContain('Missing required flag --org')
     }
   })
 })
 
 describe('optional', () => {
-  class OrgCommand extends Command {
+  class OrgCommand extends Command<*> {
     static flags = {org: OrgFlag()}
     org: ?string
     async run () {
@@ -47,14 +55,15 @@ describe('optional', () => {
   })
 
   test('reads HEROKU_ORGANIZATION', async () => {
-    class OrgCommand extends Command {
-      static flags = {org: OrgFlag({}, {'HEROKU_ORGANIZATION': 'myorg'})}
+    class OrgCommand extends Command<*> {
+      static flags = {org: OrgFlag()}
       org: ?string
       async run () {
         this.org = this.flags.org
       }
     }
 
+    process.env.HEROKU_ORGANIZATION = 'myorg'
     const cmd = await OrgCommand.mock()
     expect(cmd.org).toEqual('myorg')
   })

@@ -1,16 +1,14 @@
 // @flow
 
-import { merge, type Flag } from 'cli-engine-command/lib/flags'
+import { type OptionFlag } from 'cli-engine-command/lib/flags'
 
-type Options = $Shape<Flag<string>>
-export default function PipelineFlag (options: Options = {}, env: typeof process.env = process.env): Flag<string> {
-  const defaultOptions: Options = {
+type Options = $Shape<OptionFlag<string>>
+
+export default function PipelineFlag (options: Options = {}): OptionFlag<string> {
+  return {
     char: 'p',
     description: 'name of pipeline',
-    parse: (input, cmd) => {
-      if (input) return input
-      if (options.required) throw new Error('No pipeline specified')
-    }
+    parse: v => v,
+    ...options
   }
-  return merge(defaultOptions, options)
 }

@@ -28,8 +28,8 @@ test('makes an HTTP request', async () => {
     .reply(200, [{name: 'myapp'}])
 
   const cmd = await Command.mock()
-  const response = await cmd.heroku.get('/apps')
-  expect(response).toEqual([{name: 'myapp'}])
+  const {body} = await cmd.heroku.get('/apps')
+  expect(body).toEqual([{name: 'myapp'}])
 })
 
 describe('with HEROKU_HEADERS', () => {
@@ -42,7 +42,7 @@ describe('with HEROKU_HEADERS', () => {
       .reply(200, [{name: 'myapp'}])
 
     const cmd = await Command.mock()
-    const response = await cmd.heroku.get('/apps')
-    expect(response).toEqual([{name: 'myapp'}])
+    const {body} = await cmd.heroku.get('/apps')
+    expect(body).toEqual([{name: 'myapp'}])
   })
 })

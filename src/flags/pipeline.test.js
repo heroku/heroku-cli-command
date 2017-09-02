@@ -4,7 +4,7 @@ import Command from 'cli-engine-command'
 import PipelineFlag from './pipeline'
 
 describe('required', () => {
-  class PipelineCommand extends Command {
+  class PipelineCommand extends Command<*> {
     static flags = {pipeline: PipelineFlag({required: true})}
     pipeline: string
 
@@ -23,13 +23,13 @@ describe('required', () => {
     try {
       await PipelineCommand.mock()
     } catch (err) {
-      expect(err.message).toContain('No pipeline specified')
+      expect(err.message).toContain('Missing required flag --pipeline')
     }
   })
 })
 
 describe('optional', () => {
-  class PipelineCommand extends Command {
+  class PipelineCommand extends Command<*> {
     static flags = {pipeline: PipelineFlag()}
     pipeline: ?string
 

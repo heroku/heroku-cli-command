@@ -6,8 +6,6 @@ import team from './team'
 import org from './org'
 import pipeline from './pipeline'
 
-export {merge} from 'cli-engine-command/lib/flags'
-
 export default {
   app,
   remote,

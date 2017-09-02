@@ -3,7 +3,7 @@
 import Command from 'cli-engine-command'
 import APIClient from './api_client'
 
-export default class HerokuCommand extends Command {
+export default class HerokuCommand extends Command<*> {
   app: ?string
   _heroku: APIClient
   _legacyHerokuClient: any
@@ -22,10 +22,11 @@ export default class HerokuCommand extends Command {
     if (this._legacyHerokuClient) return this._legacyHerokuClient
     const HerokuClient = require('heroku-client')
     let options = {
-      userAgent: this.heroku.requestOptions.headers['user-agent'],
+      // flow$ignore
+      userAgent: this.heroku.defaultOptions.headers['user-agent'],
       debug: this.config.debug,
       token: this.heroku.auth,
-      host: `${this.heroku.requestOptions.protocol || 'https:'}//${this.heroku.requestOptions.host || 'api.heroku.com'}`
+      host: `${this.heroku.defaultOptions.protocol || 'https:'}//${this.heroku.defaultOptions.host || 'api.heroku.com'}`
     }
 
     this._legacyHerokuClient = new HerokuClient(options)

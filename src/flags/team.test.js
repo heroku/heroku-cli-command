@@ -1,12 +1,19 @@
 // @flow
 
 import Command from 'cli-engine-command'
-import TeamFlag from './team'
-import OrgFlag from './org'
+import flags from '.'
+
+let env = process.env
+beforeEach(() => {
+  process.env = {}
+})
+afterEach(() => {
+  process.env = env
+})
 
 describe('required', () => {
-  class TeamCommand extends Command {
-    static flags = {team: TeamFlag({required: true})}
+  class TeamCommand extends Command<*> {
+    static flags = {team: flags.team({required: true})}
     team: string
     async run () {
       this.team = this.flags.team
@@ -34,8 +41,8 @@ describe('required', () => {
 })
 
 describe('optional', () => {
-  class TeamCommand extends Command {
-    static flags = {team: TeamFlag()}
+  class TeamCommand extends Command<*> {
+    static flags = {team: flags.team()}
     team: ?string
     async run () {
       this.team = this.flags.team
@@ -53,21 +60,22 @@ describe('optional', () => {
   })
 
   test('reads HEROKU_ORGANIZATION as a backup', async () => {
-    class TeamCommand extends Command {
-      static flags = {team: TeamFlag({}, {'HEROKU_ORGANIZATION': 'myteam'})}
+    class TeamCommand extends Command<*> {
+      static flags = {team: flags.team()}
       team: ?string
       async run () {
         this.team = this.flags.team
       }
     }
 
+    process.env.HEROKU_ORGANIZATION = 'myenvteam'
     const cmd = await TeamCommand.mock()
-    expect(cmd.team).toEqual('myteam')
+    expect(cmd.team).toEqual('myenvteam')
   })
 
   test('reads --org as a backup', async () => {
-    class TeamCommand extends Command {
-      static flags = {team: TeamFlag({required: true}), org: OrgFlag()}
+    class TeamCommand extends Command<*> {
+      static flags = {team: flags.team({required: true}), org: flags.org()}
       team: string
       async run () {
         this.team = this.flags.team
@@ -79,14 +87,15 @@ describe('optional', () => {
   })
 
   test('reads HEROKU_TEAM', async () => {
-    class TeamCommand extends Command {
-      static flags = {team: TeamFlag({}, {'HEROKU_TEAM': 'myteam'})}
+    class TeamCommand extends Command<*> {
+      static flags = {team: flags.team()}
       team: ?string
       async run () {
         this.team = this.flags.team
       }
     }
 
+    process.env.HEROKU_TEAM = 'myteam'
     const cmd = await TeamCommand.mock()
     expect(cmd.team).toEqual('myteam')
   })

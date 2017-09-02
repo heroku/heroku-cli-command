@@ -1,8 +1,7 @@
 // @flow
 
 import vars from '../vars'
-import type {Flag} from 'cli-engine-command/lib/flags'
-import {merge} from '.'
+import {type OptionFlag} from 'cli-engine-command/lib/flags'
 import Git from '../git'
 import Heroku from '../api_client'
 
@@ -21,14 +20,13 @@ class MultipleRemotesError extends Error {
   }
 }
 
-type Options = $Shape<Flag<string>>
-export function app (options: Options = {}, env: typeof process.env = process.env): Flag<string> {
-  const envApp = env.HEROKU_APP
-  const defaultOptions: Options = {
+type Options = $Shape<OptionFlag<string>>
+export function app (options: Options = {}): OptionFlag<string> {
+  return {
     char: 'a',
     description: 'app to run command against',
-    default: () => envApp,
     parse: (input, cmd) => {
+      const envApp = process.env.HEROKU_APP
       if (cmd && cmd.flags.app) return cmd.flags.app
       if (input) return input
       if (envApp) return envApp
@@ -48,21 +46,21 @@ export function app (options: Options = {}, env: typeof process.env = process.en
       cacheDuration: 60 * 60 * 24, // 1 day
       options: async (ctx) => {
         const heroku = new Heroku({out: ctx.out})
-        let apps = await heroku.get('/apps')
+        let {body: apps} = await heroku.get('/apps')
         return apps.map(a => a.name).sort()
       }
-    }
+    },
+    ...(options: any)
   }
-  return merge(defaultOptions, options)
 }
 
-export function remote (options: Options = {}): Flag<string> {
-  const defaultOptions: Options = {
+export function remote (options: Options = {}): OptionFlag<string> {
+  return {
     char: 'r',
     description: 'git remote of app to use',
-    parse: input => input
+    parse: v => v,
+    ...options
   }
-  return merge(defaultOptions, options)
 }
 
 function configRemote () {

@@ -385,6 +385,10 @@ babel-plugin-syntax-flow@^6.18.0:
   version "6.18.0"
   resolved "https://registry.yarnpkg.com/babel-plugin-syntax-flow/-/babel-plugin-syntax-flow-6.18.0.tgz#4c3ab20a2af26aa20cd25995c398c4eb70310c8d"
 
+babel-plugin-syntax-object-rest-spread@^6.13.0:
+  version "6.13.0"
+  resolved "https://registry.yarnpkg.com/babel-plugin-syntax-object-rest-spread/-/babel-plugin-syntax-object-rest-spread-6.13.0.tgz#fd6536f2bce13836ffa3a5458c4903a597bb3bf5"
+
 babel-plugin-transform-class-properties@6.24.1:
   version "6.24.1"
   resolved "https://registry.yarnpkg.com/babel-plugin-transform-class-properties/-/babel-plugin-transform-class-properties-6.24.1.tgz#6a79763ea61d33d36f37b611aa9def81a81b46ac"
@@ -742,15 +746,15 @@ cli-cursor@^2.1.0:
   dependencies:
     restore-cursor "^2.0.0"
 
-cli-engine-command@^6.0.1:
-  version "6.0.1"
-  resolved "https://registry.yarnpkg.com/cli-engine-command/-/cli-engine-command-6.0.1.tgz#6fe545f371dadabefb811cfd242ba4301f76a36a"
+cli-engine-command@^7.0.2:
+  version "7.0.2"
+  resolved "https://registry.yarnpkg.com/cli-engine-command/-/cli-engine-command-7.0.2.tgz#dfbaff16a3c2a1eaa49f45e743c3ae6eb329ce93"
   dependencies:
     ansi-escapes "2.x"
     cardinal "1.x"
     chalk "^1.0.0"
     fs-extra "^4.0.1"
-    http-call "^2.1.5"
+    http-call "^3.0.0"
     lodash.ary "^4.1.1"
     lodash.defaults "^4.2.0"
     lodash.get "^4.4.2"
@@ -763,11 +767,11 @@ cli-engine-command@^6.0.1:
     lodash.result "^4.5.2"
     moment "^2.18.1"
     string "3.x"
-    supports-color "^4.2.1"
+    supports-color "^4.4.0"
 
-cli-engine-config@^1.6.1:
-  version "1.6.1"
-  resolved "https://registry.yarnpkg.com/cli-engine-config/-/cli-engine-config-1.6.1.tgz#87dc4114910f74073db97380ee56248d1d1f1702"
+cli-engine-config@^1.6.4:
+  version "1.6.4"
+  resolved "https://registry.yarnpkg.com/cli-engine-config/-/cli-engine-config-1.6.4.tgz#0eec451eb19bce7bcaf75d7e4d8bbeadde3e48f6"
   dependencies:
     fs-extra "^4.0.1"
     jest-validate "^20.0.3"
@@ -1087,9 +1091,9 @@ eslint-module-utils@^2.1.1:
     debug "^2.6.8"
     pkg-dir "^1.0.0"
 
-eslint-plugin-flowtype@^2.34.1:
-  version "2.35.0"
-  resolved "https://registry.yarnpkg.com/eslint-plugin-flowtype/-/eslint-plugin-flowtype-2.35.0.tgz#d17494f0ae8b727c632d8b9d4b4a848e7e0c04af"
+eslint-plugin-flowtype@^2.35.1:
+  version "2.35.1"
+  resolved "https://registry.yarnpkg.com/eslint-plugin-flowtype/-/eslint-plugin-flowtype-2.35.1.tgz#9ad98181b467a3645fbd2a8d430393cc17a4ea63"
   dependencies:
     lodash "^4.15.0"
 
@@ -1136,9 +1140,9 @@ eslint-scope@^3.7.1:
     esrecurse "^4.1.0"
     estraverse "^4.1.1"
 
-eslint@^4.5.0:
-  version "4.5.0"
-  resolved "https://registry.yarnpkg.com/eslint/-/eslint-4.5.0.tgz#bb75d3b8bde97fb5e13efcd539744677feb019c3"
+eslint@^4.6.0:
+  version "4.6.0"
+  resolved "https://registry.yarnpkg.com/eslint/-/eslint-4.6.0.tgz#98ced4a706a87abbe63207895d0023a38e250bbe"
   dependencies:
     ajv "^5.2.0"
     babel-code-frame "^6.22.0"
@@ -1362,9 +1366,9 @@ flat-cache@^1.2.1:
     graceful-fs "^4.1.2"
     write "^0.2.1"
 
-flow-bin@^0.53.1:
-  version "0.53.1"
-  resolved "https://registry.yarnpkg.com/flow-bin/-/flow-bin-0.53.1.tgz#9b22b63a23c99763ae533ebbab07f88c88c97d84"
+flow-bin@^0.54.0:
+  version "0.54.0"
+  resolved "https://registry.yarnpkg.com/flow-bin/-/flow-bin-0.54.0.tgz#f2fb0478e9e99702b623c9ed84079a39903bba77"
 
 flow-copy-source@^1.2.1:
   version "1.2.1"
@@ -1718,11 +1722,20 @@ html-encoding-sniffer@^1.0.1:
   dependencies:
     whatwg-encoding "^1.0.1"
 
-http-call@^2.1.5:
-  version "2.1.5"
-  resolved "https://registry.yarnpkg.com/http-call/-/http-call-2.1.5.tgz#f54d71cd8a322432691c61977d6c69d6fdfef70b"
+http-call@3.0.2:
+  version "3.0.1"
+  resolved "https://registry.yarnpkg.com/http-call/-/http-call-3.0.1.tgz#906d7f4740ac9756c1e106c89cd0fb876fa1034a"
   dependencies:
-    debug "^3.0.0"
+    debug "^3.0.1"
+    is-retry-allowed "^1.1.0"
+    is-stream "^1.1.0"
+    tunnel-agent "^0.6.0"
+
+http-call@^3.0.0:
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/http-call/-/http-call-3.0.0.tgz#4ee926fdaf87ab3e25642ee9617a5143111a7ee1"
+  dependencies:
+    debug "^3.0.1"
     is-retry-allowed "^1.1.0"
     is-stream "^1.1.0"
     tunnel-agent "^0.6.0"
@@ -3576,9 +3589,15 @@ supports-color@^3.1.2:
   dependencies:
     has-flag "^1.0.0"
 
-supports-color@^4.0.0, supports-color@^4.2.1:
+supports-color@^4.0.0:
   version "4.2.1"
   resolved "https://registry.yarnpkg.com/supports-color/-/supports-color-4.2.1.tgz#65a4bb2631e90e02420dba5554c375a4754bb836"
+  dependencies:
+    has-flag "^2.0.0"
+
+supports-color@^4.4.0:
+  version "4.4.0"
+  resolved "https://registry.yarnpkg.com/supports-color/-/supports-color-4.4.0.tgz#883f7ddabc165142b2a61427f3352ded195d1a3e"
   dependencies:
     has-flag "^2.0.0"
 

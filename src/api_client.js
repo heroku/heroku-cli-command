@@ -1,12 +1,12 @@
 // @flow
 
-import http from 'cli-engine-command/lib/http'
 import type Output from 'cli-engine-command/lib/output'
-import type HTTPError from 'http-call'
+import HTTP, {type HTTPError, type HTTPRequestOptions} from 'http-call'
 import yubikey from './yubikey'
 import Mutex from './mutex'
 import Vars from './vars'
 import {URL} from 'url'
+import type {Config} from 'cli-engine-config'
 
 type Options = {
   required?: boolean,
@@ -39,35 +39,46 @@ export class HerokuAPIError extends Error {
   }
 }
 
-export default class Heroku extends http {
+export default class Heroku {
   options: Options
   twoFactorMutex: Mutex
   preauthPromises: {[k: string]: Promise<*>}
-  host: string
+  http: Class<HTTP>
+  out: Output
+  config: Config
 
   constructor ({out}: {out: Output}, options: Options = {}) {
-    super(out)
+    this.out = out
     if (options.required === undefined) options.required = true
     options.preauth = options.preauth !== false
     this.options = options
+    this.config = out.config
     let apiUrl = new URL(Vars.apiUrl)
-    this.requestOptions.host = this.host = apiUrl.host
-    this.requestOptions.protocol = 'https:'
-    let headers = this.requestOptions.headers
-    if (this.auth) headers['authorization'] = `Bearer ${this.auth}`
-    headers['user-agent'] = `heroku-cli/${this.out.config.version} ${this.out.config.platform}`
-    headers['accept'] = headers['accept'] || 'application/vnd.heroku+json; version=3'
     let envHeaders = JSON.parse(process.env.HEROKU_HEADERS || '{}')
-    for (let [k, v] of Object.entries(envHeaders)) {
-      if (!headers[k]) headers[k] = (v: any)
-    }
     this.twoFactorMutex = new Mutex()
     this.preauthPromises = {}
+    let auth = this.auth
     let self = this
-    this.http = class extends this.http {
+    this.http = class extends HTTP {
+      static get defaultOptions () {
+        let opts = {
+          ...super.defaultOptions,
+          host: apiUrl.host,
+          headers: {
+            ...super.defaultOptions.headers,
+            'user-agent': `heroku-cli/${self.config.version} ${self.config.platform}`,
+            accept: 'application/vnd.heroku+json; version=3',
+            ...envHeaders
+          }
+        }
+        if (auth) opts.headers.authorization = `Bearer ${auth}`
+        return opts
+      }
+
       static async twoFactorRetry (err, url, opts = {}, retries = 3) {
         const app = err.body.app ? err.body.app.name : null
         if (!app || !options.preauth) {
+          // flow$ignore
           opts.headers['Heroku-Two-Factor-Code'] = await self.twoFactorPrompt()
           return this.request(url, opts, retries)
         } else {
@@ -129,5 +140,29 @@ export default class Heroku extends http {
     return this.put(`/apps/${app}/pre-authorizations`, {
       headers: { 'Heroku-Two-Factor-Code': factor }
     })
+  }
+  get (url: string, options: HTTPRequestOptions = {}) {
+    return this.http.get(url, options)
+  }
+  post (url: string, options: HTTPRequestOptions = {}) {
+    return this.http.post(url, options)
+  }
+  put (url: string, options: HTTPRequestOptions = {}) {
+    return this.http.put(url, options)
+  }
+  patch (url: string, options: HTTPRequestOptions = {}) {
+    return this.http.patch(url, options)
+  }
+  delete (url: string, options: HTTPRequestOptions = {}) {
+    return this.http.delete(url, options)
+  }
+  stream (url: string, options: HTTPRequestOptions = {}) {
+    return this.http.stream(url, options)
+  }
+  request (url: string, options: HTTPRequestOptions = {}) {
+    return this.http.request(url, options)
+  }
+  get defaultOptions (): HTTPRequestOptions {
+    return this.http.defaultOptions
   }
 }

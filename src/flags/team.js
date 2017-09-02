@@ -1,19 +1,19 @@
 // @flow
 
-import {merge, type Flag} from 'cli-engine-command/lib/flags'
+import {type OptionFlag} from 'cli-engine-command/lib/flags'
 
-type Options = $Shape<Flag<string>>
-export default function TeamFlag (options: Options = {}, env: typeof process.env = process.env): Flag<string> {
-  const defaultOptions: Options = {
+type Options = $Shape<OptionFlag<string>>
+export default function TeamFlag (options: Options = {}): OptionFlag<string> {
+  return {
     char: 't',
     description: 'team to use',
-    parse: (input, cmd) => {
+    parse: (input, cmd, name) => {
       if (input) return input
-      if (env.HEROKU_TEAM) return env.HEROKU_TEAM
+      if (process.env.HEROKU_TEAM) return process.env.HEROKU_TEAM
       if (cmd && cmd.flags.org) return cmd.flags.org
-      if (env.HEROKU_ORGANIZATION) return env.HEROKU_ORGANIZATION
+      if (process.env.HEROKU_ORGANIZATION) return process.env.HEROKU_ORGANIZATION
       if (options.required) throw new Error('No team specified')
-    }
+    },
+    ...options
   }
-  return merge(defaultOptions, options)
 }
