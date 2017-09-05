@@ -5,34 +5,33 @@
   "author": "Jeff Dickey @dickeyxxx",
   "bugs": "https://github.com/heroku/cli-engine-heroku/issues",
   "dependencies": {
+    "cli-engine-command": "^8.0.0",
     "heroku-client": "^3.0.3",
-    "http-call": "^3.0.1",
+    "http-call": "^3.0.2",
     "netrc-parser": "^2.0.3"
   },
   "devDependencies": {
     "babel-cli": "^6.26.0",
     "babel-eslint": "7.2.3",
-    "babel-jest": "20.0.3",
+    "babel-jest": "^21.0.0",
     "babel-plugin-syntax-object-rest-spread": "^6.13.0",
     "babel-plugin-transform-class-properties": "6.24.1",
     "babel-plugin-transform-es2015-modules-commonjs": "^6.26.0",
     "babel-plugin-transform-flow-strip-types": "6.22.0",
-    "cli-engine-command": "^7.0.2",
-    "cli-engine-config": "^1.6.4",
-    "eslint": "^4.6.0",
+    "eslint": "^4.6.1",
     "eslint-config-standard": "10.2.1",
     "eslint-plugin-flowtype": "^2.35.1",
     "eslint-plugin-import": "^2.7.0",
-    "eslint-plugin-jest": "20.0.3",
+    "eslint-plugin-jest": "^21.0.0",
     "eslint-plugin-node": "^5.1.0",
     "eslint-plugin-promise": "3.5.0",
     "eslint-plugin-standard": "3.0.1",
     "flow-bin": "^0.54.0",
     "flow-copy-source": "^1.2.1",
     "flow-typed": "^2.1.5",
-    "jest": "20.0.4",
+    "jest": "^21.0.1",
     "nock": "^9.0.14",
-    "nodemon": "1.11.0",
+    "nodemon": "^1.12.0",
     "rimraf": "2.6.1"
   },
   "engines": {
@@ -55,9 +54,6 @@
   ],
   "license": "ISC",
   "main": "lib/index.js",
-  "peerDependencies": {
-    "cli-engine-command": "^7.0.0"
-  },
   "repository": "heroku/cli-engine-heroku",
   "scripts": {
     "build": "babel src -d lib --ignore '*.test.js'",
