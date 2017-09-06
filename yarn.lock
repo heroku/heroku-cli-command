@@ -2,6 +2,10 @@
 # yarn lockfile v1
 
 
+"@heroku/linewrap@^1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@heroku/linewrap/-/linewrap-1.0.0.tgz#a9d4e99f0a3e423a899b775f5f3d6747a1ff15c6"
+
 abab@^1.0.3:
   version "1.0.3"
   resolved "https://registry.yarnpkg.com/abab/-/abab-1.0.3.tgz#b81de5f7274ec4e756d797cd834f303642724e5d"
@@ -648,14 +652,14 @@ cli-cursor@^2.1.0:
   dependencies:
     restore-cursor "^2.0.0"
 
-cli-engine-command@^8.0.3:
-  version "8.0.3"
-  resolved "https://registry.yarnpkg.com/cli-engine-command/-/cli-engine-command-8.0.3.tgz#242975626d80fa293e450ed090608b64825c644e"
+cli-engine-command@^8.0.5:
+  version "8.0.5"
+  resolved "https://registry.yarnpkg.com/cli-engine-command/-/cli-engine-command-8.0.5.tgz#4db87c18826b1cd75e80ad9e36043e3e15fa4c37"
   dependencies:
+    "@heroku/linewrap" "^1.0.0"
     ansi-escapes "^3.0.0"
     cardinal "1.x"
     chalk "^1.0.0"
-    cli-engine-config "^3.0.0"
     fs-extra "^4.0.1"
     http-call "^3.0.2"
     lodash.ary "^4.1.1"
@@ -672,9 +676,9 @@ cli-engine-command@^8.0.3:
     string "3.x"
     supports-color "^4.4.0"
 
-cli-engine-config@^3.0.0:
-  version "3.0.0"
-  resolved "https://registry.yarnpkg.com/cli-engine-config/-/cli-engine-config-3.0.0.tgz#599a3e6d042c519ef2fff3df97b473eb1fb64f0b"
+cli-engine-config@^3.1.0:
+  version "3.1.0"
+  resolved "https://registry.yarnpkg.com/cli-engine-config/-/cli-engine-config-3.1.0.tgz#04bf34ca9f81ae9046ef858836a59aa7e4594035"
   dependencies:
     fs-extra "^4.0.1"
     uuid "^3.1.0"
@@ -1261,9 +1265,9 @@ flat-cache@^1.2.1:
     graceful-fs "^4.1.2"
     write "^0.2.1"
 
-flow-bin@^0.54.0:
-  version "0.54.0"
-  resolved "https://registry.yarnpkg.com/flow-bin/-/flow-bin-0.54.0.tgz#f2fb0478e9e99702b623c9ed84079a39903bba77"
+flow-bin@^0.54.1:
+  version "0.54.1"
+  resolved "https://registry.yarnpkg.com/flow-bin/-/flow-bin-0.54.1.tgz#7101bcccf006dc0652714a8aef0c72078a760510"
 
 flow-copy-source@^1.2.1:
   version "1.2.1"

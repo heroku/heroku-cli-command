@@ -5,7 +5,7 @@
   "author": "Jeff Dickey @dickeyxxx",
   "bugs": "https://github.com/heroku/cli-engine-heroku/issues",
   "dependencies": {
-    "cli-engine-command": "^8.0.3",
+    "cli-engine-config": "^3.1.0",
     "heroku-client": "^3.0.3",
     "http-call": "^3.0.2",
     "netrc-parser": "^2.0.3"
@@ -18,6 +18,7 @@
     "babel-plugin-transform-class-properties": "6.24.1",
     "babel-plugin-transform-es2015-modules-commonjs": "^6.26.0",
     "babel-plugin-transform-flow-strip-types": "6.22.0",
+    "cli-engine-command": "^8.0.5",
     "eslint": "^4.6.1",
     "eslint-config-standard": "10.2.1",
     "eslint-plugin-flowtype": "^2.35.1",
@@ -26,7 +27,7 @@
     "eslint-plugin-node": "^5.1.0",
     "eslint-plugin-promise": "3.5.0",
     "eslint-plugin-standard": "3.0.1",
-    "flow-bin": "^0.54.0",
+    "flow-bin": "^0.54.1",
     "flow-copy-source": "^1.2.1",
     "flow-typed": "^2.1.5",
     "jest": "^21.0.1",
@@ -54,6 +55,10 @@
   ],
   "license": "ISC",
   "main": "lib/index.js",
+  "peerDependencies": {
+    "cli-engine-command": "^8.0.0",
+    "cli-engine-config": "^3.0.0"
+  },
   "repository": "heroku/cli-engine-heroku",
   "scripts": {
     "build": "babel src -d lib --ignore '*.test.js'",
