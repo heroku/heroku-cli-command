@@ -5,7 +5,7 @@
   "author": "Jeff Dickey @dickeyxxx",
   "bugs": "https://github.com/heroku/cli-engine-heroku/issues",
   "dependencies": {
-    "cli-engine-command": "^8.0.0",
+    "cli-engine-command": "^8.0.3",
     "heroku-client": "^3.0.3",
     "http-call": "^3.0.2",
     "netrc-parser": "^2.0.3"
