@@ -1,6 +1,7 @@
 // @flow
 
 import {type OptionFlag} from 'cli-engine-command/lib/flags'
+import {TeamCompletion} from '../completions'
 
 type Options = $Shape<OptionFlag<string>>
 export default function TeamFlag (options: Options = {}): OptionFlag<string> {
@@ -14,6 +15,7 @@ export default function TeamFlag (options: Options = {}): OptionFlag<string> {
       if (process.env.HEROKU_ORGANIZATION) return process.env.HEROKU_ORGANIZATION
       if (options.required) throw new Error('No team specified')
     },
+    completion: TeamCompletion,
     ...options
   }
 }
