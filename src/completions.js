@@ -45,6 +45,13 @@ export const RemoteCompletion: Completion = {
   }
 }
 
+export const RoleCompletion: Completion = {
+  cacheDuration: oneDay * 365, // cache once
+  options: async (ctx) => {
+    return ['admin', 'collaborator', 'member', 'owner']
+  }
+}
+
 export const SpaceCompletion: Completion = {
   cacheDuration: oneDay,
   options: async (ctx) => {
@@ -58,6 +65,13 @@ export const StackCompletion: Completion = {
   options: async (ctx) => {
     let spaces = await _herokuGet('stacks', ctx)
     return spaces
+  }
+}
+
+export const StageCompletion: Completion = {
+  cacheDuration: oneDay * 365, // cache once
+  options: async (ctx) => {
+    return ['test', 'review', 'development', 'staging', 'production']
   }
 }
 
