@@ -1,9 +1,8 @@
 // @flow
 
-import vars from '../vars'
 import {type OptionFlag} from 'cli-engine-command/lib/flags'
-import Git from '../git'
-import {AppCompletion} from '../completions'
+import {AppCompletion, RemoteCompletion} from '../completions'
+import {configRemote, getGitRemotes} from '../git'
 
 class MultipleRemotesError extends Error {
   constructor (gitRemotes) {
@@ -52,35 +51,7 @@ export function remote (options: Options = {}): OptionFlag<string> {
     char: 'r',
     description: 'git remote of app to use',
     parse: v => v,
+    completion: RemoteCompletion,
     ...options
   }
-}
-
-function configRemote () {
-  let git = new Git()
-  try {
-    return git.exec('config heroku.remote').trim()
-  } catch (err) { }
-}
-
-function getGitRemotes (onlyRemote: ?string): {remote: string, app: string}[] {
-  let git = new Git()
-  let appRemotes = []
-  let remotes = []
-  try {
-    remotes = git.remotes
-  } catch (err) { }
-  for (let remote of remotes) {
-    if (onlyRemote && remote.name !== onlyRemote) continue
-    for (let prefix of vars.gitPrefixes) {
-      const suffix = '.git'
-      let match = remote.url.match(`${prefix}(.*)${suffix}`)
-      if (!match) continue
-      appRemotes.push({
-        remote: remote.name,
-        app: match[1]
-      })
-    }
-  }
-  return appRemotes
 }
