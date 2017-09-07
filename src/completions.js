@@ -2,7 +2,7 @@
 
 import type {Completion} from 'cli-engine-command/lib/completion'
 import Heroku from './api_client'
-import {configRemote, getGitRemotes} from './git'
+import {configRemote, getGitRemotes} from './flags/app'
 
 const oneDay = 60 * 60 * 24
 
