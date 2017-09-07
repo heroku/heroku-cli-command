@@ -26,12 +26,8 @@ describe('required', () => {
   })
 
   test('errors with no org', async () => {
-    expect.assertions(1)
-    try {
-      await OrgCommand.mock()
-    } catch (err) {
-      expect(err.message).toContain('Missing required flag --org')
-    }
+    const cmd = await OrgCommand.mock()
+    expect(cmd.err).toHaveProperty('message', 'Missing required flag --org')
   })
 })
 

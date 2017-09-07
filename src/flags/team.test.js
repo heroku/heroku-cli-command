@@ -11,6 +11,11 @@ afterEach(() => {
   process.env = env
 })
 
+function fetchErr (cmd): Error {
+  if (!cmd.err) throw new Error('no error')
+  return cmd.err
+}
+
 describe('required', () => {
   class TeamCommand extends Command<*> {
     static flags = {team: flags.team({required: true})}
@@ -31,12 +36,8 @@ describe('required', () => {
   })
 
   test('errors with no team', async () => {
-    expect.assertions(1)
-    try {
-      await TeamCommand.mock()
-    } catch (err) {
-      expect(err.message).toContain('No team specified')
-    }
+    const cmd = await TeamCommand.mock()
+    expect(fetchErr(cmd).message).toContain('No team specified')
   })
 })
 
