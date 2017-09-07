@@ -53,6 +53,14 @@ export const SpaceCompletion: Completion = {
   }
 }
 
+export const StackCompletion: Completion = {
+  cacheDuration: oneDay,
+  options: async (ctx) => {
+    let spaces = await _herokuGet('stacks', ctx)
+    return spaces
+  }
+}
+
 export const TeamCompletion: Completion = {
   cacheDuration: oneDay,
   options: async (ctx) => {
