@@ -17,11 +17,6 @@ beforeEach(() => {
   mockGitRemotes.mockReturnValue([])
 })
 
-function fetchErr (cmd): Error {
-  if (!cmd.err) throw new Error('no error')
-  return cmd.err
-}
-
 describe('required', () => {
   class Command extends Base {
     static flags = {app: app({required: true}), remote: remote()}
@@ -47,23 +42,36 @@ describe('required', () => {
       {name: 'staging', url: 'https://git.heroku.com/myapp-staging.git'},
       {name: 'production', url: 'https://git.heroku.com/myapp-production.git'}
     ])
-    let cmd = await Command.mock('-r', 'foo')
-    expect(fetchErr(cmd).message).toEqual('remote foo not found in git remotes')
+    try {
+      let cmd = await Command.mock('-r', 'foo')
+      cmd.out.log(cmd.flags.app)
+    } catch (err) {
+      expect(err.message).toEqual('remote foo not found in git remotes')
+    }
   })
 
   test('errors with no app', async () => {
     expect.assertions(1)
-    let cmd = await Command.mock()
-    expect(fetchErr(cmd).message).toContain('No app specified')
+    try {
+      let cmd = await Command.mock()
+      console.log(cmd.flags.app) // should not get here
+    } catch (err) {
+      expect(err.message).toContain('No app specified')
+    }
   })
 
   test('errors with 2 git remotes', async () => {
+    expect.assertions(1)
     mockGitRemotes.mockReturnValueOnce([
       {name: 'staging', url: 'https://git.heroku.com/myapp-staging.git'},
       {name: 'production', url: 'https://git.heroku.com/myapp-production.git'}
     ])
-    let cmd = await Command.mock()
-    expect(fetchErr(cmd).message).toContain('Multiple apps in git remotes')
+    try {
+      let cmd = await Command.mock()
+      console.log(cmd.flags.app) // should not get here
+    } catch (err) {
+      expect(err.message).toContain('Multiple apps in git remotes')
+    }
   })
 
   test('returns undefined with 2 git remotes when app not required', async () => {

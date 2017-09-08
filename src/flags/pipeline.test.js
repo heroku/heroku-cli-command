@@ -19,8 +19,12 @@ describe('required', () => {
   })
 
   test('errors with no pipeline', async () => {
-    const cmd = await PipelineCommand.mock()
-    expect(cmd.err).toHaveProperty('message', 'Missing required flag --pipeline')
+    expect.assertions(1)
+    try {
+      await PipelineCommand.mock()
+    } catch (err) {
+      expect(err.message).toContain('Missing required flag --pipeline')
+    }
   })
 })
 
