@@ -21,6 +21,30 @@ export const AppCompletion: Completion = {
   }
 }
 
+export const AddonCompletion: Completion = {
+  cacheDuration: oneDay,
+  cacheKey: async (ctx) => {
+    return (ctx.flags && ctx.flags.app) ? `${ctx.flags.app}_addons` : ''
+  },
+  options: async (ctx) => {
+    const heroku = new Heroku({out: ctx.out})
+    let addons = (ctx.flags && ctx.flags.app) ? await heroku.get(`/apps/${ctx.flags.app}/addons`) : []
+    return addons.map(a => a.name).sort()
+  }
+}
+
+export const DynoCompletion: Completion = {
+  cacheDuration: oneDay,
+  cacheKey: async (ctx) => {
+    return (ctx.flags && ctx.flags.app) ? `${ctx.flags.app}_dynos` : ''
+  },
+  options: async (ctx) => {
+    const heroku = new Heroku({out: ctx.out})
+    let dynos = (ctx.flags && ctx.flags.app) ? await heroku.get(`/apps/${ctx.flags.app}/dynos`) : []
+    return dynos.map(a => a.type).sort()
+  }
+}
+
 export const DynoSizeCompletion: Completion = {
   cacheDuration: oneDay * 90,
   options: async (ctx) => {
