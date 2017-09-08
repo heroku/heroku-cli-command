@@ -1,8 +1,8 @@
 // @flow
 
 import vars from '../vars'
+import type {OptionFlag} from 'cli-engine-config'
 import Git from '../git'
-import {type OptionFlag} from 'cli-engine-command/lib/flags'
 import {AppCompletion, RemoteCompletion} from '../completions'
 
 class MultipleRemotesError extends Error {

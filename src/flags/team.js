@@ -1,6 +1,6 @@
 // @flow
 
-import {type OptionFlag} from 'cli-engine-command/lib/flags'
+import type {OptionFlag} from 'cli-engine-config'
 import {TeamCompletion} from '../completions'
 
 type Options = $Shape<OptionFlag<string>>
