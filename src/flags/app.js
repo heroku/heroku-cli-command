@@ -3,7 +3,7 @@
 import vars from '../vars'
 import type {OptionFlag} from 'cli-engine-config'
 import Git from '../git'
-import Heroku from '../api_client'
+import {AppCompletion, RemoteCompletion} from '../completions'
 
 class MultipleRemotesError extends Error {
   constructor (gitRemotes) {
@@ -42,14 +42,7 @@ export function app (options: Options = {}): OptionFlag<string> {
       }
       if (options.required) throw new Error('No app specified')
     },
-    completion: {
-      cacheDuration: 60 * 60 * 24, // 1 day
-      options: async (ctx) => {
-        const heroku = new Heroku({out: ctx.out})
-        let {body: apps} = await heroku.get('/apps')
-        return apps.map(a => a.name).sort()
-      }
-    },
+    completion: AppCompletion,
     ...(options: any)
   }
 }
@@ -59,18 +52,19 @@ export function remote (options: Options = {}): OptionFlag<string> {
     char: 'r',
     description: 'git remote of app to use',
     parse: v => v,
+    completion: RemoteCompletion,
     ...options
   }
 }
 
-function configRemote () {
+export function configRemote () {
   let git = new Git()
   try {
     return git.exec('config heroku.remote').trim()
   } catch (err) { }
 }
 
-function getGitRemotes (onlyRemote: ?string): {remote: string, app: string}[] {
+export function getGitRemotes (onlyRemote: ?string): {remote: string, app: string}[] {
   let git = new Git()
   let appRemotes = []
   let remotes = []
