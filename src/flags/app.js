@@ -1,7 +1,7 @@
 // @flow
 
 import vars from '../vars'
-import {type OptionFlag} from 'cli-engine-command/lib/flags'
+import type {OptionFlag} from 'cli-engine-config'
 import Git from '../git'
 import Heroku from '../api_client'
 

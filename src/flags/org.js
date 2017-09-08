@@ -1,6 +1,6 @@
 // @flow
 
-import {type OptionFlag} from 'cli-engine-command/lib/flags'
+import type {OptionFlag} from 'cli-engine-config'
 
 type Options = $Shape<OptionFlag<string>>
 export default function OrgFlag (options: Options = {}): OptionFlag<string> {
