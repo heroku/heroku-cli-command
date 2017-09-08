@@ -21,6 +21,14 @@ export const AppCompletion: Completion = {
   }
 }
 
+export const DynoSizeCompletion: Completion = {
+  cacheDuration: oneDay * 90,
+  options: async (ctx) => {
+    let sizes = await _herokuGet('dyno-sizes', ctx)
+    return sizes
+  }
+}
+
 export const PipelineCompletion: Completion = {
   cacheDuration: oneDay,
   options: async (ctx) => {
