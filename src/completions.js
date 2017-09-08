@@ -23,7 +23,7 @@ export const AppCompletion: Completion = {
   }
 }
 
-export const AddonCompletion: Completion = {
+export const AppAddonCompletion: Completion = {
   cacheDuration: oneDay,
   cacheKey: async (ctx) => {
     return (ctx.flags && ctx.flags.app) ? `${ctx.flags.app}_addons` : ''
@@ -35,7 +35,7 @@ export const AddonCompletion: Completion = {
   }
 }
 
-export const DynoCompletion: Completion = {
+export const AppDynoCompletion: Completion = {
   cacheDuration: oneDay,
   cacheKey: async (ctx) => {
     return (ctx.flags && ctx.flags.app) ? `${ctx.flags.app}_dynos` : ''
