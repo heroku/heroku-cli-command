@@ -3,6 +3,8 @@
 import type {Completion} from 'cli-engine-command/lib/completion'
 import Heroku from './api_client'
 import {configRemote, getGitRemotes} from './flags/app'
+import fs from 'fs-extra'
+import path from 'path'
 
 const oneDay = 60 * 60 * 24
 
@@ -61,6 +63,23 @@ export const PipelineCompletion: Completion = {
   }
 }
 
+export const ProcessTypeCompletion: Completion = {
+  cacheDuration: 1, // fetch Procfile services every time
+  options: async (ctx) => {
+    let types = []
+    let procfile = path.join(process.cwd(), 'Procfile')
+    if (await fs.exists(procfile)) {
+      let buff = await fs.readFile(procfile)
+      types = buff.toString().split('\n').map(s => {
+        if (!s) return false
+        let m = s.match(/^([A-Za-z0-9_-]+)/)
+        return m ? m[0] : false
+      }).filter(t => t)
+    }
+    return types
+  }
+}
+
 export const RegionCompletion: Completion = {
   cacheDuration: oneDay * 7,
   options: async (ctx) => {
@@ -70,7 +89,7 @@ export const RegionCompletion: Completion = {
 }
 
 export const RemoteCompletion: Completion = {
-  cacheDuration: 1, // fetch git remote(s) everytime
+  cacheDuration: 1, // fetch git remote(s) every time
   options: async (ctx) => {
     let remotes = getGitRemotes(configRemote())
     return remotes.map(r => r.remote)
