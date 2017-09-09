@@ -57,7 +57,7 @@
   "license": "ISC",
   "main": "lib/index.js",
   "peerDependencies": {
-    "cli-engine-command": "^9.0.0",
+    "cli-engine-command": "^8.0.0",
     "cli-engine-config": "^3.0.0"
   },
   "repository": "heroku/cli-engine-heroku",
