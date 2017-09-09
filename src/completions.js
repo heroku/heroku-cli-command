@@ -1,6 +1,6 @@
 // @flow
 
-import type {Completion} from 'cli-engine-command/lib/completion'
+import type {Config, Completion} from 'cli-engine-config'
 import Heroku from './api_client'
 import {configRemote, getGitRemotes} from './flags/app'
 import fs from 'fs-extra'
@@ -8,8 +8,8 @@ import path from 'path'
 
 const oneDay = 60 * 60 * 24
 
-export const _herokuGet = async function (resource: string, ctx: {out: any}): Promise<Array<string>> {
-  const heroku = new Heroku({out: ctx.out})
+export const _herokuGet = async function (resource: string, ctx: {config: Config}): Promise<Array<string>> {
+  const heroku = new Heroku({config: ctx.config})
   let {body: resources} = await heroku.get(`/${resource}`)
   if (typeof resources === 'string') resources = JSON.parse(resources)
   return resources.map(a => a.name).sort()
@@ -36,7 +36,7 @@ export const AppAddonCompletion: Completion = {
     return (ctx.flags && ctx.flags.app) ? `${ctx.flags.app}_addons` : ''
   },
   options: async (ctx) => {
-    const heroku = new Heroku({out: ctx.out})
+    const heroku = new Heroku({config: ctx.config})
     let addons = (ctx.flags && ctx.flags.app) ? await heroku.get(`/apps/${ctx.flags.app}/addons`) : []
     return addons.map(a => a.name).sort()
   }
@@ -48,7 +48,7 @@ export const AppDynoCompletion: Completion = {
     return (ctx.flags && ctx.flags.app) ? `${ctx.flags.app}_dynos` : ''
   },
   options: async (ctx) => {
-    const heroku = new Heroku({out: ctx.out})
+    const heroku = new Heroku({config: ctx.config})
     let dynos = (ctx.flags && ctx.flags.app) ? await heroku.get(`/apps/${ctx.flags.app}/dynos`) : []
     return dynos.map(a => a.type).sort()
   }

@@ -3,7 +3,7 @@
 import Base from '../command'
 import {app, remote} from './app'
 import nock from 'nock'
-import Output from 'cli-engine-command/lib/output'
+import {defaultConfig as config} from 'cli-engine-config'
 
 let mockGitRemotes = jest.fn()
 
@@ -139,8 +139,7 @@ describe('completion', () => {
 
   test('options returns all the apps', async () => {
     api.get('/apps').reply(200, [{id: 1, name: 'foo'}, {id: 2, name: 'bar'}])
-    const out = new Output()
-    const options = await completion.options({out: out})
+    const options = await completion.options({config})
     expect(options).toEqual(['bar', 'foo'])
   })
 })

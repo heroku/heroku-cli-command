@@ -1,12 +1,12 @@
 // @flow
 
-import type Output from 'cli-engine-command/lib/output'
 import HTTP, {type HTTPError, type HTTPRequestOptions} from 'http-call'
 import yubikey from './yubikey'
 import Mutex from './mutex'
 import Vars from './vars'
 import {URL} from 'url'
 import type {Config} from 'cli-engine-config'
+import type {CLI} from 'cli-ux'
 
 type Options = {
   required?: boolean,
@@ -44,15 +44,16 @@ export default class Heroku {
   twoFactorMutex: Mutex
   preauthPromises: {[k: string]: Promise<*>}
   http: Class<HTTP>
-  out: Output
   config: Config
+  cli: CLI
 
-  constructor ({out}: {out: Output}, options: Options = {}) {
-    this.out = out
+  constructor ({config, cli}: {config: Config, cli?: CLI} = {}, options: Options = {}) {
+    this.config = config
+    const {CLI} = require('cli-ux')
+    this.cli = cli || new CLI({mock: config.mock})
     if (options.required === undefined) options.required = true
     options.preauth = options.preauth !== false
     this.options = options
-    this.config = out.config
     let apiUrl = new URL(Vars.apiUrl)
     let envHeaders = JSON.parse(process.env.HEROKU_HEADERS || '{}')
     this.twoFactorMutex = new Mutex()
@@ -126,7 +127,7 @@ export default class Heroku {
     yubikey.enable()
     return this.twoFactorMutex.synchronize(async () => {
       try {
-        let factor = await this.out.prompt('Two-factor code', {mask: true})
+        let factor = await this.cli.prompt('Two-factor code', {type: 'mask'})
         yubikey.disable()
         return factor
       } catch (err) {
