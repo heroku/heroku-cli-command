@@ -62,6 +62,14 @@ export const DynoSizeCompletion: Completion = {
   }
 }
 
+export const FileCompletion: Completion = {
+  skipCache: true,
+  options: async (ctx) => {
+    let files = await fs.readdir(process.cwd())
+    return files
+  }
+}
+
 export const PipelineCompletion: Completion = {
   cacheDuration: oneDay,
   options: async (ctx) => {
