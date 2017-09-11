@@ -24,7 +24,7 @@ export const AppCompletion: Completion = {
 }
 
 export const BuildpackCompletion: Completion = {
-  cacheDuration: oneDay * 90,
+  skipCache: true,
   options: async (ctx) => {
     return ['heroku/ruby', 'heroku/nodejs', 'heroku/clojure', 'heroku/python', 'heroku/java', 'heroku/gradle', 'heroku/scala', 'heroku/php', 'heroku/go']
   }
@@ -71,7 +71,7 @@ export const PipelineCompletion: Completion = {
 }
 
 export const ProcessTypeCompletion: Completion = {
-  cacheDuration: 1, // fetch Procfile services every time
+  skipCache: true,
   options: async (ctx) => {
     let types = []
     let procfile = path.join(process.cwd(), 'Procfile')
@@ -96,7 +96,7 @@ export const RegionCompletion: Completion = {
 }
 
 export const RemoteCompletion: Completion = {
-  cacheDuration: 1, // fetch git remote(s) every time
+  skipCache: true,
   options: async (ctx) => {
     let remotes = getGitRemotes(configRemote())
     return remotes.map(r => r.remote)
@@ -104,14 +104,14 @@ export const RemoteCompletion: Completion = {
 }
 
 export const RoleCompletion: Completion = {
-  cacheDuration: oneDay * 365,
+  skipCache: true,
   options: async (ctx) => {
     return ['admin', 'collaborator', 'member', 'owner']
   }
 }
 
 export const ScopeCompletion: Completion = {
-  cacheDuration: oneDay * 365,
+  skipCache: true,
   options: async (ctx) => {
     return ['global', 'identity', 'read', 'write', 'read-protected', 'write-protected']
   }
@@ -134,7 +134,7 @@ export const StackCompletion: Completion = {
 }
 
 export const StageCompletion: Completion = {
-  cacheDuration: oneDay * 365,
+  skipCache: true,
   options: async (ctx) => {
     return ['test', 'review', 'development', 'staging', 'production']
   }
