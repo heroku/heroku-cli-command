@@ -5,68 +5,45 @@
   "author": "Jeff Dickey @dickeyxxx",
   "bugs": "https://github.com/heroku/cli-engine-heroku/issues",
   "dependencies": {
+    "ansi-styles": "^3.2.0",
+    "chalk": "^2.1.0",
+    "cli-engine-command": "^9.0.0-ts.7",
     "cli-ux": "^1.0.1",
     "heroku-client": "^3.0.3",
     "http-call": "^3.0.2",
-    "netrc-parser": "^2.0.3"
+    "netrc-parser": "^2.0.3",
+    "supports-color": "^4.4.0"
   },
   "devDependencies": {
-    "babel-cli": "^6.26.0",
-    "babel-eslint": "7.2.3",
-    "babel-jest": "^21.0.2",
-    "babel-plugin-syntax-object-rest-spread": "^6.13.0",
-    "babel-plugin-transform-class-properties": "6.24.1",
-    "babel-plugin-transform-es2015-modules-commonjs": "^6.26.0",
-    "babel-plugin-transform-flow-strip-types": "6.22.0",
-    "cli-engine-command": "^8.0.14",
-    "cli-engine-config": "^3.2.0",
-    "eslint": "^4.6.1",
-    "eslint-config-standard": "10.2.1",
-    "eslint-plugin-flowtype": "^2.35.1",
-    "eslint-plugin-import": "^2.7.0",
-    "eslint-plugin-jest": "^21.0.2",
-    "eslint-plugin-node": "^5.1.0",
-    "eslint-plugin-promise": "3.5.0",
-    "eslint-plugin-standard": "3.0.1",
-    "flow-bin": "^0.54.1",
-    "flow-copy-source": "^1.2.1",
-    "flow-typed": "^2.1.5",
+    "@types/ansi-styles": "^2.0.30",
+    "@types/chalk": "^0.4.31",
+    "@types/jest": "^20.0.8",
+    "@types/node": "^8.0.28",
+    "@types/supports-color": "^3.1.0",
+    "babel-core": "^6.26.0",
+    "del-cli": "^1.1.0",
     "jest": "^21.0.2",
     "nock": "^9.0.14",
-    "nodemon": "^1.12.0",
-    "rimraf": "2.6.1"
-  },
-  "engines": {
-    "node": ">=7.6.0"
+    "prettier": "^1.6.1",
+    "ts-jest": "^21.0.1",
+    "typescript": "^2.5.2"
   },
   "files": [
     "lib"
   ],
   "homepage": "https://github.com/heroku/cli-engine-heroku",
-  "jest": {
-    "testEnvironment": "node",
-    "rootDir": "./src",
-    "coveragePathIgnorePatterns": [],
-    "setupFiles": [
-      "../test/init.js"
-    ]
-  },
   "keywords": [
     "heroku"
   ],
   "license": "ISC",
   "main": "lib/index.js",
-  "peerDependencies": {
-    "cli-engine-command": "^8.0.0",
-    "cli-engine-config": "^3.0.0"
-  },
   "repository": "heroku/cli-engine-heroku",
   "scripts": {
-    "build": "babel src -d lib --ignore '*.test.js'",
-    "clean": "rimraf lib",
-    "copy-flow": "flow-copy-source -v -i '**/*.test.js' src lib",
-    "prepare": "npm run clean && npm run build && npm run copy-flow",
-    "test": "jest && flow && eslint .",
-    "watch": "nodemon -e js -i lib --exec \"npm run prepare\""
+    "clean": "del lib",
+    "prepare": "npm run clean && tsc && del 'lib/**/*.test.js' 'lib/**/*.test.d.ts'",
+    "posttest": "prettier -l 'src/**/*.ts'",
+    "precommit": "lint-staged",
+    "pretest": "tsc --sourcemap",
+    "test": "jest"
   }
 }

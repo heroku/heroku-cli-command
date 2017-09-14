@@ -1,11 +1,9 @@
-// @flow
-
 export type Remote = {
   name: string,
   url: string
 }
 
-export default class Git {
+export class Git {
   get remotes (): Remote[] {
     return this.exec('remote -v').split('\n')
       .filter(l => l.endsWith('(fetch)'))

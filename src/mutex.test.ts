@@ -1,8 +1,6 @@
-// @flow
+import {Mutex} from './mutex'
 
-import Mutex from './mutex'
-
-let output
+let output: string[]
 
 beforeEach(() => {
   output = []
@@ -13,7 +11,7 @@ describe('mutex', function () {
     let mutex = new Mutex()
     return Promise.all([
       mutex.synchronize(function () {
-        return new Promise(function (resolve, reject) {
+        return new Promise(function (resolve) {
           setTimeout(function () {
             output.push('foo')
             resolve('foo')
@@ -21,7 +19,7 @@ describe('mutex', function () {
         })
       }),
       mutex.synchronize(function () {
-        return new Promise(function (resolve, reject) {
+        return new Promise(function (resolve) {
           setTimeout(function () {
             output.push('bar')
             resolve('bar')
@@ -38,24 +36,24 @@ describe('mutex', function () {
     let mutex = new Mutex()
     return Promise.all([
       mutex.synchronize(function () {
-        return new Promise(function (resolve, reject) {
+        return new Promise(function (resolve) {
           output.push('foo')
           resolve('foo')
         })
       }),
       mutex.synchronize(function () {
-        return new Promise(function (resolve, reject) {
+        return new Promise(function (_, reject) {
           output.push('bar')
           reject(new Error('bar'))
         })
       }),
       mutex.synchronize(function () {
-        return new Promise(function (resolve, reject) {
+        return new Promise(function (resolve) {
           output.push('biz')
           resolve('biz')
         })
       })
-    ]).then((results) => {
+    ]).then(() => {
       throw new Error('x')
     }).catch((err) => {
       expect(err.message).toEqual('bar')
@@ -66,7 +64,7 @@ describe('mutex', function () {
   it('should run promises after draining the queue', function (done) {
     let mutex = new Mutex()
     mutex.synchronize(function () {
-      return new Promise(function (resolve, reject) {
+      return new Promise(function (resolve) {
         output.push('foo')
         resolve('foo')
       })
@@ -76,7 +74,7 @@ describe('mutex', function () {
         expect(output).toEqual(['foo'])
 
         return mutex.synchronize(function () {
-          return new Promise(function (resolve, reject) {
+          return new Promise(function (resolve) {
             output.push('bar')
             resolve('bar')
           })
