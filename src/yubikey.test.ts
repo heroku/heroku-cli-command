@@ -1,7 +1,5 @@
-// @flow
-
-import cp from 'child_process'
-import yubikey from './yubikey'
+import * as childProcess from 'child_process'
+import {yubikey} from './yubikey'
 
 jest.mock('child_process')
 
@@ -16,6 +14,7 @@ describe('yubikey', () => {
   it('turns yubikey on', () => {
     expect.assertions(2)
 
+    const cp: jest.Mocked<typeof childProcess> = require('child_process')
     cp.execSync.mockImplementationOnce((args, opts) => {
       expect(args).toEqual("osascript -e 'if application \"yubiswitch\" is running then tell application \"yubiswitch\" to KeyOn'")
       expect(opts).toEqual({ stdio: 'inherit' })
@@ -26,6 +25,7 @@ describe('yubikey', () => {
   it('turns yubikey off', () => {
     expect.assertions(2)
 
+    const cp: jest.Mocked<typeof childProcess> = require('child_process')
     cp.execSync.mockImplementationOnce((args, opts) => {
       expect(args).toEqual("osascript -e 'if application \"yubiswitch\" is running then tell application \"yubiswitch\" to KeyOff'")
       expect(opts).toEqual({ stdio: 'inherit' })
