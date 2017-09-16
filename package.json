@@ -5,7 +5,6 @@
   "author": "Jeff Dickey @dickeyxxx",
   "bugs": "https://github.com/heroku/cli-engine-heroku/issues",
   "dependencies": {
-    "@types/nock": "^8.2.1",
     "ansi-styles": "^3.2.0",
     "chalk": "^2.1.0",
     "cli-ux": "^1.1.9",
@@ -21,6 +20,7 @@
     "@types/chalk": "^0.4.31",
     "@types/fs-extra": "^4.0.2",
     "@types/jest": "^20.0.8",
+    "@types/nock": "^8.2.1",
     "@types/node": "^8.0.28",
     "@types/supports-color": "^3.1.0",
     "babel-core": "^6.26.0",
