@@ -1,6 +1,4 @@
-// @flow
-
-import {Command, flags} from './index'
+import { Command, flags } from '.'
 
 test('has flags', async () => {
   expect(flags).toBeTruthy()
