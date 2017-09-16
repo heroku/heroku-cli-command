@@ -11,9 +11,9 @@ const CustomColors = {
   addon: chalk.yellow,
   configVar: chalk.green,
   release: chalk.blue.bold,
-  app: (s: string) => CustomColors.heroku(`⬢ ${s}`),
+  app: (s: string) => color.heroku(`⬢ ${s}`),
   heroku: (s: string) => {
-    return supports.has256 ? '\u001b[38;5;104m' + s + ansiStyles.reset.open : chalk.magenta(s)
+    return supports.has256 ? '\u001b[38;5;104m' + s + ansiStyles.reset.open : color.magenta(s)
   },
 }
 
