@@ -540,42 +540,22 @@ cli-cursor@^1.0.2:
   dependencies:
     restore-cursor "^1.0.1"
 
-cli-engine-command@^9.0.0-ts.9:
-  version "9.0.0-ts.9"
-  resolved "https://registry.yarnpkg.com/cli-engine-command/-/cli-engine-command-9.0.0-ts.9.tgz#17faf009bee6272dd41f5221bf097d2f3e278013"
+cli-engine-command@^9.0.0-ts.11:
+  version "9.0.0-ts.11"
+  resolved "https://registry.yarnpkg.com/cli-engine-command/-/cli-engine-command-9.0.0-ts.11.tgz#f2876ac8daa0c24c885fe0d5dd2bde26520d3998"
   dependencies:
     chalk "^2.1.0"
-    cli-engine-config "^4.0.1-ts.13"
     cli-flags "^1.0.15"
-    cli-ux "^1.1.8"
     fs-extra "^4.0.2"
     http-call "^4.0.0-ts2.0"
     tslib "^1.7.1"
 
-cli-engine-config@^3.3.1:
-  version "3.3.1"
-  resolved "https://registry.yarnpkg.com/cli-engine-config/-/cli-engine-config-3.3.1.tgz#79970a47e97bd4caad29d40f5577a23ddd7982cc"
+cli-engine-config@^4.0.1-ts.15:
+  version "4.0.1-ts.15"
+  resolved "https://registry.yarnpkg.com/cli-engine-config/-/cli-engine-config-4.0.1-ts.15.tgz#cbd74333143287c55ae660c1922b3c8fbd5f4d3b"
   dependencies:
-    debug "^3.0.1"
-    fs-extra "^4.0.1"
-    uuid "^3.1.0"
-
-cli-engine-config@^4.0.1-ts.13:
-  version "4.0.1-ts.13"
-  resolved "https://registry.yarnpkg.com/cli-engine-config/-/cli-engine-config-4.0.1-ts.13.tgz#962576d4899d0b992310e0edb4abf33e858546c0"
-  dependencies:
-    cli-flags "^1.0.14"
     fs-extra "^4.0.2"
     uuid "^3.1.0"
-
-cli-flags@^1.0.14:
-  version "1.0.14"
-  resolved "https://registry.yarnpkg.com/cli-flags/-/cli-flags-1.0.14.tgz#3a1dd3befe640c1e4f91951256dde56722648ebb"
-  dependencies:
-    chalk "^2.1.0"
-    cli-ux "^1.1.8"
-    lodash "^4.17.4"
-    ts-lodash "^4.0.5"
 
 cli-flags@^1.0.15:
   version "1.0.15"
@@ -1072,7 +1052,7 @@ form-data@~2.1.1:
     combined-stream "^1.0.5"
     mime-types "^2.1.12"
 
-fs-extra@^4.0.0, fs-extra@^4.0.1, fs-extra@^4.0.2:
+fs-extra@^4.0.0, fs-extra@^4.0.2:
   version "4.0.2"
   resolved "https://registry.yarnpkg.com/fs-extra/-/fs-extra-4.0.2.tgz#f91704c53d1b461f893452b0c307d9997647ab6b"
   dependencies:
