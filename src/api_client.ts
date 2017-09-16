@@ -72,7 +72,7 @@ export class APIClient {
       }
 
       static async twoFactorRetry(
-        err: any,
+        err: HTTPError,
         url: string,
         opts: HTTPRequestOptions = {},
         retries = 3,
@@ -99,14 +99,13 @@ export class APIClient {
         try {
           return await super.request(url, opts)
         } catch (err) {
-          if (!err.__httpcall) throw err
-          let apiError = new HerokuAPIError(err)
+          if (!(err instanceof HTTPError)) throw err
           if (retries > 0) {
-            if (apiError.http.statusCode === 403 && apiError.body.id === 'two_factor') {
-              return this.twoFactorRetry(apiError, url, opts, retries)
+            if (err.http.statusCode === 403 && err.body.id === 'two_factor') {
+              return this.twoFactorRetry(err, url, opts, retries)
             }
           }
-          throw apiError
+          throw new HerokuAPIError(err)
         }
       }
     }

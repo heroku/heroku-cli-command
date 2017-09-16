@@ -42,3 +42,14 @@ describe('with HEROKU_HEADERS', () => {
     expect(body).toEqual([{ name: 'myapp' }])
   })
 })
+
+test('2fa no preauth', async () => {
+  api = nock('https://api.heroku.com')
+  api.get('/apps').reply(403, { id: 'two_factor' })
+  ;(<any>api.get('/apps')).matchHeader('heroku-two-factor-code', '123456').reply(200, [{ name: 'myapp' }])
+
+  const cmd = new Command()
+  cmd.heroku.cli.prompt = jest.fn().mockReturnValueOnce(Promise.resolve('123456'))
+  const { body } = await cmd.heroku.get('/apps')
+  expect(body).toEqual([{ name: 'myapp' }])
+})
