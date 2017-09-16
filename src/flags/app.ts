@@ -1,7 +1,7 @@
 import { vars } from '../vars'
-import { option } from 'cli-flags'
+import { flags } from 'cli-engine-command'
 import { Git } from '../git'
-// import {AppCompletion, RemoteCompletion} from '../completions'
+import { AppCompletion, RemoteCompletion } from '../completions'
 
 class MultipleRemotesError extends Error {
   constructor(gitRemotes: GitRemote[]) {
@@ -18,7 +18,7 @@ class MultipleRemotesError extends Error {
   }
 }
 
-export const app = option({
+export const app = flags.option({
   description: 'app to run command against',
   char: 'a',
   default: ({ input, flag }) => {
@@ -34,13 +34,13 @@ export const app = option({
       throw new MultipleRemotesError(gitRemotes)
     }
   },
-  // completion: AppCompletion,
+  completion: AppCompletion,
 })
 
-export const remote = option({
+export const remote = flags.option({
   char: 'r',
   description: 'git remote of app to use',
-  // completion: RemoteCompletion,
+  completion: RemoteCompletion,
 })
 
 export function configRemote() {

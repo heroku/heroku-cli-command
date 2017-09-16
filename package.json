@@ -11,6 +11,7 @@
     "cli-engine-command": "^9.0.0-ts.8",
     "cli-engine-config": "^4.0.1-ts.13",
     "cli-ux": "^1.1.8",
+    "fs-extra": "^4.0.2",
     "heroku-client": "^3.0.3",
     "http-call": "^4.0.0-ts2.0",
     "netrc-parser": "^2.0.3",
@@ -20,6 +21,7 @@
   "devDependencies": {
     "@types/ansi-styles": "^2.0.30",
     "@types/chalk": "^0.4.31",
+    "@types/fs-extra": "^4.0.2",
     "@types/jest": "^20.0.8",
     "@types/node": "^8.0.28",
     "@types/supports-color": "^3.1.0",

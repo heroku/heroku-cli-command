@@ -1,6 +1,6 @@
-import { option } from 'cli-flags'
+import { flags } from 'cli-engine-command'
 
-export const org = option({
+export const org = flags.option({
   description: 'name of org',
   char: 'o',
   hidden: true,

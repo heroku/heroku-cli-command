@@ -1,5 +1,6 @@
 import { Command as Base } from '../command'
 import { flags } from '.'
+import { defaultConfig as config } from 'cli-engine-config'
 import * as nock from 'nock'
 
 let mockGitRemotes = jest.fn()
@@ -135,24 +136,25 @@ describe('optional', () => {
   })
 })
 
-// describe('completion', () => {
-//   class Command extends Base {
-//     static flags = { app: flags.app({}) }
-//   }
+describe('completion', () => {
+  class Command extends Base {
+    options = {
+      flags: { app: flags.app({}) },
+    }
+  }
 
-//   let completion
-//   beforeAll(() => {
-//     completion = Command.flags.app.completion || {}
-//   })
+  test('cacheDuration defaults to 1 day', () => {
+    const command = new Command()
+    const completion = (<any>command.options.flags).app.completion || {}
+    const duration = completion.cacheDuration
+    expect(duration).toEqual(86400)
+  })
 
-//   test('cacheDuration defaults to 1 day', () => {
-//     const duration = completion.cacheDuration
-//     expect(duration).toEqual(86400)
-//   })
-
-//   test('options returns all the apps', async () => {
-//     api.get('/apps').reply(200, [{id: 1, name: 'foo'}, {id: 2, name: 'bar'}])
-//     const options = await completion.options({config})
-//     expect(options).toEqual(['bar', 'foo'])
-//   })
-// })
+  test('options returns all the apps', async () => {
+    const command = new Command()
+    const completion = (<any>command.options.flags).app.completion || {}
+    api.get('/apps').reply(200, [{ id: 1, name: 'foo' }, { id: 2, name: 'bar' }])
+    const options = await completion.options({ config })
+    expect(options).toEqual(['bar', 'foo'])
+  })
+})
