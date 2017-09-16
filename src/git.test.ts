@@ -1,4 +1,4 @@
-import {Git} from './git'
+import { Git } from './git'
 import * as childProcess from 'child_process'
 
 jest.mock('child_process')
@@ -12,17 +12,18 @@ heroku\thttps://git.heroku.com/myapp.git  (fetch)
 heroku\thttps://git.heroku.com/myapp.git  (pull)
 `)
   expect(git.remotes).toEqual([
-    {name: 'origin', url: 'https://github.com/foo/bar'},
-    {name: 'heroku', url: 'https://git.heroku.com/myapp.git'}
+    { name: 'origin', url: 'https://github.com/foo/bar' },
+    { name: 'heroku', url: 'https://git.heroku.com/myapp.git' },
   ])
-  expect(cp.execSync).toBeCalledWith('git remote -v', {encoding: 'utf8', stdio: [null, 'pipe', null]})
+  expect(cp.execSync).toBeCalledWith('git remote -v', { encoding: 'utf8', stdio: [null, 'pipe', null] })
 })
 
 test('traps git not found', () => {
   const err = new Error() as any
   err.code = 'ENOENT'
-
-  ;(<any>childProcess.execSync).mockImplementationOnce(() => { throw err })
+  ;(<any>childProcess.execSync).mockImplementationOnce(() => {
+    throw err
+  })
 
   const git = new Git()
   expect(() => {
@@ -33,8 +34,9 @@ test('traps git not found', () => {
 test('rethrows other git error', () => {
   const err = new Error('some other message') as any
   err.code = 'NOTENOENT'
-
-  ;(<any>childProcess.execSync).mockImplementationOnce(() => { throw err })
+  ;(<any>childProcess.execSync).mockImplementationOnce(() => {
+    throw err
+  })
 
   const git = new Git()
   expect(() => {
