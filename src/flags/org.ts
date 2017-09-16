@@ -5,5 +5,4 @@ export const org = option({
   char: 'o',
   hidden: true,
   default: () => process.env.HEROKU_ORGANIZATION,
-  parse: input => input,
 })

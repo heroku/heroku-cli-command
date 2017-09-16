@@ -29,7 +29,7 @@ describe('required', () => {
     try {
       await OrgCommand.mock()
     } catch (err) {
-      expect(err.message).toContain('Missing required flag --org')
+      expect(err.message).toContain('Missing required flag:\n -o, --org')
     }
   })
 })

@@ -5,6 +5,7 @@
   "author": "Jeff Dickey @dickeyxxx",
   "bugs": "https://github.com/heroku/cli-engine-heroku/issues",
   "dependencies": {
+    "@types/nock": "^8.2.1",
     "ansi-styles": "^3.2.0",
     "chalk": "^2.1.0",
     "cli-engine-command": "^9.0.0-ts.7",
@@ -44,9 +45,10 @@
   "repository": "heroku/cli-engine-heroku",
   "scripts": {
     "clean": "del lib",
-    "prepare": "npm run clean && tsc && del 'lib/**/*.test.js' 'lib/**/*.test.d.ts'",
+    "coverage": "cat coverage/coverage-final.json | remap-istanbul -o coverage/coverage-final.json && curl -s https://codecov.io/bash | bash",
     "posttest": "prettier -l 'src/**/*.ts'",
     "precommit": "lint-staged",
+    "prepare": "npm run clean && tsc && del 'lib/**/*.test.js' 'lib/**/*.test.d.ts'",
     "pretest": "tsc --sourcemap",
     "test": "jest"
   }
