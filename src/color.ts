@@ -13,8 +13,7 @@ const CustomColors = {
   release: chalk.blue.bold,
   app: (s: string) => CustomColors.heroku(`⬢ ${s}`),
   heroku: (s: string) => {
-    let has256 = supports.has256 || (process.env.TERM || '').indexOf('256') !== -1
-    return has256 ? '\u001b[38;5;104m' + s + ansiStyles.reset.open : chalk.magenta(s)
+    return supports.has256 ? '\u001b[38;5;104m' + s + ansiStyles.reset.open : chalk.magenta(s)
   },
 }
 
