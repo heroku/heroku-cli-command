@@ -12,7 +12,7 @@
     "cli-engine-config": "^4.0.1-ts.13",
     "cli-ux": "^1.1.8",
     "heroku-client": "^3.0.3",
-    "http-call": "^3.0.2",
+    "http-call": "^4.0.0-ts2.0",
     "netrc-parser": "^2.0.3",
     "supports-color": "^4.4.0",
     "tslib": "^1.7.1"
