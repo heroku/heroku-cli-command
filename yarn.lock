@@ -594,6 +594,23 @@ cli-ux@^1.1.8:
     supports-color "^4.4.0"
     ts-lodash "^4.0.5"
 
+cli-ux@^1.1.9:
+  version "1.1.9"
+  resolved "https://registry.yarnpkg.com/cli-ux/-/cli-ux-1.1.9.tgz#d5552429c0077d5982bcfb33c86b3b0165de9bba"
+  dependencies:
+    "@heroku/linewrap" "^1.0.0"
+    ansi-escapes "^3.0.0"
+    ansi-styles "^3.2.0"
+    cardinal "^1.0.0"
+    chalk "^2.1.0"
+    fs-extra "^4.0.2"
+    lodash "^4.17.4"
+    moment "^2.18.1"
+    password-prompt "^1.0.3"
+    strip-ansi "^4.0.0"
+    supports-color "^4.4.0"
+    ts-lodash "^4.0.5"
+
 cliui@^2.1.0:
   version "2.1.0"
   resolved "https://registry.yarnpkg.com/cliui/-/cliui-2.1.0.tgz#4b475760ff80264c762c3a1719032e91c7fea0d1"

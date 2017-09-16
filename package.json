@@ -8,6 +8,7 @@
     "@types/nock": "^8.2.1",
     "ansi-styles": "^3.2.0",
     "chalk": "^2.1.0",
+    "cli-ux": "^1.1.9",
     "fs-extra": "^4.0.2",
     "heroku-client": "^3.0.3",
     "http-call": "^4.0.0-ts2.0",
@@ -25,7 +26,6 @@
     "babel-core": "^6.26.0",
     "cli-engine-command": "^9.0.0-ts.11",
     "cli-engine-config": "^4.0.1-ts.15",
-    "cli-ux": "^1.1.8",
     "del-cli": "^1.1.0",
     "husky": "^0.14.3",
     "jest": "^21.1.0",
@@ -48,8 +48,7 @@
   "main": "lib/index.js",
   "peerDependencies": {
     "cli-engine-command": "^9.0.0-ts.10",
-    "cli-engine-config": "^4.0.1-ts.15",
-    "cli-ux": "^1.1.8"
+    "cli-engine-config": "^4.0.1-ts.15"
   },
   "repository": "heroku/cli-engine-heroku",
   "scripts": {
