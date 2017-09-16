@@ -1,3 +1,4 @@
+import { FlagBuilder } from 'cli-flags'
 import { flags } from 'cli-engine-command'
 
 export const org = flags.option({
@@ -5,4 +6,4 @@ export const org = flags.option({
   char: 'o',
   hidden: true,
   default: () => process.env.HEROKU_ORGANIZATION,
-})
+}) as FlagBuilder<string>

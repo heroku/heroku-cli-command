@@ -1,6 +1,6 @@
 import * as url from 'url'
 
-class Vars {
+export class Vars {
   get host(): string {
     return this.envHost || 'heroku.com'
   }

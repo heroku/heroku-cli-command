@@ -6,12 +6,12 @@ import { Config } from 'cli-engine-config'
 import { CLI } from 'cli-ux'
 import { deps } from './deps'
 
-type Options = {
+export type Options = {
   required?: boolean
   preauth?: boolean
 }
 
-type HerokuAPIErrorOptions = {
+export type HerokuAPIErrorOptions = {
   resource?: string
   app?: { id: string; name: string }
   id?: string

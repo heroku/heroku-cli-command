@@ -1,3 +1,4 @@
+import { FlagBuilder } from 'cli-flags'
 import { vars } from '../vars'
 import { flags } from 'cli-engine-command'
 import { Git } from '../git'
@@ -35,7 +36,7 @@ export const app = flags.option({
     }
   },
   completion: AppCompletion,
-})
+}) as FlagBuilder<string>
 
 export const remote = flags.option({
   char: 'r',
@@ -50,7 +51,7 @@ export function configRemote() {
   } catch (err) {}
 }
 
-type GitRemote = { remote: string; app: string }
+export type GitRemote = { remote: string; app: string }
 export function getGitRemotes(onlyRemote: string | undefined): GitRemote[] {
   let git = new Git()
   let appRemotes = []
