@@ -6,7 +6,7 @@ import Mutex from './mutex'
 import Vars from './vars'
 import {URL} from 'url'
 import type {Config} from 'cli-engine-config'
-import type {CLI} from 'cli-ux'
+import cli from 'cli-ux'
 
 type Options = {
   required?: boolean,
@@ -45,12 +45,9 @@ export default class Heroku {
   preauthPromises: {[k: string]: Promise<*>}
   http: Class<HTTP>
   config: Config
-  cli: CLI
 
-  constructor ({config, cli}: {config: Config, cli?: CLI} = {}, options: Options = {}) {
+  constructor ({config}: {config: Config} = {}, options: Options = {}) {
     this.config = config
-    const {CLI} = require('cli-ux')
-    this.cli = cli || new CLI({mock: config.mock})
     if (options.required === undefined) options.required = true
     options.preauth = options.preauth !== false
     this.options = options
@@ -127,7 +124,7 @@ export default class Heroku {
     yubikey.enable()
     return this.twoFactorMutex.synchronize(async () => {
       try {
-        let factor = await this.cli.prompt('Two-factor code', {type: 'mask'})
+        let factor = await cli.prompt('Two-factor code', {type: 'mask'})
         yubikey.disable()
         return factor
       } catch (err) {
