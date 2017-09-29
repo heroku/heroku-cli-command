@@ -110,6 +110,7 @@ export default class Heroku {
   }
 
   get auth (): ?string {
+    if (process.env.HEROKU_API_TOKEN) cli.warn('HEROKU_API_TOKEN is set but you probably meant HEROKU_API_KEY')
     let auth = process.env.HEROKU_API_KEY
     if (!auth) {
       const Netrc = require('netrc-parser')
