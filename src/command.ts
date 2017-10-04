@@ -13,7 +13,7 @@ export class Command extends Base {
 
   get heroku(): APIClient {
     if (this._heroku) return this._heroku
-    this._heroku = new APIClient({ config: this.config, cli: this.cli })
+    this._heroku = new APIClient({ config: this.config })
     return this._heroku
   }
   get legacyHerokuClient(): any {

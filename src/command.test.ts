@@ -24,7 +24,7 @@ test('sets app', async () => {
 })
 
 test('has heroku clients', async () => {
-  let { cmd } = await AppCommand.mock<AppCommand>('--app=myapp')
+  let cmd = await AppCommand.mock<AppCommand>('--app=myapp')
   expect(cmd.heroku).toBeTruthy()
   expect(cmd.legacyHerokuClient).toBeTruthy()
 })

@@ -14,7 +14,7 @@ describe('required', () => {
   }
 
   test('has a pipeline', async () => {
-    const { cmd } = await PipelineCommand.mock<PipelineCommand>('--pipeline', 'mypipeline')
+    const cmd = await PipelineCommand.mock<PipelineCommand>('--pipeline', 'mypipeline')
     expect(cmd.pipeline).toEqual('mypipeline')
   })
 
@@ -36,18 +36,18 @@ describe('optional', () => {
     pipeline?: string
 
     async run() {
-      this.cli.log(this.flags.pipeline)
+      this.pipeline = this.flags.pipeline
     }
   }
 
   test('--pipeline', async () => {
-    const { stdout } = await PipelineCommand.mock('--pipeline', 'mypipeline')
-    expect(stdout).toEqual('mypipeline\n')
+    const cmd = await PipelineCommand.mock<PipelineCommand>('--pipeline', 'mypipeline')
+    expect(cmd.pipeline).toEqual('mypipeline')
   })
 
   test('-p', async () => {
-    const { stdout } = await PipelineCommand.mock('-p', 'mypipeline')
-    expect(stdout).toEqual('mypipeline\n')
+    const cmd = await PipelineCommand.mock<PipelineCommand>('-p', 'mypipeline')
+    expect(cmd.pipeline).toEqual('mypipeline')
   })
 
   test('is not hidden by default', async () => {

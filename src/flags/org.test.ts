@@ -1,5 +1,6 @@
 import { Command } from 'cli-engine-command'
 import { flags } from '.'
+import cli from 'cli-ux'
 
 let env = process.env
 beforeEach(() => {
@@ -15,13 +16,13 @@ describe('required', () => {
       flags: { org: flags.org({ required: true }) },
     }
     async run() {
-      this.cli.log(this.flags.org)
+      cli.log(this.flags.org)
     }
   }
 
   test('has an org', async () => {
-    const { stdout } = await OrgCommand.mock('--org', 'myorg')
-    expect(stdout).toEqual('myorg\n')
+    await OrgCommand.mock('--org', 'myorg')
+    expect(cli.stdout.output).toEqual('myorg\n')
   })
 
   test('errors with no org', async () => {
@@ -40,18 +41,18 @@ describe('optional', () => {
       flags: { org: flags.org() },
     }
     async run() {
-      this.cli.log(this.flags.org)
+      cli.log(this.flags.org)
     }
   }
 
   test('--org', async () => {
-    const { stdout } = await OrgCommand.mock('--org', 'myorg')
-    expect(stdout).toEqual('myorg\n')
+    await OrgCommand.mock('--org', 'myorg')
+    expect(cli.stdout.output).toEqual('myorg\n')
   })
 
   test('-o', async () => {
-    const { stdout } = await OrgCommand.mock('-o', 'myorg')
-    expect(stdout).toEqual('myorg\n')
+    await OrgCommand.mock('-o', 'myorg')
+    expect(cli.stdout.output).toEqual('myorg\n')
   })
 
   test('reads HEROKU_ORGANIZATION', async () => {
@@ -60,13 +61,13 @@ describe('optional', () => {
         flags: { org: flags.org() },
       }
       async run() {
-        this.cli.log(this.flags.org)
+        cli.log(this.flags.org)
       }
     }
 
     process.env.HEROKU_ORGANIZATION = 'myorg'
-    const { stdout } = await OrgCommand.mock()
-    expect(stdout).toEqual('myorg\n')
+    await OrgCommand.mock()
+    expect(cli.stdout.output).toEqual('myorg\n')
   })
 
   test('is hidden by default', async () => {

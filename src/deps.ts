@@ -18,8 +18,8 @@ export const deps = {
   },
 
   // remote
-  get CLI(): typeof cli.CLI {
-    return fetch('cli-ux').CLI
+  get cli(): typeof cli.default {
+    return fetch('cli-ux').default
   },
   get HTTP(): typeof http.HTTP {
     return fetch('http-call').HTTP

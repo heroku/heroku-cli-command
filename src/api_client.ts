@@ -3,7 +3,6 @@ import { Mutex } from './mutex'
 import { vars } from './vars'
 import { URL } from 'url'
 import { Config } from 'cli-engine-config'
-import { CLI } from 'cli-ux'
 import { deps } from './deps'
 
 export type Options = {
@@ -42,11 +41,9 @@ export class APIClient {
   preauthPromises: { [k: string]: Promise<HTTP> }
   http: typeof deps.HTTP
   config: Config
-  cli: CLI
 
-  constructor({ config, cli }: { config: Config; cli?: CLI }, options: Options = {}) {
+  constructor({ config }: { config: Config }, options: Options = {}) {
     this.config = config
-    this.cli = cli || new deps.CLI(config)
     if (options.required === undefined) options.required = true
     options.preauth = options.preauth !== false
     this.options = options
@@ -120,6 +117,7 @@ export class APIClient {
   }
 
   get auth(): string | undefined {
+    if (process.env.HEROKU_API_TOKEN) deps.cli.warn('HEROKU_API_TOKEN is set but you probably meant HEROKU_API_KEY')
     let auth = process.env.HEROKU_API_KEY
     if (!auth) {
       const Netrc = require('netrc-parser')
@@ -133,7 +131,7 @@ export class APIClient {
     deps.yubikey.enable()
     return this.twoFactorMutex.synchronize(async () => {
       try {
-        let factor = await this.cli.prompt('Two-factor code', { type: 'mask' })
+        let factor = await deps.cli.prompt('Two-factor code', { type: 'mask' })
         deps.yubikey.disable()
         return factor
       } catch (err) {

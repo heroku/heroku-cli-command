@@ -1,5 +1,6 @@
 import * as nock from 'nock'
 import { Command } from './command'
+import cli from 'cli-ux'
 
 jest.mock('netrc-parser', () => {
   return class {
@@ -49,7 +50,7 @@ test('2fa no preauth', async () => {
   ;(<any>api.get('/apps')).matchHeader('heroku-two-factor-code', '123456').reply(200, [{ name: 'myapp' }])
 
   const cmd = new Command()
-  cmd.heroku.cli.prompt = jest.fn().mockReturnValueOnce(Promise.resolve('123456'))
+  cli.prompt = jest.fn().mockReturnValueOnce(Promise.resolve('123456'))
   const { body } = await cmd.heroku.get('/apps')
   expect(body).toEqual([{ name: 'myapp' }])
 })
@@ -64,7 +65,7 @@ test.only('2fa preauth', async () => {
   api.get('/apps/myapp/dynos').reply(200, { web: 1 })
 
   const cmd = new Command()
-  cmd.heroku.cli.prompt = jest.fn().mockReturnValueOnce(Promise.resolve('123456'))
+  cli.prompt = jest.fn().mockReturnValueOnce(Promise.resolve('123456'))
   const info = cmd.heroku.get('/apps/myapp')
   const anotherapp = cmd.heroku.get('/apps/anotherapp')
   const config = cmd.heroku.get('/apps/myapp/config')
