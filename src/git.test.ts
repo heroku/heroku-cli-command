@@ -12,8 +12,8 @@ heroku\thttps://git.heroku.com/myapp.git  (fetch)
 heroku\thttps://git.heroku.com/myapp.git  (pull)
 `)
   expect(git.remotes).toEqual([
-    {name: 'origin', url: 'https://github.com/foo/bar'},
-    {name: 'heroku', url: 'https://git.heroku.com/myapp.git'}
+    { name: 'origin', url: 'https://github.com/foo/bar' },
+    { name: 'heroku', url: 'https://git.heroku.com/myapp.git' },
   ])
   expect(git.exec).toBeCalledWith('remote -v')
 })
@@ -23,15 +23,16 @@ test('runs git', () => {
   git.exec('version')
   expect(childProcess.execSync).toBeCalledWith('git version', {
     encoding: 'utf8',
-    stdio: [null, 'pipe', null]
+    stdio: [null, 'pipe', null],
   })
 })
 
 test('traps git not found', () => {
   const err = new Error()
   ;(<any>err).code = 'ENOENT'
-
-  ;(<any>childProcess.execSync).mockImplementationOnce(() => { throw err })
+  ;(<any>childProcess.execSync).mockImplementationOnce(() => {
+    throw err
+  })
 
   const git = new Git()
   expect(() => {
@@ -42,8 +43,9 @@ test('traps git not found', () => {
 test('rethrows other git error', () => {
   const err = new Error('some other message')
   ;(<any>err).code = 'NOTENOENT'
-
-  ;(<any>childProcess.execSync).mockImplementationOnce(() => { throw err })
+  ;(<any>childProcess.execSync).mockImplementationOnce(() => {
+    throw err
+  })
 
   const git = new Git()
   expect(() => {
