@@ -2,7 +2,7 @@
   "name": "cli-engine-heroku",
   "description": "heroku specific functionality for the cli-engine",
   "version": "5.0.3",
-  "author": "Jeff Dickey @dickeyxxx",
+  "author": "Jeff Dickey @jdxcode",
   "bugs": "https://github.com/heroku/cli-engine-heroku/issues",
   "dependencies": {
     "cli-ux": "^2.0.4",
@@ -11,6 +11,8 @@
     "netrc-parser": "^2.0.3"
   },
   "devDependencies": {
+    "@types/jest": "21.1.8",
+    "@types/node": "8.0.58",
     "babel-cli": "^6.26.0",
     "babel-eslint": "8.0.1",
     "babel-jest": "^21.2.0",
@@ -20,6 +22,7 @@
     "babel-plugin-transform-flow-strip-types": "6.22.0",
     "cli-engine-command": "10.0.0-ts.0",
     "cli-engine-config": "4.0.1-ts.19",
+    "del-cli": "1.1.0",
     "eslint": "^4.7.2",
     "eslint-config-standard": "10.2.1",
     "eslint-plugin-flowtype": "^2.36.0",
@@ -31,10 +34,15 @@
     "flow-bin": "^0.55.0",
     "flow-copy-source": "^1.2.1",
     "flow-typed": "^2.1.5",
+    "husky": "0.14.3",
     "jest": "^21.2.1",
+    "lint-staged": "6.0.0",
     "nock": "^9.0.14",
     "nodemon": "^1.12.1",
-    "rimraf": "2.6.2"
+    "prettier": "1.8.2",
+    "rimraf": "2.6.2",
+    "ts-jest": "21.2.4",
+    "typescript": "2.6.2"
   },
   "engines": {
     "node": ">=7.6.0"
@@ -43,28 +51,21 @@
     "lib"
   ],
   "homepage": "https://github.com/heroku/cli-engine-heroku",
-  "jest": {
-    "testEnvironment": "node",
-    "rootDir": "./src",
-    "coveragePathIgnorePatterns": [],
-    "setupTestFrameworkScriptFile": "../test/init.js"
-  },
   "keywords": [
     "heroku"
   ],
   "license": "ISC",
   "main": "lib/index.js",
   "peerDependencies": {
-    "cli-engine-command": "^9.0.0",
-    "cli-engine-config": "^3.0.0"
+    "cli-engine-command": "^10.0.0",
+    "cli-engine-config": "^4.0.0"
   },
   "repository": "heroku/cli-engine-heroku",
   "scripts": {
-    "build": "babel src -d lib --ignore '*.test.js'",
-    "clean": "rimraf lib",
-    "copy-flow": "flow-copy-source -v -i '**/*.test.js' src lib",
-    "prepare": "npm run clean && npm run build && npm run copy-flow",
-    "test": "jest && flow && eslint .",
-    "watch": "nodemon -e js -i lib --exec \"npm run prepare\""
+    "posttest": "prettier -l 'src/**/*.ts'",
+    "precommit": "lint-staged",
+    "prepare": "del-cli lib && tsc && del-cli \"lib/**/*.test.+(d.ts|js)\"",
+    "pretest": "tsc",
+    "test": "jest"
   }
 }

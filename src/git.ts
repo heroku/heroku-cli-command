@@ -1,5 +1,3 @@
-// @flow
-
 export type Remote = {
   name: string,
   url: string

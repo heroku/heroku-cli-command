@@ -1,15 +1,12 @@
-// @flow
-
 import Git from './git'
-import childProcess from 'child_process'
+import * as childProcess from 'child_process'
 
 jest.mock('child_process')
 
 test('gets the remotes', () => {
   const git = new Git()
-  // flow$ignore
   git.exec = jest.fn()
-  git.exec.mockReturnValueOnce(`origin\thttps://github.com/foo/bar  (fetch)
+  ;(<any>git.exec).mockReturnValueOnce(`origin\thttps://github.com/foo/bar  (fetch)
 origin\thttps://github.com/foo/bar  (pull)
 heroku\thttps://git.heroku.com/myapp.git  (fetch)
 heroku\thttps://git.heroku.com/myapp.git  (pull)
@@ -32,10 +29,9 @@ test('runs git', () => {
 
 test('traps git not found', () => {
   const err = new Error()
-  // flow$ignore
-  err.code = 'ENOENT'
+  ;(<any>err).code = 'ENOENT'
 
-  childProcess.execSync.mockImplementationOnce(() => { throw err })
+  ;(<any>childProcess.execSync).mockImplementationOnce(() => { throw err })
 
   const git = new Git()
   expect(() => {
@@ -45,10 +41,9 @@ test('traps git not found', () => {
 
 test('rethrows other git error', () => {
   const err = new Error('some other message')
-  // flow$ignore
-  err.code = 'NOTENOENT'
+  ;(<any>err).code = 'NOTENOENT'
 
-  childProcess.execSync.mockImplementationOnce(() => { throw err })
+  ;(<any>childProcess.execSync).mockImplementationOnce(() => { throw err })
 
   const git = new Git()
   expect(() => {
