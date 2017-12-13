@@ -12,6 +12,7 @@
     "cli-ux": "^2.0.5",
     "heroku-client": "^3.0.3",
     "http-call": "^4.0.0",
+    "lodash.flatten": "4.4.0",
     "netrc-parser": "^2.0.3",
     "supports-color": "5.1.0"
   },
@@ -51,5 +52,6 @@
     "prepare": "del-cli lib && tsc && del-cli \"lib/**/*.test.+(d.ts|js)\"",
     "pretest": "tsc",
     "test": "jest"
-  }
+  },
+  "types": "./lib/index.d.ts"
 }
