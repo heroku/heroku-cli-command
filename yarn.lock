@@ -590,14 +590,15 @@ cli-cursor@^1.0.2:
   dependencies:
     restore-cursor "^1.0.1"
 
-cli-engine-command@ts:
-  version "10.0.0-ts.5"
-  resolved "https://registry.yarnpkg.com/cli-engine-command/-/cli-engine-command-10.0.0-ts.5.tgz#3e3ee04efa882cb349f75990a286b603e78dce29"
+cli-engine-command@10.0.0:
+  version "10.0.0"
+  resolved "https://registry.yarnpkg.com/cli-engine-command/-/cli-engine-command-10.0.0.tgz#b17e74d5c34a32a3633d75eb9d77277fc2de3d5d"
   dependencies:
     "@heroku/linewrap" "^1.0.0"
     ansi-escapes "^3.0.0"
     cardinal "1.x"
     chalk "2.3.0"
+    cli-engine-config "4.1.0"
     cli-flags "1.0.18"
     cli-ux "^2.0.5"
     fs-extra "^5.0.0"
@@ -607,9 +608,9 @@ cli-engine-command@ts:
     string "3.x"
     supports-color "^5.1.0"
 
-cli-engine-config@ts:
-  version "4.0.1-ts.23"
-  resolved "https://registry.yarnpkg.com/cli-engine-config/-/cli-engine-config-4.0.1-ts.23.tgz#5fdb8cd220121476ed040772aaec5fb85621b7c5"
+cli-engine-config@4.1.0:
+  version "4.1.0"
+  resolved "https://registry.yarnpkg.com/cli-engine-config/-/cli-engine-config-4.1.0.tgz#d4075fe1c35f9f6edbb460eab01e6ccd6a40db5e"
   dependencies:
     cli-flags "1.0.18"
     debug "^3.1.0"
