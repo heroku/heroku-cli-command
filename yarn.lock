@@ -591,14 +591,14 @@ cli-cursor@^1.0.2:
     restore-cursor "^1.0.1"
 
 cli-engine-command@ts:
-  version "10.0.0-ts.4"
-  resolved "https://registry.yarnpkg.com/cli-engine-command/-/cli-engine-command-10.0.0-ts.4.tgz#1c278216d7d40337aeadd09e4a0ff6bac60c6856"
+  version "10.0.0-ts.5"
+  resolved "https://registry.yarnpkg.com/cli-engine-command/-/cli-engine-command-10.0.0-ts.5.tgz#3e3ee04efa882cb349f75990a286b603e78dce29"
   dependencies:
     "@heroku/linewrap" "^1.0.0"
     ansi-escapes "^3.0.0"
     cardinal "1.x"
     chalk "2.3.0"
-    cli-flags "1.0.17"
+    cli-flags "1.0.18"
     cli-ux "^2.0.5"
     fs-extra "^5.0.0"
     http-call "^4.0.0"
@@ -608,17 +608,17 @@ cli-engine-command@ts:
     supports-color "^5.1.0"
 
 cli-engine-config@ts:
-  version "4.0.1-ts.22"
-  resolved "https://registry.yarnpkg.com/cli-engine-config/-/cli-engine-config-4.0.1-ts.22.tgz#a1a0a23ee069f5095af40772eaaa3388e917757c"
+  version "4.0.1-ts.23"
+  resolved "https://registry.yarnpkg.com/cli-engine-config/-/cli-engine-config-4.0.1-ts.23.tgz#5fdb8cd220121476ed040772aaec5fb85621b7c5"
   dependencies:
-    cli-flags "1.0.17"
+    cli-flags "1.0.18"
     debug "^3.1.0"
     fs-extra "^5.0.0"
     uuid "^3.1.0"
 
-cli-flags@1.0.17:
-  version "1.0.17"
-  resolved "https://registry.yarnpkg.com/cli-flags/-/cli-flags-1.0.17.tgz#6920d144f138e447233d72e3f06a52990957465c"
+cli-flags@1.0.18:
+  version "1.0.18"
+  resolved "https://registry.yarnpkg.com/cli-flags/-/cli-flags-1.0.18.tgz#632ca43cdc872f9031b1dbbce8e92216a35ab4d2"
   dependencies:
     chalk "^2.3.0"
     cli-ux "^2.0.5"
@@ -678,8 +678,8 @@ code-point-at@^1.0.0:
   resolved "https://registry.yarnpkg.com/code-point-at/-/code-point-at-1.1.0.tgz#0d070b4d043a5bea33a2f1a40e2edb3d9a4ccf77"
 
 color-convert@^1.9.0:
-  version "1.9.0"
-  resolved "https://registry.yarnpkg.com/color-convert/-/color-convert-1.9.0.tgz#1accf97dd739b983bf994d56fec8f95853641b7a"
+  version "1.9.1"
+  resolved "https://registry.yarnpkg.com/color-convert/-/color-convert-1.9.1.tgz#c1261107aeb2f294ebffec9ed9ecad529a6097ed"
   dependencies:
     color-name "^1.1.1"
 
@@ -3143,7 +3143,13 @@ supports-color@^3.1.2:
   dependencies:
     has-flag "^1.0.0"
 
-supports-color@^4.0.0, supports-color@^4.4.0:
+supports-color@^4.0.0:
+  version "4.5.0"
+  resolved "https://registry.yarnpkg.com/supports-color/-/supports-color-4.5.0.tgz#be7a0de484dec5c5cddf8b3d59125044912f635b"
+  dependencies:
+    has-flag "^2.0.0"
+
+supports-color@^4.4.0:
   version "4.4.0"
   resolved "https://registry.yarnpkg.com/supports-color/-/supports-color-4.4.0.tgz#883f7ddabc165142b2a61427f3352ded195d1a3e"
   dependencies:
