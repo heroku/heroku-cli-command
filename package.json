@@ -7,6 +7,8 @@
   "dependencies": {
     "ansi-styles": "3.2.0",
     "chalk": "2.3.0",
+    "cli-engine-command": "ts",
+    "cli-engine-config": "ts",
     "cli-ux": "^2.0.5",
     "heroku-client": "^3.0.3",
     "http-call": "^4.0.0",
@@ -21,8 +23,6 @@
     "@types/nock": "8.2.1",
     "@types/node": "8.0.58",
     "@types/supports-color": "3.1.0",
-    "cli-engine-command": "ts",
-    "cli-engine-config": "ts",
     "del-cli": "1.1.0",
     "husky": "0.14.3",
     "jest": "^21.2.1",
@@ -44,10 +44,6 @@
   ],
   "license": "ISC",
   "main": "lib/index.js",
-  "peerDependencies": {
-    "cli-engine-command": "^10.0.0",
-    "cli-engine-config": "^4.0.0"
-  },
   "repository": "heroku/cli-engine-heroku",
   "scripts": {
     "posttest": "prettier -l 'src/**/*.ts'",
