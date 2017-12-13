@@ -7,10 +7,8 @@ beforeEach(() => {
 })
 
 class AppCommand extends Command {
-  options = {
-    flags: {
-      app: flags.app(),
-    },
+  static flags = {
+    app: flags.app(),
   }
 
   async run() {
@@ -24,7 +22,7 @@ test('sets app', async () => {
 })
 
 test('has heroku clients', async () => {
-  let cmd = await AppCommand.mock<AppCommand>('--app=myapp')
+  let { cmd } = await AppCommand.mock('--app=myapp')
   expect(cmd.heroku).toBeTruthy()
   expect(cmd.legacyHerokuClient).toBeTruthy()
 })

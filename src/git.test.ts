@@ -1,4 +1,4 @@
-import Git from './git'
+import { Git } from './git'
 import * as childProcess from 'child_process'
 
 jest.mock('child_process')

@@ -55,7 +55,7 @@ test('2fa no preauth', async () => {
   expect(body).toEqual([{ name: 'myapp' }])
 })
 
-test.only('2fa preauth', async () => {
+test('2fa preauth', async () => {
   api = nock('https://api.heroku.com')
   api.get('/apps/myapp').reply(403, { id: 'two_factor', app: { name: 'myapp' } })
   ;(<any>api.put('/apps/myapp/pre-authorizations')).matchHeader('heroku-two-factor-code', '123456').reply(200, {})

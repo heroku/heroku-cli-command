@@ -3,7 +3,8 @@ import { Mutex } from './mutex'
 import { vars } from './vars'
 import { URL } from 'url'
 import { Config } from 'cli-engine-config'
-import { deps } from './deps'
+import { cli } from 'cli-ux'
+import { yubikey } from './yubikey'
 
 export type Options = {
   required?: boolean
@@ -39,7 +40,7 @@ export class HerokuAPIError extends Error {
 export class APIClient {
   options: Options
   preauthPromises: { [k: string]: Promise<HTTP> }
-  http: typeof deps.HTTP
+  http: typeof HTTP
   config: Config
 
   constructor({ config }: { config: Config }, options: Options = {}) {
@@ -52,7 +53,7 @@ export class APIClient {
     this.preauthPromises = {}
     let auth = this.auth
     let self = this
-    this.http = class APIHTTPClient extends deps.HTTP {
+    this.http = class APIHTTPClient extends HTTP {
       static get defaultOptions() {
         let opts = {
           ...super.defaultOptions,
@@ -111,13 +112,13 @@ export class APIClient {
   _twoFactorMutex: Mutex<string>
   get twoFactorMutex(): Mutex<string> {
     if (!this._twoFactorMutex) {
-      this._twoFactorMutex = new deps.Mutex()
+      this._twoFactorMutex = new Mutex()
     }
     return this._twoFactorMutex
   }
 
   get auth(): string | undefined {
-    if (process.env.HEROKU_API_TOKEN) deps.cli.warn('HEROKU_API_TOKEN is set but you probably meant HEROKU_API_KEY')
+    if (process.env.HEROKU_API_TOKEN) cli.warn('HEROKU_API_TOKEN is set but you probably meant HEROKU_API_KEY')
     let auth = process.env.HEROKU_API_KEY
     if (!auth) {
       const Netrc = require('netrc-parser')
@@ -128,14 +129,14 @@ export class APIClient {
   }
 
   twoFactorPrompt() {
-    deps.yubikey.enable()
+    yubikey.enable()
     return this.twoFactorMutex.synchronize(async () => {
       try {
-        let factor = await deps.cli.prompt('Two-factor code', { type: 'mask' })
-        deps.yubikey.disable()
+        let factor = await cli.prompt('Two-factor code', { type: 'mask' })
+        yubikey.disable()
         return factor
       } catch (err) {
-        deps.yubikey.disable()
+        yubikey.disable()
         throw err
       }
     })

@@ -1,20 +1,18 @@
-// @flow
-
-import Command from 'cli-engine-command'
-import PipelineFlag from './pipeline'
+import { Command } from 'cli-engine-command'
+import { flags } from '.'
 
 describe('required', () => {
-  class PipelineCommand extends Command<*> {
-    static flags = {pipeline: PipelineFlag({required: true})}
+  class PipelineCommand extends Command {
+    static flags = { pipeline: flags.pipeline({ required: true }) }
     pipeline: string
 
-    async run () {
+    async run() {
       this.pipeline = this.flags.pipeline
     }
   }
 
   test('has a pipeline', async () => {
-    const cmd = await PipelineCommand.mock('--pipeline', 'mypipeline')
+    const { cmd } = await PipelineCommand.mock('--pipeline', 'mypipeline')
     expect(cmd.pipeline).toEqual('mypipeline')
   })
 
@@ -23,33 +21,33 @@ describe('required', () => {
     try {
       await PipelineCommand.mock()
     } catch (err) {
-      expect(err.message).toContain('Missing required flag --pipeline')
+      expect(err.message).toContain('Missing required flag:\n -p, --pipeline PIPELINE')
     }
   })
 })
 
 describe('optional', () => {
-  class PipelineCommand extends Command<*> {
-    static flags = {pipeline: PipelineFlag()}
-    pipeline: ?string
+  class PipelineCommand extends Command {
+    static flags = { pipeline: flags.pipeline() }
+    pipeline?: string
 
-    async run () {
+    async run() {
       this.pipeline = this.flags.pipeline
     }
   }
 
   test('--pipeline', async () => {
-    const cmd = await PipelineCommand.mock('--pipeline', 'mypipeline')
+    const { cmd } = await PipelineCommand.mock('--pipeline', 'mypipeline')
     expect(cmd.pipeline).toEqual('mypipeline')
   })
 
   test('-p', async () => {
-    const cmd = await PipelineCommand.mock('-p', 'mypipeline')
+    const { cmd } = await PipelineCommand.mock('-p', 'mypipeline')
     expect(cmd.pipeline).toEqual('mypipeline')
   })
 
   test('is not hidden by default', async () => {
-    expect(PipelineCommand.flags.pipeline.hidden).toBeFalsy()
+    expect(flags.pipeline().hidden).toBeFalsy()
   })
 
   test('does not error when pipeline is not specified', async () => {

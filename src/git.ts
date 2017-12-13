@@ -3,7 +3,7 @@ export type Remote = {
   url: string
 }
 
-export default class Git {
+export class Git {
   get remotes(): Remote[] {
     return this.exec('remote -v')
       .split('\n')
