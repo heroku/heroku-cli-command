@@ -16,6 +16,10 @@
   dependencies:
     chalk "*"
 
+"@types/content-type@1.1.2":
+  version "1.1.2"
+  resolved "https://registry.yarnpkg.com/@types/content-type/-/content-type-1.1.2.tgz#bff0a1b7aa5bd48516c8ed7a6efefb1e85813245"
+
 "@types/fs-extra@5.0.0":
   version "5.0.0"
   resolved "https://registry.yarnpkg.com/@types/fs-extra/-/fs-extra-5.0.0.tgz#d3e225b35eb5c6d3a5a782c28219df365c781413"
@@ -590,27 +594,27 @@ cli-cursor@^1.0.2:
   dependencies:
     restore-cursor "^1.0.1"
 
-cli-engine-command@10.0.0:
-  version "10.0.0"
-  resolved "https://registry.yarnpkg.com/cli-engine-command/-/cli-engine-command-10.0.0.tgz#b17e74d5c34a32a3633d75eb9d77277fc2de3d5d"
+cli-engine-command@10.1.0-ts.1:
+  version "10.1.0-ts.1"
+  resolved "https://registry.yarnpkg.com/cli-engine-command/-/cli-engine-command-10.1.0-ts.1.tgz#f531d1298bcf693b7d2396817c0294cca47aea97"
   dependencies:
     "@heroku/linewrap" "^1.0.0"
     ansi-escapes "^3.0.0"
     cardinal "1.x"
     chalk "2.3.0"
-    cli-engine-config "4.1.0"
+    cli-engine-config "4.3.0-ts.1"
     cli-flags "1.0.18"
-    cli-ux "^2.0.5"
+    cli-ux "^2.0.7"
     fs-extra "^5.0.0"
-    http-call "^4.0.0"
+    http-call "^4.0.4"
     lodash.maxby "^4.6.0"
     moment "^2.19.4"
     string "3.x"
     supports-color "^5.1.0"
 
-cli-engine-config@4.1.0:
-  version "4.1.0"
-  resolved "https://registry.yarnpkg.com/cli-engine-config/-/cli-engine-config-4.1.0.tgz#d4075fe1c35f9f6edbb460eab01e6ccd6a40db5e"
+cli-engine-config@4.3.0-ts.1:
+  version "4.3.0-ts.1"
+  resolved "https://registry.yarnpkg.com/cli-engine-config/-/cli-engine-config-4.3.0-ts.1.tgz#39e226c1dacbca647c629d5b8a8188817343bec3"
   dependencies:
     cli-flags "1.0.18"
     debug "^3.1.0"
@@ -640,6 +644,23 @@ cli-truncate@^0.2.1:
 cli-ux@^2.0.5:
   version "2.0.5"
   resolved "https://registry.yarnpkg.com/cli-ux/-/cli-ux-2.0.5.tgz#4484fafbdafc996bf8a81b157adc069e34a4f4ef"
+  dependencies:
+    "@heroku/linewrap" "^1.0.0"
+    ansi-escapes "^3.0.0"
+    ansi-styles "^3.2.0"
+    cardinal "^1.0.0"
+    chalk "^2.1.0"
+    fs-extra "^4.0.2"
+    lodash "^4.17.4"
+    moment "^2.18.1"
+    password-prompt "^1.0.3"
+    strip-ansi "^4.0.0"
+    supports-color "^4.4.0"
+    ts-lodash "^4.0.5"
+
+cli-ux@^2.0.7:
+  version "2.0.7"
+  resolved "https://registry.yarnpkg.com/cli-ux/-/cli-ux-2.0.7.tgz#61ed276700a7fa90a4aa8456c2e28a944c91d268"
   dependencies:
     "@heroku/linewrap" "^1.0.0"
     ansi-escapes "^3.0.0"
@@ -725,6 +746,10 @@ content-type-parser@^1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/content-type-parser/-/content-type-parser-1.0.1.tgz#c3e56988c53c65127fb46d4032a3a900246fdc94"
 
+content-type@1.0.4:
+  version "1.0.4"
+  resolved "https://registry.yarnpkg.com/content-type/-/content-type-1.0.4.tgz#e138cc75e040c727b1966fe5e5f8c9aee256fe3b"
+
 convert-source-map@^1.4.0, convert-source-map@^1.5.0:
   version "1.5.0"
   resolved "https://registry.yarnpkg.com/convert-source-map/-/convert-source-map-1.5.0.tgz#9acd70851c6d5dfdd93d9282e5edf94a03ff46b5"
@@ -733,7 +758,7 @@ core-js@^2.4.0, core-js@^2.5.0:
   version "2.5.1"
   resolved "https://registry.yarnpkg.com/core-js/-/core-js-2.5.1.tgz#ae6874dc66937789b80754ff5428df66819ca50b"
 
-core-js@^2.5.1:
+core-js@^2.5.1, core-js@^2.5.3:
   version "2.5.3"
   resolved "https://registry.yarnpkg.com/core-js/-/core-js-2.5.3.tgz#8acc38345824f16d8365b7c9b4259168e8ed603e"
 
@@ -1365,6 +1390,18 @@ http-call@^4.0.0:
     is-retry-allowed "^1.1.0"
     is-stream "^1.1.0"
     mime-types "^2.1.17"
+    tunnel-agent "^0.6.0"
+
+http-call@^4.0.4:
+  version "4.0.4"
+  resolved "https://registry.yarnpkg.com/http-call/-/http-call-4.0.4.tgz#deb9d82c0ac8ac7794d27c5c8fe0e0cdfac99f99"
+  dependencies:
+    "@types/content-type" "1.1.2"
+    content-type "1.0.4"
+    core-js "^2.5.3"
+    debug "^3.1.0"
+    is-retry-allowed "^1.1.0"
+    is-stream "^1.1.0"
     tunnel-agent "^0.6.0"
 
 http-signature@~1.1.0:

@@ -7,7 +7,8 @@
   "dependencies": {
     "ansi-styles": "3.2.0",
     "chalk": "2.3.0",
-    "cli-engine-command": "10.0.0",
+    "cli-engine-command": "10.1.0-ts.1",
+    "cli-engine-config": "4.3.0-ts.1",
     "cli-ux": "^2.0.5",
     "heroku-client": "^3.0.3",
     "http-call": "^4.0.0",
