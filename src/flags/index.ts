@@ -1,11 +1,18 @@
-import { IBooleanFlag, IRequiredFlag, IOptionalFlag, IMultiOptionFlag } from 'cli-flags'
-import { flags as baseFlags, FlagBuilder } from 'cli-engine-command'
+import {
+  flags as baseFlags,
+  FlagBuilder,
+  InputFlags,
+  IBooleanFlag,
+  IRequiredFlag,
+  IMultiOptionFlag,
+  IOptionalFlag,
+} from 'cli-engine-command'
 import { app, remote } from './app'
 import { team } from './team'
 import { org } from './org'
 import { pipeline } from './pipeline'
 
-export { IBooleanFlag, IRequiredFlag, IOptionalFlag, IMultiOptionFlag, FlagBuilder }
+export { FlagBuilder, InputFlags, IBooleanFlag, IRequiredFlag, IMultiOptionFlag, IOptionalFlag }
 
 export const flags = {
   ...baseFlags,
