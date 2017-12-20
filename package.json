@@ -7,9 +7,9 @@
   "dependencies": {
     "ansi-styles": "3.2.0",
     "chalk": "2.3.0",
-    "cli-ux": "^2.0.8",
+    "cli-ux": "^2.0.9",
     "heroku-client": "^3.0.3",
-    "http-call": "^4.0.4",
+    "http-call": "^4.0.5",
     "lodash.flatten": "4.4.0",
     "netrc-parser": "^2.0.3",
     "supports-color": "5.1.0"
@@ -22,15 +22,15 @@
     "@types/nock": "9.1.0",
     "@types/node": "8.5.1",
     "@types/supports-color": "3.1.0",
-    "cli-engine-command": "10.1.0-ts.4",
-    "cli-engine-config": "4.3.0-ts.4",
+    "cli-engine-command": "11.0.0",
+    "cli-engine-config": "5.0.0",
     "del-cli": "1.1.0",
     "husky": "0.14.3",
-    "jest": "^21.2.1",
+    "jest": "^22.0.3",
     "lint-staged": "6.0.0",
     "nock": "9.1.4",
     "prettier": "1.9.2",
-    "ts-jest": "21.2.4",
+    "ts-jest": "22.0.0",
     "typescript": "2.6.2"
   },
   "engines": {
