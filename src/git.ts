@@ -1,10 +1,10 @@
-export type Remote = {
+export interface IGitRemote {
   name: string
   url: string
 }
 
 export class Git {
-  get remotes(): Remote[] {
+  get remotes(): IGitRemote[] {
     return this.exec('remote -v')
       .split('\n')
       .filter(l => l.endsWith('(fetch)'))

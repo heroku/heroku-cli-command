@@ -11,11 +11,11 @@
     "netrc-parser": "^2.0.3"
   },
   "devDependencies": {
-    "@types/jest": "21.1.8",
+    "@types/jest": "21.1.9",
     "@types/nock": "9.1.0",
-    "@types/node": "8.5.1",
-    "cli-engine-command": "11.0.3",
-    "cli-engine-config": "5.0.3",
+    "@types/node": "8.5.2",
+    "cli-engine-command": "11.0.4",
+    "cli-engine-config": "5.0.4",
     "cli-flags": "^2.0.2",
     "del-cli": "1.1.0",
     "husky": "0.14.3",
@@ -24,6 +24,8 @@
     "nock": "9.1.5",
     "prettier": "1.9.2",
     "ts-jest": "22.0.0",
+    "tslint": "^5.8.0",
+    "tslint-cli-engine": "^1.0.1",
     "typescript": "2.6.2"
   },
   "engines": {
@@ -45,7 +47,7 @@
   "repository": "heroku/cli-engine-heroku",
   "scripts": {
     "clean": "del-cli lib",
-    "posttest": "prettier -l 'src/**/*.ts'",
+    "posttest": "tslint -p . && prettier -l 'src/**/*.ts'",
     "precommit": "lint-staged",
     "prepare": "tsc",
     "prepublishOnly": "yarn run clean && yarn run prepare && yarn run prune",

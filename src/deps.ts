@@ -3,11 +3,11 @@ import CLI = require('cli-ux')
 import HTTP = require('http-call')
 
 // local
-import mutex = require('./mutex')
-import yubikey = require('./yubikey')
 import apiClient = require('./api_client')
 import file = require('./file')
 import git = require('./git')
+import mutex = require('./mutex')
+import yubikey = require('./yubikey')
 
 import flags = require('./flags')
 

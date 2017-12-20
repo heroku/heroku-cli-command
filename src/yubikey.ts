@@ -10,7 +10,7 @@ function toggle(onoff: string) {
 }
 
 export const yubikey = {
-  enable: () => toggle('KeyOn'),
   disable: () => toggle('KeyOff'),
+  enable: () => toggle('KeyOn'),
   platform: process.platform,
 }

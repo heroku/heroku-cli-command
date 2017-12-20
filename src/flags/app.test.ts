@@ -1,7 +1,7 @@
-import { Command as Base } from '../command'
-import * as flags from './app'
 import { defaultConfig as config } from 'cli-engine-config'
 import * as nock from 'nock'
+import { Command as Base } from '../command'
+import * as flags from './app'
 
 let mockGitRemotes = jest.fn()
 
@@ -133,10 +133,10 @@ describe('optional', () => {
 describe('completion', () => {
   class Command extends Base {
     static flags = { app: flags.app({}) }
+    async run() {}
   }
 
   test('cacheDuration defaults to 1 day', () => {
-    Command.flags.app
     const completion = Command.flags.app.completion!
     const duration = completion.cacheDuration
     expect(duration).toEqual(86400)

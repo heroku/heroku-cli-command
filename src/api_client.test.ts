@@ -1,6 +1,10 @@
-import * as nock from 'nock'
-import { Command } from './command'
 import cli from 'cli-ux'
+import * as nock from 'nock'
+import { Command as CommandBase } from './command'
+
+class Command extends CommandBase {
+  async run() {}
+}
 
 jest.mock('netrc-parser', () => {
   return class {
@@ -47,7 +51,7 @@ describe('with HEROKU_HEADERS', () => {
 test('2fa no preauth', async () => {
   api = nock('https://api.heroku.com')
   api.get('/apps').reply(403, { id: 'two_factor' })
-  ;(<any>api.get('/apps')).matchHeader('heroku-two-factor-code', '123456').reply(200, [{ name: 'myapp' }])
+  ;(api.get('/apps') as any).matchHeader('heroku-two-factor-code', '123456').reply(200, [{ name: 'myapp' }])
 
   const cmd = new Command()
   cli.prompt = jest.fn().mockReturnValueOnce(Promise.resolve('123456'))
@@ -58,7 +62,7 @@ test('2fa no preauth', async () => {
 test('2fa preauth', async () => {
   api = nock('https://api.heroku.com')
   api.get('/apps/myapp').reply(403, { id: 'two_factor', app: { name: 'myapp' } })
-  ;(<any>api.put('/apps/myapp/pre-authorizations')).matchHeader('heroku-two-factor-code', '123456').reply(200, {})
+  ;(api.put('/apps/myapp/pre-authorizations') as any).matchHeader('heroku-two-factor-code', '123456').reply(200, {})
   api.get('/apps/myapp').reply(200, { name: 'myapp' })
   api.get('/apps/anotherapp').reply(200, { name: 'anotherapp' })
   api.get('/apps/myapp/config').reply(200, { foo: 'bar' })

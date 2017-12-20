@@ -1,17 +1,17 @@
 import { URL } from 'url'
-import { vars } from './vars'
 import deps from './deps'
+import { vars } from './vars'
 
+import { Config } from 'cli-engine-config'
 import { HTTP, HTTPError, HTTPRequestOptions } from 'http-call'
 import { Mutex } from './mutex'
-import { Config } from 'cli-engine-config'
 
-export type Options = {
+export interface IOptions {
   required?: boolean
   preauth?: boolean
 }
 
-export type HerokuAPIErrorOptions = {
+export interface IHerokuAPIErrorOptions {
   resource?: string
   app?: { id: string; name: string }
   id?: string
@@ -21,10 +21,10 @@ export type HerokuAPIErrorOptions = {
 
 export class HerokuAPIError extends Error {
   http: HTTPError
-  body: HerokuAPIErrorOptions
+  body: IHerokuAPIErrorOptions
 
   constructor(httpError: HTTPError) {
-    let options: HerokuAPIErrorOptions = httpError.body
+    let options: IHerokuAPIErrorOptions = httpError.body
     if (!options.message) throw httpError
     let info = []
     if (options.id) info.push(`Error ID: ${options.id}`)
@@ -38,12 +38,13 @@ export class HerokuAPIError extends Error {
 }
 
 export class APIClient {
-  options: Options
+  options: IOptions
   preauthPromises: { [k: string]: Promise<HTTP> }
   http: typeof HTTP
   config: Config
+  private _twoFactorMutex: Mutex<string>
 
-  constructor({ config }: { config: Config }, options: Options = {}) {
+  constructor({ config }: { config: Config }, options: IOptions = {}) {
     this.config = config
     if (options.required === undefined) options.required = true
     options.preauth = options.preauth !== false
@@ -58,10 +59,11 @@ export class APIClient {
         let opts = {
           ...super.defaultOptions,
           host: apiUrl.host,
+
           headers: {
             ...super.defaultOptions.headers,
-            'user-agent': `heroku-cli/${self.config.version} ${self.config.platform}`,
             accept: 'application/vnd.heroku+json; version=3',
+            'user-agent': `heroku-cli/${self.config.version} ${self.config.platform}`,
             ...envHeaders,
           },
         }
@@ -109,7 +111,6 @@ export class APIClient {
     }
   }
 
-  _twoFactorMutex: Mutex<string>
   get twoFactorMutex(): Mutex<string> {
     if (!this._twoFactorMutex) {
       this._twoFactorMutex = new deps.Mutex()

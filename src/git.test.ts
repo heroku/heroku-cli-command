@@ -1,12 +1,12 @@
-import { Git } from './git'
 import * as childProcess from 'child_process'
+import { Git } from './git'
 
 jest.mock('child_process')
 
 test('gets the remotes', () => {
   const git = new Git()
   git.exec = jest.fn()
-  ;(<any>git.exec).mockReturnValueOnce(`origin\thttps://github.com/foo/bar  (fetch)
+  ;(git.exec as any).mockReturnValueOnce(`origin\thttps://github.com/foo/bar  (fetch)
 origin\thttps://github.com/foo/bar  (pull)
 heroku\thttps://git.heroku.com/myapp.git  (fetch)
 heroku\thttps://git.heroku.com/myapp.git  (pull)
@@ -29,8 +29,8 @@ test('runs git', () => {
 
 test('traps git not found', () => {
   const err = new Error()
-  ;(<any>err).code = 'ENOENT'
-  ;(<any>childProcess.execSync).mockImplementationOnce(() => {
+  ;(err as any).code = 'ENOENT'
+  ;(childProcess.execSync as any).mockImplementationOnce(() => {
     throw err
   })
 
@@ -42,8 +42,8 @@ test('traps git not found', () => {
 
 test('rethrows other git error', () => {
   const err = new Error('some other message')
-  ;(<any>err).code = 'NOTENOENT'
-  ;(<any>childProcess.execSync).mockImplementationOnce(() => {
+  ;(err as any).code = 'NOTENOENT'
+  ;(childProcess.execSync as any).mockImplementationOnce(() => {
     throw err
   })
 

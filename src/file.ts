@@ -1,5 +1,5 @@
-import { promisify } from 'util'
 import * as fs from 'fs'
+import { promisify } from 'util'
 
 let _debug: any
 function debug(...args: any[]) {

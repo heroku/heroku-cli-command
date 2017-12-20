@@ -6,21 +6,21 @@ beforeEach(() => {
   output = []
 })
 
-describe('mutex', function() {
-  it('should run promises in order', function() {
+describe('mutex', () => {
+  it('should run promises in order', () => {
     let mutex = new Mutex()
     return Promise.all([
-      mutex.synchronize(function() {
-        return new Promise(function(resolve) {
-          setTimeout(function() {
+      mutex.synchronize(() => {
+        return new Promise(resolve => {
+          setTimeout(() => {
             output.push('foo')
             resolve('foo')
           }, 3)
         })
       }),
-      mutex.synchronize(function() {
-        return new Promise(function(resolve) {
-          setTimeout(function() {
+      mutex.synchronize(() => {
+        return new Promise(resolve => {
+          setTimeout(() => {
             output.push('bar')
             resolve('bar')
           }, 1)
@@ -32,23 +32,23 @@ describe('mutex', function() {
     })
   })
 
-  it('should propegate errors', function() {
+  it('should propegate errors', () => {
     let mutex = new Mutex()
     return Promise.all([
-      mutex.synchronize(function() {
-        return new Promise(function(resolve) {
+      mutex.synchronize(() => {
+        return new Promise(resolve => {
           output.push('foo')
           resolve('foo')
         })
       }),
-      mutex.synchronize(function() {
-        return new Promise(function(_, reject) {
+      mutex.synchronize(() => {
+        return new Promise((_, reject) => {
           output.push('bar')
           reject(new Error('bar'))
         })
       }),
-      mutex.synchronize(function() {
-        return new Promise(function(resolve) {
+      mutex.synchronize(() => {
+        return new Promise(resolve => {
           output.push('biz')
           resolve('biz')
         })
@@ -63,23 +63,23 @@ describe('mutex', function() {
       })
   })
 
-  it('should run promises after draining the queue', function(done) {
+  it('should run promises after draining the queue', done => {
     let mutex = new Mutex()
     mutex
-      .synchronize(function() {
-        return new Promise(function(resolve) {
+      .synchronize(() => {
+        return new Promise(resolve => {
           output.push('foo')
           resolve('foo')
         })
       })
       .then(results => {
-        setImmediate(function() {
+        setImmediate(() => {
           expect('foo').toEqual(results)
           expect(output).toEqual(['foo'])
 
           return mutex
-            .synchronize(function() {
-              return new Promise(function(resolve) {
+            .synchronize(() => {
+              return new Promise(resolve => {
                 output.push('bar')
                 resolve('bar')
               })

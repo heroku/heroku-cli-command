@@ -5,7 +5,7 @@ export type Record<T> = [Task<T>, PromiseResolve<T>, PromiseReject]
 
 export class Mutex<T> {
   private busy = false
-  private queue: Record<T>[] = []
+  private queue: Array<Record<T>> = []
 
   synchronize(task: Task<T>): Promise<T> {
     return new Promise((resolve, reject) => {

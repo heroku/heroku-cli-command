@@ -1,10 +1,10 @@
+import { flags } from 'cli-engine-command'
+import { herokuGet, oneDay } from '../completions'
 import deps from '../deps'
 import { vars } from '../vars'
-import { flags } from 'cli-engine-command'
-import { oneDay, _herokuGet } from '../completions'
 
 class MultipleRemotesError extends Error {
-  constructor(gitRemotes: GitRemote[]) {
+  constructor(gitRemotes: IGitRemote[]) {
     super(`Multiple apps in git remotes
   Usage: --remote ${gitRemotes[1].remote}
      or: --app ${gitRemotes[1].app}
@@ -18,17 +18,19 @@ class MultipleRemotesError extends Error {
   }
 }
 
-export const AppCompletion: flags.Completion = {
+export const AppCompletion: flags.ICompletion = {
   cacheDuration: oneDay,
   options: async ctx => {
-    let apps = await _herokuGet('apps', ctx)
+    let apps = await herokuGet('apps', ctx)
     return apps
   },
 }
 
 export const app = flags.option({
-  description: 'app to run command against',
   char: 'a',
+  completion: AppCompletion,
+  description: 'app to run command against',
+
   default: ({ options, flags }) => {
     const envApp = process.env.HEROKU_APP
     if (envApp) return envApp
@@ -41,11 +43,11 @@ export const app = flags.option({
       throw new MultipleRemotesError(gitRemotes)
     }
   },
-  completion: AppCompletion,
 })
 
-export const RemoteCompletion: flags.Completion = {
+export const RemoteCompletion: flags.ICompletion = {
   skipCache: true,
+
   options: async () => {
     let remotes = getGitRemotes(configRemote())
     return remotes.map(r => r.remote)
@@ -54,8 +56,8 @@ export const RemoteCompletion: flags.Completion = {
 
 export const remote = flags.option({
   char: 'r',
-  description: 'git remote of app to use',
   completion: RemoteCompletion,
+  description: 'git remote of app to use',
 })
 
 function configRemote() {
@@ -65,8 +67,11 @@ function configRemote() {
   } catch (err) {}
 }
 
-type GitRemote = { remote: string; app: string }
-function getGitRemotes(onlyRemote: string | undefined): GitRemote[] {
+interface IGitRemote {
+  remote: string
+  app: string
+}
+function getGitRemotes(onlyRemote: string | undefined): IGitRemote[] {
   let git = new deps.Git()
   let appRemotes = []
   let remotes
@@ -82,8 +87,8 @@ function getGitRemotes(onlyRemote: string | undefined): GitRemote[] {
       let match = remote.url.match(`${prefix}(.*)${suffix}`)
       if (!match) continue
       appRemotes.push({
-        remote: remote.name,
         app: match[1],
+        remote: remote.name,
       })
     }
   }

@@ -1,6 +1,6 @@
 import { Command } from 'cli-engine-command'
-import * as flags from './org'
 import { cli } from 'cli-ux'
+import * as flags from './org'
 
 let env = process.env
 beforeEach(() => {
