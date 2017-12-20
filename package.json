@@ -50,7 +50,7 @@
     "prepare": "tsc",
     "prepublishOnly": "yarn run clean && yarn run prepare && yarn run prune",
     "pretest": "tsc",
-    "prune": "del-cli \"lib/**/*\\.test\\.(d.ts|js)\"",
+    "prune": "del-cli 'lib/**/*.test.+(d.ts|js)'",
     "test": "jest"
   },
   "types": "./lib/index.d.ts"
