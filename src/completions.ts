@@ -3,6 +3,8 @@ import * as path from 'path'
 import { flags } from 'cli-engine-command'
 import { Config } from 'cli-engine-config'
 
+export { AppCompletion, RemoteCompletion } from './flags/app'
+
 export const oneDay = 60 * 60 * 24
 
 export const _herokuGet = async function(resource: string, ctx: { config: Config }): Promise<Array<string>> {

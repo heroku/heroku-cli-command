@@ -14,12 +14,6 @@
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/@heroku/linewrap/-/linewrap-1.0.0.tgz#a9d4e99f0a3e423a899b775f5f3d6747a1ff15c6"
 
-"@types/fs-extra@5.0.0":
-  version "5.0.0"
-  resolved "https://registry.yarnpkg.com/@types/fs-extra/-/fs-extra-5.0.0.tgz#d3e225b35eb5c6d3a5a782c28219df365c781413"
-  dependencies:
-    "@types/node" "*"
-
 "@types/jest@21.1.8":
   version "21.1.8"
   resolved "https://registry.yarnpkg.com/@types/jest/-/jest-21.1.8.tgz#d497213725684f1e5a37900b17a47c9c018f1a97"
@@ -613,9 +607,9 @@ cli-cursor@^1.0.2:
   dependencies:
     restore-cursor "^1.0.1"
 
-cli-engine-command@11.0.1:
-  version "11.0.1"
-  resolved "https://registry.yarnpkg.com/cli-engine-command/-/cli-engine-command-11.0.1.tgz#d8b3f999f13df11dc3d6e3963e49892000f1a420"
+cli-engine-command@11.0.2:
+  version "11.0.2"
+  resolved "https://registry.yarnpkg.com/cli-engine-command/-/cli-engine-command-11.0.2.tgz#ce5d09ca92343ef01ea7e035122b6efa450617fa"
   dependencies:
     chalk "2.3.0"
     cli-flags "2.0.1"
@@ -1191,7 +1185,7 @@ fs-extra@4.0.3:
     jsonfile "^4.0.0"
     universalify "^0.1.0"
 
-fs-extra@5.0.0, fs-extra@^5.0.0:
+fs-extra@^5.0.0:
   version "5.0.0"
   resolved "https://registry.yarnpkg.com/fs-extra/-/fs-extra-5.0.0.tgz#414d0110cdd06705734d055652c5411260c31abd"
   dependencies:
