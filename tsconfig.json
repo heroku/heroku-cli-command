@@ -7,10 +7,7 @@
     "declaration": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "target": "es2017",
-    "lib": [
-      "es7"
-    ]
+    "target": "esnext"
   },
   "include": [
     "./src/**/*"

@@ -1,7 +1,7 @@
 import { TeamCompletion } from '../completions'
-import { flags, FlagBuilder } from 'cli-engine-command'
+import { flags } from 'cli-engine-command'
 
-export const team: FlagBuilder<string> = flags.option({
+export const team = flags.option({
   description: 'team to use',
   char: 't',
   default: ({ flags }) => {

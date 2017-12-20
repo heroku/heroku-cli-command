@@ -613,32 +613,28 @@ cli-cursor@^1.0.2:
   dependencies:
     restore-cursor "^1.0.1"
 
-cli-engine-command@11.0.0:
-  version "11.0.0"
-  resolved "https://registry.yarnpkg.com/cli-engine-command/-/cli-engine-command-11.0.0.tgz#f95d1ec4194e56a32b7afc7474da88e140b02307"
+cli-engine-command@11.0.1:
+  version "11.0.1"
+  resolved "https://registry.yarnpkg.com/cli-engine-command/-/cli-engine-command-11.0.1.tgz#d8b3f999f13df11dc3d6e3963e49892000f1a420"
   dependencies:
     chalk "2.3.0"
-    cli-flags "1.0.19"
+    cli-flags "2.0.1"
     cli-ux "^2.0.9"
     http-call "^4.0.5"
 
-cli-engine-config@5.0.0:
-  version "5.0.0"
-  resolved "https://registry.yarnpkg.com/cli-engine-config/-/cli-engine-config-5.0.0.tgz#61825f93c2b84bbe310a15b8876d8bafe3c06ecd"
+cli-engine-config@5.0.2:
+  version "5.0.2"
+  resolved "https://registry.yarnpkg.com/cli-engine-config/-/cli-engine-config-5.0.2.tgz#243c5f955e40b8ab5e927f0f2821c716398430b2"
   dependencies:
-    cli-flags "1.0.19"
-    debug "^3.1.0"
     fs-extra "^5.0.0"
     uuid "^3.1.0"
 
-cli-flags@1.0.19:
-  version "1.0.19"
-  resolved "https://registry.yarnpkg.com/cli-flags/-/cli-flags-1.0.19.tgz#19f117964bb4ff61d9376df7942aa1d99edd06cd"
+cli-flags@2.0.1:
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/cli-flags/-/cli-flags-2.0.1.tgz#70a5b46a0e0ddc53ed1cfe19ae09b540375521c0"
   dependencies:
-    chalk "^2.3.0"
-    cli-ux "^2.0.8"
-    lodash "^4.17.4"
-    ts-lodash "^4.0.6"
+    cli-ux "^2.0.9"
+    ts-lodash "^4.0.7"
 
 cli-spinners@^0.1.2:
   version "0.1.2"
@@ -650,23 +646,6 @@ cli-truncate@^0.2.1:
   dependencies:
     slice-ansi "0.0.4"
     string-width "^1.0.1"
-
-cli-ux@^2.0.8:
-  version "2.0.8"
-  resolved "https://registry.yarnpkg.com/cli-ux/-/cli-ux-2.0.8.tgz#8cefd0e6d8aa9d7245fc21324287ff6fe3d7fa90"
-  dependencies:
-    "@heroku/linewrap" "^1.0.0"
-    ansi-escapes "^3.0.0"
-    ansi-styles "^3.2.0"
-    cardinal "^1.0.0"
-    chalk "^2.3.0"
-    fs-extra "^5.0.0"
-    lodash "^4.17.4"
-    moment "^2.20.0"
-    password-prompt "^1.0.3"
-    strip-ansi "^4.0.0"
-    supports-color "^5.1.0"
-    ts-lodash "^4.0.6"
 
 cli-ux@^2.0.9:
   version "2.0.9"
@@ -2526,9 +2505,9 @@ netrc-parser@^2.0.3:
     debug "^3.0.1"
     lex "^1.7.9"
 
-nock@9.1.4:
-  version "9.1.4"
-  resolved "https://registry.yarnpkg.com/nock/-/nock-9.1.4.tgz#5cdda89c5effaed0f448486f0135bf7b1e7bf1dc"
+nock@9.1.5:
+  version "9.1.5"
+  resolved "https://registry.yarnpkg.com/nock/-/nock-9.1.5.tgz#9e4878e0e1c050bdd93ae1e326e89461ea15618b"
   dependencies:
     chai ">=1.9.2 <4.0.0"
     debug "^2.2.0"
@@ -3522,6 +3501,12 @@ ts-jest@22.0.0:
 ts-lodash@^4.0.6:
   version "4.0.6"
   resolved "https://registry.yarnpkg.com/ts-lodash/-/ts-lodash-4.0.6.tgz#1166589945e8a980dc809b875c9d6b70aadd8537"
+  dependencies:
+    lodash "^4.17.4"
+
+ts-lodash@^4.0.7:
+  version "4.0.7"
+  resolved "https://registry.yarnpkg.com/ts-lodash/-/ts-lodash-4.0.7.tgz#da926ec01529f6c15b2ce4e74dfc66cbeac0490c"
   dependencies:
     lodash "^4.17.4"
 

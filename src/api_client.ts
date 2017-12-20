@@ -1,10 +1,10 @@
+import { URL } from 'url'
+import { vars } from './vars'
+import deps from './deps'
+
 import { HTTP, HTTPError, HTTPRequestOptions } from 'http-call'
 import { Mutex } from './mutex'
-import { vars } from './vars'
-import { URL } from 'url'
 import { Config } from 'cli-engine-config'
-import { cli } from 'cli-ux'
-import { yubikey } from './yubikey'
 
 export type Options = {
   required?: boolean
@@ -53,7 +53,7 @@ export class APIClient {
     this.preauthPromises = {}
     let auth = this.auth
     let self = this
-    this.http = class APIHTTPClient extends HTTP {
+    this.http = class APIHTTPClient extends deps.HTTP.HTTP {
       static get defaultOptions() {
         let opts = {
           ...super.defaultOptions,
@@ -97,7 +97,7 @@ export class APIClient {
         try {
           return await super.request(url, opts)
         } catch (err) {
-          if (!(err instanceof HTTPError)) throw err
+          if (!(err instanceof deps.HTTP.HTTPError)) throw err
           if (retries > 0) {
             if (err.http.statusCode === 403 && err.body.id === 'two_factor') {
               return this.twoFactorRetry(err, url, opts, retries)
@@ -112,13 +112,13 @@ export class APIClient {
   _twoFactorMutex: Mutex<string>
   get twoFactorMutex(): Mutex<string> {
     if (!this._twoFactorMutex) {
-      this._twoFactorMutex = new Mutex()
+      this._twoFactorMutex = new deps.Mutex()
     }
     return this._twoFactorMutex
   }
 
   get auth(): string | undefined {
-    if (process.env.HEROKU_API_TOKEN) cli.warn('HEROKU_API_TOKEN is set but you probably meant HEROKU_API_KEY')
+    if (process.env.HEROKU_API_TOKEN) deps.cli.warn('HEROKU_API_TOKEN is set but you probably meant HEROKU_API_KEY')
     let auth = process.env.HEROKU_API_KEY
     if (!auth) {
       const Netrc = require('netrc-parser')
@@ -129,14 +129,14 @@ export class APIClient {
   }
 
   twoFactorPrompt() {
-    yubikey.enable()
+    deps.yubikey.enable()
     return this.twoFactorMutex.synchronize(async () => {
       try {
-        let factor = await cli.prompt('Two-factor code', { type: 'mask' })
-        yubikey.disable()
+        let factor = await deps.cli.prompt('Two-factor code', { type: 'mask' })
+        deps.yubikey.disable()
         return factor
       } catch (err) {
-        yubikey.disable()
+        deps.yubikey.disable()
         throw err
       }
     })

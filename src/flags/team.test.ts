@@ -1,5 +1,5 @@
 import { Command } from 'cli-engine-command'
-import { flags } from '.'
+import * as flags from '.'
 
 let env = process.env
 let teamfn: jest.Mock<{}>

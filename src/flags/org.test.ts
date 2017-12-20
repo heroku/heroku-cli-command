@@ -1,5 +1,5 @@
 import { Command } from 'cli-engine-command'
-import { flags } from '.'
+import * as flags from './org'
 import { cli } from 'cli-ux'
 
 let env = process.env

@@ -1,5 +1,5 @@
 import { Command } from 'cli-engine-command'
-import { flags } from '.'
+import * as flags from './pipeline'
 
 describe('required', () => {
   class PipelineCommand extends Command {

@@ -1,5 +1,5 @@
 import { Command } from './command'
-import { flags } from './flags'
+import * as flags from './flags'
 
 let m: jest.Mock<void>
 beforeEach(() => {

@@ -1,7 +1,7 @@
+import deps from '../deps'
 import { vars } from '../vars'
-import { flags, FlagBuilder } from 'cli-engine-command'
-import { Git } from '../git'
-import { AppCompletion, RemoteCompletion } from '../completions'
+import { flags } from 'cli-engine-command'
+import { oneDay, _herokuGet } from '../completions'
 
 class MultipleRemotesError extends Error {
   constructor(gitRemotes: GitRemote[]) {
@@ -18,7 +18,15 @@ class MultipleRemotesError extends Error {
   }
 }
 
-export const app: FlagBuilder<string> = flags.option<string>({
+export const AppCompletion: flags.Completion = {
+  cacheDuration: oneDay,
+  options: async ctx => {
+    let apps = await _herokuGet('apps', ctx)
+    return apps
+  },
+}
+
+export const app = flags.option({
   description: 'app to run command against',
   char: 'a',
   default: ({ options, flags }) => {
@@ -36,22 +44,30 @@ export const app: FlagBuilder<string> = flags.option<string>({
   completion: AppCompletion,
 })
 
-export const remote: FlagBuilder = flags.option({
+export const RemoteCompletion: flags.Completion = {
+  skipCache: true,
+  options: async () => {
+    let remotes = getGitRemotes(configRemote())
+    return remotes.map(r => r.remote)
+  },
+}
+
+export const remote = flags.option({
   char: 'r',
   description: 'git remote of app to use',
   completion: RemoteCompletion,
 })
 
-export function configRemote() {
-  let git = new Git()
+function configRemote() {
+  let git = new deps.Git()
   try {
     return git.exec('config heroku.remote').trim()
   } catch (err) {}
 }
 
-export type GitRemote = { remote: string; app: string }
-export function getGitRemotes(onlyRemote: string | undefined): GitRemote[] {
-  let git = new Git()
+type GitRemote = { remote: string; app: string }
+function getGitRemotes(onlyRemote: string | undefined): GitRemote[] {
+  let git = new deps.Git()
   let appRemotes = []
   let remotes
   try {

@@ -1,5 +1,5 @@
 import { Command as Base } from '../command'
-import { flags } from '.'
+import * as flags from './app'
 import { defaultConfig as config } from 'cli-engine-config'
 import * as nock from 'nock'
 

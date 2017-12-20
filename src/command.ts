@@ -1,3 +1,4 @@
+import deps from './deps'
 import { Command as Base } from 'cli-engine-command'
 import { APIClient } from './api_client'
 
@@ -13,7 +14,7 @@ export class Command extends Base {
 
   get heroku(): APIClient {
     if (this._heroku) return this._heroku
-    this._heroku = new APIClient(this)
+    this._heroku = new deps.APIClient(this)
     return this._heroku
   }
 
