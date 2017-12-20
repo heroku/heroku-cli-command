@@ -607,20 +607,18 @@ cli-cursor@^1.0.2:
   dependencies:
     restore-cursor "^1.0.1"
 
-cli-engine-command@11.0.4:
-  version "11.0.4"
-  resolved "https://registry.yarnpkg.com/cli-engine-command/-/cli-engine-command-11.0.4.tgz#3abdf2b1a02d51084c445510ce825d2df701948b"
+cli-engine-command@11.0.5:
+  version "11.0.5"
+  resolved "https://registry.yarnpkg.com/cli-engine-command/-/cli-engine-command-11.0.5.tgz#2bd6bd0cb6ccce16acea5bf6b940403c19303045"
   dependencies:
     chalk "2.3.0"
     cli-flags "2.0.2"
     cli-ux "^2.0.10"
     http-call "^4.0.5"
 
-cli-engine-config@5.0.4:
-  version "5.0.4"
-  resolved "https://registry.yarnpkg.com/cli-engine-config/-/cli-engine-config-5.0.4.tgz#962f91c4a240d1d067f61c37817ff6b5dc2a7885"
-  dependencies:
-    uuid "^3.1.0"
+cli-engine-config@5.0.5:
+  version "5.0.5"
+  resolved "https://registry.yarnpkg.com/cli-engine-config/-/cli-engine-config-5.0.5.tgz#5d0736b58a9d23b4be55a9ba7f1c0fd9f81ac1fb"
 
 cli-flags@2.0.2, cli-flags@^2.0.2:
   version "2.0.2"

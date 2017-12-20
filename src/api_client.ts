@@ -2,7 +2,7 @@ import { URL } from 'url'
 import deps from './deps'
 import { vars } from './vars'
 
-import { Config } from 'cli-engine-config'
+import { IConfig } from 'cli-engine-config'
 import { HTTP, HTTPError, HTTPRequestOptions } from 'http-call'
 import { Mutex } from './mutex'
 
@@ -41,10 +41,10 @@ export class APIClient {
   options: IOptions
   preauthPromises: { [k: string]: Promise<HTTP> }
   http: typeof HTTP
-  config: Config
+  config: IConfig
   private _twoFactorMutex: Mutex<string>
 
-  constructor({ config }: { config: Config }, options: IOptions = {}) {
+  constructor({ config }: { config: IConfig }, options: IOptions = {}) {
     this.config = config
     if (options.required === undefined) options.required = true
     options.preauth = options.preauth !== false

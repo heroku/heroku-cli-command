@@ -1,5 +1,5 @@
 import { flags } from 'cli-engine-command'
-import { Config } from 'cli-engine-config'
+import { IConfig } from 'cli-engine-config'
 import * as path from 'path'
 import deps from './deps'
 
@@ -7,7 +7,7 @@ export { AppCompletion, RemoteCompletion } from './flags/app'
 
 export const oneDay = 60 * 60 * 24
 
-export const herokuGet = async (resource: string, ctx: { config: Config }): Promise<string[]> => {
+export const herokuGet = async (resource: string, ctx: { config: IConfig }): Promise<string[]> => {
   const heroku = new deps.APIClient({ config: ctx.config })
   let { body: resources } = await heroku.get(`/${resource}`)
   if (typeof resources === 'string') resources = JSON.parse(resources)
