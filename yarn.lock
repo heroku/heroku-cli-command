@@ -611,9 +611,9 @@ cli-cursor@^1.0.2:
   dependencies:
     restore-cursor "^1.0.1"
 
-cli-engine-command@11.0.7:
-  version "11.0.7"
-  resolved "https://registry.yarnpkg.com/cli-engine-command/-/cli-engine-command-11.0.7.tgz#98ec524ebbf824121a0beb4917ac0ae9b07816c7"
+cli-engine-command@11.0.8:
+  version "11.0.8"
+  resolved "https://registry.yarnpkg.com/cli-engine-command/-/cli-engine-command-11.0.8.tgz#89cb95257fba58a404c9bb422288a3cda7adff6b"
   dependencies:
     chalk "2.3.0"
     cli-flags "^2.0.3"
