@@ -8,7 +8,7 @@ export { AppCompletion, RemoteCompletion } from './flags/app'
 export const oneDay = 60 * 60 * 24
 
 export const herokuGet = async (resource: string, ctx: { config: IConfig }): Promise<string[]> => {
-  const heroku = new deps.APIClient({ config: ctx.config })
+  const heroku = new deps.APIClient(ctx.config)
   let { body: resources } = await heroku.get(`/${resource}`)
   if (typeof resources === 'string') resources = JSON.parse(resources)
   return resources.map((a: any) => a.name).sort()
@@ -38,7 +38,7 @@ export const AppAddonCompletion: flags.ICompletion = {
     return ctx.flags && ctx.flags.app ? `${ctx.flags.app}_addons` : ''
   },
   options: async ctx => {
-    const heroku = new deps.APIClient({ config: ctx.config })
+    const heroku = new deps.APIClient(ctx.config)
     let addons = ctx.flags && ctx.flags.app ? await heroku.get(`/apps/${ctx.flags.app}/addons`) : []
     return (addons as any).map((a: any) => a.name).sort()
   },
@@ -50,7 +50,7 @@ export const AppDynoCompletion: flags.ICompletion = {
     return ctx.flags && ctx.flags.app ? `${ctx.flags.app}_dynos` : ''
   },
   options: async ctx => {
-    const heroku = new deps.APIClient({ config: ctx.config })
+    const heroku = new deps.APIClient(ctx.config)
     let dynos = ctx.flags && ctx.flags.app ? await heroku.get(`/apps/${ctx.flags.app}/dynos`) : []
     return (dynos as any).map((a: any) => a.type).sort()
   },

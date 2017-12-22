@@ -12,7 +12,7 @@ describe('required', () => {
   }
 
   test('has a pipeline', async () => {
-    const { cmd } = await PipelineCommand.mock('--pipeline', 'mypipeline')
+    const { cmd } = await PipelineCommand.mock(['--pipeline', 'mypipeline'])
     expect(cmd.pipeline).toEqual('mypipeline')
   })
 
@@ -37,12 +37,12 @@ describe('optional', () => {
   }
 
   test('--pipeline', async () => {
-    const { cmd } = await PipelineCommand.mock('--pipeline', 'mypipeline')
+    const { cmd } = await PipelineCommand.mock(['--pipeline', 'mypipeline'])
     expect(cmd.pipeline).toEqual('mypipeline')
   })
 
   test('-p', async () => {
-    const { cmd } = await PipelineCommand.mock('-p', 'mypipeline')
+    const { cmd } = await PipelineCommand.mock(['-p', 'mypipeline'])
     expect(cmd.pipeline).toEqual('mypipeline')
   })
 

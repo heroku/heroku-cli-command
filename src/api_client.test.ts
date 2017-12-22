@@ -29,7 +29,7 @@ test('makes an HTTP request', async () => {
   })
   api.get('/apps').reply(200, [{ name: 'myapp' }])
 
-  const cmd = new Command()
+  const { cmd } = await Command.mock()
   const { body } = await cmd.heroku.get('/apps')
   expect(body).toEqual([{ name: 'myapp' }])
 })
@@ -42,7 +42,7 @@ describe('with HEROKU_HEADERS', () => {
     })
     api.get('/apps').reply(200, [{ name: 'myapp' }])
 
-    const cmd = new Command()
+    const { cmd } = await Command.mock()
     const { body } = await cmd.heroku.get('/apps')
     expect(body).toEqual([{ name: 'myapp' }])
   })
@@ -53,7 +53,7 @@ test('2fa no preauth', async () => {
   api.get('/apps').reply(403, { id: 'two_factor' })
   ;(api.get('/apps') as any).matchHeader('heroku-two-factor-code', '123456').reply(200, [{ name: 'myapp' }])
 
-  const cmd = new Command()
+  const { cmd } = await Command.mock()
   cli.prompt = jest.fn().mockReturnValueOnce(Promise.resolve('123456'))
   const { body } = await cmd.heroku.get('/apps')
   expect(body).toEqual([{ name: 'myapp' }])
@@ -68,7 +68,7 @@ test('2fa preauth', async () => {
   api.get('/apps/myapp/config').reply(200, { foo: 'bar' })
   api.get('/apps/myapp/dynos').reply(200, { web: 1 })
 
-  const cmd = new Command()
+  const { cmd } = await Command.mock()
   cli.prompt = jest.fn().mockReturnValueOnce(Promise.resolve('123456'))
   const info = cmd.heroku.get('/apps/myapp')
   const anotherapp = cmd.heroku.get('/apps/anotherapp')

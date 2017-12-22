@@ -3,18 +3,12 @@ import { APIClient } from './api_client'
 import deps from './deps'
 
 export abstract class Command extends Base {
-  app: string | undefined
   _heroku: APIClient
   _legacyHerokuClient: any
 
-  async init() {
-    await super.init()
-    if (this.flags.app) this.app = this.flags.app
-  }
-
   get heroku(): APIClient {
     if (this._heroku) return this._heroku
-    this._heroku = new deps.APIClient(this)
+    this._heroku = new deps.APIClient(this.config)
     return this._heroku
   }
 

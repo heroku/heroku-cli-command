@@ -34,7 +34,7 @@ describe('required', () => {
   }
 
   test('has an app', async () => {
-    await Command.mock('--app', 'myapp')
+    await Command.mock(['--app', 'myapp'])
     expect(appfn).toBeCalledWith('myapp')
   })
 
@@ -43,7 +43,7 @@ describe('required', () => {
       { name: 'staging', url: 'https://git.heroku.com/myapp-staging.git' },
       { name: 'production', url: 'https://git.heroku.com/myapp-production.git' },
     ])
-    await Command.mock('-r', 'staging')
+    await Command.mock(['-r', 'staging'])
     expect(appfn).toBeCalledWith('myapp-staging')
   })
 
@@ -54,7 +54,7 @@ describe('required', () => {
       { name: 'production', url: 'https://git.heroku.com/myapp-production.git' },
     ])
     try {
-      await Command.mock('-r', 'foo')
+      await Command.mock(['-r', 'foo'])
     } catch (err) {
       expect(err.message).toEqual('remote foo not found in git remotes')
     }

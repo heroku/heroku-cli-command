@@ -12,17 +12,17 @@ class AppCommand extends Command {
   }
 
   async run() {
-    m(this.app)
+    m(this.flags.app)
   }
 }
 
 test('sets app', async () => {
-  await AppCommand.mock('--app=myapp')
+  await AppCommand.mock(['--app=myapp'])
   expect(m).toBeCalledWith('myapp')
 })
 
 test('has heroku clients', async () => {
-  let { cmd } = await AppCommand.mock('--app=myapp')
+  let { cmd } = await AppCommand.mock(['--app=myapp'])
   expect(cmd.heroku).toBeTruthy()
   expect(cmd.legacyHerokuClient).toBeTruthy()
 })

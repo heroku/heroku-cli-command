@@ -19,7 +19,7 @@ describe('required', () => {
   }
 
   test('has an org', async () => {
-    const { stdout } = await OrgCommand.mock('--org', 'myorg')
+    const { stdout } = await OrgCommand.mock(['--org', 'myorg'])
     expect(stdout).toEqual('myorg\n')
   })
 
@@ -42,12 +42,12 @@ describe('optional', () => {
   }
 
   test('--org', async () => {
-    await OrgCommand.mock('--org', 'myorg')
+    await OrgCommand.mock(['--org', 'myorg'])
     expect(cli.stdout.output).toEqual('myorg\n')
   })
 
   test('-o', async () => {
-    await OrgCommand.mock('-o', 'myorg')
+    await OrgCommand.mock(['-o', 'myorg'])
     expect(cli.stdout.output).toEqual('myorg\n')
   })
 

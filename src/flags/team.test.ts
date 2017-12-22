@@ -20,12 +20,12 @@ describe('required', () => {
   }
 
   test('has an team', async () => {
-    await TeamCommand.mock('--team', 'myteam')
+    await TeamCommand.mock(['--team', 'myteam'])
     expect(teamfn).toBeCalledWith('myteam')
   })
 
   test('-t', async () => {
-    await TeamCommand.mock('-t', 'myteam')
+    await TeamCommand.mock(['-t', 'myteam'])
     expect(teamfn).toBeCalledWith('myteam')
   })
 
@@ -48,12 +48,12 @@ describe('optional', () => {
   }
 
   test('--team', async () => {
-    await TeamCommand.mock('--team', 'myteam')
+    await TeamCommand.mock(['--team', 'myteam'])
     expect(teamfn).toBeCalledWith('myteam')
   })
 
   test('-t', async () => {
-    await TeamCommand.mock('-t', 'myteam')
+    await TeamCommand.mock(['-t', 'myteam'])
     expect(teamfn).toBeCalledWith('myteam')
   })
 
@@ -79,7 +79,7 @@ describe('optional', () => {
       }
     }
 
-    await TeamCommand.mock('--org', 'myteam')
+    await TeamCommand.mock(['--org', 'myteam'])
     expect(teamfn).toBeCalledWith('myteam')
   })
 

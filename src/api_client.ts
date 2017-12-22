@@ -44,7 +44,7 @@ export class APIClient {
   config: IConfig
   private _twoFactorMutex: Mutex<string>
 
-  constructor({ config }: { config: IConfig }, options: IOptions = {}) {
+  constructor(config: IConfig, options: IOptions = {}) {
     this.config = config
     if (options.required === undefined) options.required = true
     options.preauth = options.preauth !== false
