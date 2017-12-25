@@ -611,16 +611,16 @@ cli-cursor@^1.0.2:
   dependencies:
     restore-cursor "^1.0.1"
 
-cli-engine-command@11.0.8:
-  version "11.0.8"
-  resolved "https://registry.yarnpkg.com/cli-engine-command/-/cli-engine-command-11.0.8.tgz#89cb95257fba58a404c9bb422288a3cda7adff6b"
+cli-engine-command@11.0.12:
+  version "11.0.12"
+  resolved "https://registry.yarnpkg.com/cli-engine-command/-/cli-engine-command-11.0.12.tgz#54480f6b2591d9882ab6bf5600afc88d6a92022a"
   dependencies:
     chalk "2.3.0"
     cli-flags "^2.0.3"
 
-cli-engine-config@5.0.6:
-  version "5.0.6"
-  resolved "https://registry.yarnpkg.com/cli-engine-config/-/cli-engine-config-5.0.6.tgz#af66fa9bace4da0b77fab151d381bb5f1f204aa1"
+cli-engine-config@5.0.7:
+  version "5.0.7"
+  resolved "https://registry.yarnpkg.com/cli-engine-config/-/cli-engine-config-5.0.7.tgz#3a341b1b8fa4e840f41af1ae5b223dc926c3d5ee"
 
 cli-flags@^2.0.3:
   version "2.0.3"
@@ -830,7 +830,7 @@ debug@^2.2.0, debug@^2.6.3, debug@^2.6.8:
   dependencies:
     ms "2.0.0"
 
-debug@^3.0.1, debug@^3.1.0:
+debug@^3.1.0:
   version "3.1.0"
   resolved "https://registry.yarnpkg.com/debug/-/debug-3.1.0.tgz#5bb5a0672628b64149566ba16819e61518c67261"
   dependencies:
@@ -1398,11 +1398,10 @@ hawk@~6.0.2:
     hoek "4.x.x"
     sntp "2.x.x"
 
-heroku-client@3.0.4:
-  version "3.0.4"
-  resolved "https://registry.yarnpkg.com/heroku-client/-/heroku-client-3.0.4.tgz#3a70a25655fe069d0535333903b6ce50c0f4fced"
+heroku-client@3.0.5:
+  version "3.0.5"
+  resolved "https://registry.yarnpkg.com/heroku-client/-/heroku-client-3.0.5.tgz#3a8a9445236cfc0e418bf795f51a2228610a575d"
   dependencies:
-    debug "^3.1.0"
     is-retry-allowed "^1.0.0"
     tunnel-agent "^0.6.0"
 
@@ -2546,11 +2545,10 @@ natural-compare@^1.4.0:
   version "1.4.0"
   resolved "https://registry.yarnpkg.com/natural-compare/-/natural-compare-1.4.0.tgz#4abebfeed7541f2c27acfb29bdbbd15c8d5ba4f7"
 
-netrc-parser@^2.0.3:
-  version "2.0.3"
-  resolved "https://registry.yarnpkg.com/netrc-parser/-/netrc-parser-2.0.3.tgz#b8bdd1c7170d349daaf1f81e3ef436959aa5ee42"
+netrc-parser@^2.0.5:
+  version "2.0.5"
+  resolved "https://registry.yarnpkg.com/netrc-parser/-/netrc-parser-2.0.5.tgz#28484c0f6e47a9f386a0953bcb7b9b55d8a83f9e"
   dependencies:
-    debug "^3.0.1"
     lex "^1.7.9"
 
 nock@9.1.5:

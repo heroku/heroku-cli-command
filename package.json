@@ -6,17 +6,17 @@
   "bugs": "https://github.com/heroku/cli-engine-heroku/issues",
   "dependencies": {
     "cli-ux": "^2.0.12",
-    "heroku-client": "3.0.4",
+    "heroku-client": "3.0.5",
     "http-call": "^4.0.5",
-    "netrc-parser": "^2.0.3"
+    "netrc-parser": "^2.0.5"
   },
   "devDependencies": {
     "@types/ansi-styles": "^2.0.30",
     "@types/jest": "21.1.9",
     "@types/nock": "9.1.0",
     "@types/node": "8.5.2",
-    "cli-engine-command": "11.0.8",
-    "cli-engine-config": "5.0.6",
+    "cli-engine-command": "11.0.12",
+    "cli-engine-config": "5.0.7",
     "cli-flags": "^2.0.3",
     "del-cli": "1.1.0",
     "husky": "0.14.3",
