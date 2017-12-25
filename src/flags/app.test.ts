@@ -1,4 +1,4 @@
-import { defaultConfig as config } from 'cli-engine-config'
+import { buildConfig } from 'cli-engine-config'
 import * as nock from 'nock'
 import { Command as Base } from '../command'
 import * as flags from './app'
@@ -145,7 +145,7 @@ describe('completion', () => {
   test('options returns all the apps', async () => {
     const completion = Command.flags.app.completion!
     api.get('/apps').reply(200, [{ id: 1, name: 'foo' }, { id: 2, name: 'bar' }])
-    const options = await completion.options({ config })
+    const options = await completion.options({ config: buildConfig() })
     expect(options).toEqual(['bar', 'foo'])
   })
 })
