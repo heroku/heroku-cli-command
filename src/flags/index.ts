@@ -1,4 +1,4 @@
-export * from 'cli-engine-command/lib/flags'
+export * from '@cli-engine/command/lib/flags'
 
 export { app, remote } from './app'
 export { org } from './org'

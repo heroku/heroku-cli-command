@@ -1,4 +1,4 @@
-import { flags } from 'cli-engine-command'
+import { flags } from '@cli-engine/command'
 
 export const pipeline = flags.option({
   char: 'p',

@@ -1,4 +1,5 @@
-import { flags } from 'cli-engine-command'
+import { flags } from '@cli-engine/command'
+
 import { TeamCompletion } from '../completions'
 
 export const team = flags.option({

@@ -1,36 +1,33 @@
 {
-  "name": "cli-engine-heroku",
+  "name": "@heroku-cli/heroku",
   "description": "heroku specific functionality for the cli-engine",
-  "version": "7.0.9",
+  "version": "7.0.0.beta0",
   "author": "Jeff Dickey @jdxcode",
   "bugs": "https://github.com/heroku/cli-engine-heroku/issues",
   "dependencies": {
+    "@cli-engine/command": "^11.0.0-beta.0",
+    "@cli-engine/config": "https://github.com/heroku/cli-engine-config#9dd70e4",
     "cli-ux": "^2.0.14",
     "heroku-client": "3.0.5",
     "http-call": "^4.0.5",
     "netrc-parser": "^2.0.5"
   },
   "devDependencies": {
+    "@heroku-cli/tslint": "^1.0.3",
     "@types/ansi-styles": "^2.0.30",
     "@types/jest": "21.1.9",
     "@types/nock": "9.1.0",
     "@types/node": "8.5.2",
-    "cli-engine-command": "11.0.13",
-    "cli-engine-config": "5.0.7",
-    "cli-flags": "^2.0.3",
-    "del-cli": "1.1.0",
     "husky": "0.14.3",
     "jest": "^22.0.4",
-    "lint-staged": "6.0.0",
     "nock": "9.1.5",
     "prettier": "1.9.2",
     "ts-jest": "22.0.0",
     "tslint": "^5.8.0",
-    "tslint-cli-engine": "^1.0.3",
     "typescript": "2.6.2"
   },
   "engines": {
-    "node": ">=7.6.0"
+    "node": ">=8.0.0"
   },
   "files": [
     "lib"
@@ -41,19 +38,12 @@
   ],
   "license": "ISC",
   "main": "lib/index.js",
-  "peerDependencies": {
-    "cli-engine-command": "^11.0.0",
-    "cli-engine-config": "^5.0.0"
-  },
   "repository": "heroku/cli-engine-heroku",
   "scripts": {
-    "clean": "del-cli lib",
-    "posttest": "tslint -p . && prettier -l 'src/**/*.ts'",
-    "precommit": "lint-staged",
-    "prepare": "tsc",
-    "prepublishOnly": "yarn run clean && yarn run prepare && yarn run prune",
+    "posttest": "cli-engine-util",
+    "precommit": "cli-engine-util",
+    "prepare": "cli-engine-util",
     "pretest": "tsc",
-    "prune": "del-cli 'lib/**/*.test.+(d.ts|js)'",
     "test": "jest"
   },
   "types": "./lib/index.d.ts"

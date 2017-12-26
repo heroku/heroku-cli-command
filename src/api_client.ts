@@ -1,10 +1,10 @@
-import { URL } from 'url'
-import deps from './deps'
-import { vars } from './vars'
-
-import { IConfig } from 'cli-engine-config'
+import { Config } from '@cli-engine/config'
 import { HTTP, HTTPError, HTTPRequestOptions } from 'http-call'
+import { URL } from 'url'
+
+import deps from './deps'
 import { Mutex } from './mutex'
+import { vars } from './vars'
 
 export interface IOptions {
   required?: boolean
@@ -38,13 +38,11 @@ export class HerokuAPIError extends Error {
 }
 
 export class APIClient {
-  options: IOptions
   preauthPromises: { [k: string]: Promise<HTTP> }
   http: typeof HTTP
-  config: IConfig
   private _twoFactorMutex: Mutex<string>
 
-  constructor(config: IConfig, options: IOptions = {}) {
+  constructor(protected config: Config, public options: IOptions = {}) {
     this.config = config
     if (options.required === undefined) options.required = true
     options.preauth = options.preauth !== false

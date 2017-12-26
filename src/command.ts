@@ -1,5 +1,6 @@
-import { Command as Base } from 'cli-engine-command'
+import { Command as Base } from '@cli-engine/command'
 import { deprecate } from 'util'
+
 import { APIClient } from './api_client'
 import deps from './deps'
 

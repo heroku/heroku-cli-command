@@ -1,6 +1,8 @@
-import { buildConfig } from 'cli-engine-config'
+import { buildConfig } from '@cli-engine/config'
 import * as nock from 'nock'
+
 import { Command as Base } from '../command'
+
 import * as flags from './app'
 
 let mockGitRemotes = jest.fn()

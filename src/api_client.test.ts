@@ -1,5 +1,6 @@
 import cli from 'cli-ux'
 import * as nock from 'nock'
+
 import { Command as CommandBase } from './command'
 
 class Command extends CommandBase {

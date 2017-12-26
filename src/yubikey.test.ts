@@ -1,4 +1,5 @@
 import * as childProcess from 'child_process'
+
 import { yubikey } from './yubikey'
 
 jest.mock('child_process')

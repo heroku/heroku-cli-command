@@ -1,4 +1,5 @@
-import { flags } from 'cli-engine-command'
+import { flags } from '@cli-engine/command'
+
 import { herokuGet, oneDay } from '../completions'
 import deps from '../deps'
 import { vars } from '../vars'
