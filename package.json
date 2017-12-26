@@ -1,5 +1,5 @@
 {
-  "name": "@heroku-cli/heroku",
+  "name": "@heroku-cli/command",
   "description": "heroku specific functionality for the cli-engine",
   "version": "7.0.0-beta.0",
   "author": "Jeff Dickey @jdxcode",
