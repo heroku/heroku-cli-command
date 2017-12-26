@@ -5,14 +5,15 @@
   "author": "Jeff Dickey @jdxcode",
   "bugs": "https://github.com/heroku/cli-engine-heroku/issues",
   "dependencies": {
-    "@cli-engine/command": "^11.0.0-beta.1",
-    "@cli-engine/config": "^5.0.0-beta.1",
+    "@cli-engine/command": "^11.0.0-beta.2",
+    "@cli-engine/config": "^5.0.0-beta.2",
     "cli-ux": "^2.0.15",
     "heroku-client": "3.0.5",
     "http-call": "^4.0.5",
     "netrc-parser": "^2.0.5"
   },
   "devDependencies": {
+    "@cli-engine/util": "^1.0.2",
     "@heroku-cli/tslint": "^1.0.3",
     "@types/ansi-styles": "^2.0.30",
     "@types/jest": "21.1.9",
