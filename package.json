@@ -5,9 +5,9 @@
   "author": "Jeff Dickey @jdxcode",
   "bugs": "https://github.com/heroku/cli-engine-heroku/issues",
   "dependencies": {
-    "@cli-engine/command": "^11.0.0-beta.0",
-    "@cli-engine/config": "https://github.com/heroku/cli-engine-config#9dd70e4",
-    "cli-ux": "^2.0.14",
+    "@cli-engine/command": "^11.0.0-beta.1",
+    "@cli-engine/config": "^5.0.0-beta.1",
+    "cli-ux": "^2.0.15",
     "heroku-client": "3.0.5",
     "http-call": "^4.0.5",
     "netrc-parser": "^2.0.5"
