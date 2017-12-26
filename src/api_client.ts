@@ -1,6 +1,6 @@
 import { Config } from '@cli-engine/config'
 import { HTTP, HTTPError, HTTPRequestOptions } from 'http-call'
-import { URL } from 'url'
+import * as url from 'url'
 
 import deps from './deps'
 import { Mutex } from './mutex'
@@ -47,7 +47,7 @@ export class APIClient {
     if (options.required === undefined) options.required = true
     options.preauth = options.preauth !== false
     this.options = options
-    let apiUrl = new URL(vars.apiUrl)
+    let apiUrl = url.URL ? new URL(vars.apiUrl) : url.parse(vars.apiUrl)
     let envHeaders = JSON.parse(process.env.HEROKU_HEADERS || '{}')
     this.preauthPromises = {}
     let auth = this.auth
