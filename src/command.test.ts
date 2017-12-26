@@ -26,3 +26,15 @@ test('has heroku clients', async () => {
   expect(cmd.heroku).toBeTruthy()
   expect(cmd.legacyHerokuClient).toBeTruthy()
 })
+
+test('has out/cli', async () => {
+  class LogCommand extends Command {
+    async run() {
+      this.out.log('out')
+      this.cli.log('cli')
+    }
+  }
+
+  let { stdout } = await LogCommand.mock()
+  expect(stdout).toEqual('out\ncli\n')
+})

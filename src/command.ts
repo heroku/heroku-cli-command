@@ -1,6 +1,11 @@
 import { Command as Base } from 'cli-engine-command'
+import { deprecate } from 'util'
 import { APIClient } from './api_client'
 import deps from './deps'
+
+const deprecatedCLI = deprecate(() => {
+  return require('cli-ux').cli
+}, 'this.out and this.cli is deprecated. Please import the "cli-ux" module directly instead.')
 
 export abstract class Command extends Base {
   _heroku: APIClient
@@ -25,5 +30,12 @@ export abstract class Command extends Base {
 
     this._legacyHerokuClient = new HerokuClient(options)
     return this._legacyHerokuClient
+  }
+
+  get cli(): any {
+    return deprecatedCLI()
+  }
+  get out(): any {
+    return deprecatedCLI()
   }
 }
