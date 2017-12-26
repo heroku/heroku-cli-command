@@ -10,40 +10,23 @@
     esutils "^2.0.2"
     js-tokens "^3.0.0"
 
-"@cli-engine/command@^11.0.0-beta.2", "@cli-engine/command@https://github.com/heroku/cli-engine-command#050162b":
+"@cli-engine/command@^11.0.0-beta.3":
+  version "11.0.0-beta.3"
+  resolved "https://registry.yarnpkg.com/@cli-engine/command/-/command-11.0.0-beta.3.tgz#0c36ad9124c073004bc89668b3a59ae01f6b40d7"
+  dependencies:
+    chalk "^2.3.0"
+    cli-flags "^2.0.3"
+
+"@cli-engine/command@https://github.com/heroku/cli-engine-command#050162b":
   version "11.0.0-beta.2"
   resolved "https://github.com/heroku/cli-engine-command#050162bc24fd0e1432613a801ec695eb86c78832"
   dependencies:
     chalk "^2.3.0"
     cli-flags "^2.0.3"
 
-"@cli-engine/config@^5.0.0-beta.2":
-  version "5.0.0-beta.2"
-  resolved "https://registry.yarnpkg.com/@cli-engine/config/-/config-5.0.0-beta.2.tgz#9d3c210ea14b063549fd3c8ceae1e0b0939cd323"
-
 "@cli-engine/config@^5.0.0-beta.4":
   version "5.0.0-beta.4"
   resolved "https://registry.yarnpkg.com/@cli-engine/config/-/config-5.0.0-beta.4.tgz#c61dd31b92163e986b3c8f102c823d31c997ae79"
-
-"@cli-engine/engine@^5.0.0-beta.0":
-  version "5.0.0-beta.0"
-  resolved "https://registry.yarnpkg.com/@cli-engine/engine/-/engine-5.0.0-beta.0.tgz#f0a36d2fb557015f4011069d04bd2d974bbf1780"
-  dependencies:
-    "@heroku-cli/color" "^1.0.3"
-    assync "^1.0.3"
-    cli-ux "^2.0.15"
-    debug "^3.1.0"
-    fs-extra "^5.0.0"
-    graceful-fs "^4.1.11"
-    http-call "^4.0.5"
-    klaw "^2.1.1"
-    log-chopper "^1.0.1"
-    moment "^2.20.1"
-    rwlockfile "^1.4.11"
-    semver "5.4.1"
-    string-similarity "^1.2.0"
-    strip-ansi "4.0.0"
-    ts-lodash "4.0.8"
 
 "@cli-engine/engine@https://github.com/heroku/cli-engine#5aacdd61":
   version "5.0.0-beta.0"
@@ -65,13 +48,13 @@
     strip-ansi "4.0.0"
     ts-lodash "4.0.8"
 
-"@cli-engine/util@^1.0.3":
-  version "1.0.3"
-  resolved "https://registry.yarnpkg.com/@cli-engine/util/-/util-1.0.3.tgz#7f2e66578773fa73cf657783fafc62b134345cf3"
+"@cli-engine/util@^1.0.4":
+  version "1.0.4"
+  resolved "https://registry.yarnpkg.com/@cli-engine/util/-/util-1.0.4.tgz#ec50a090b22197ddd9013af6ce17862fbcf21349"
   dependencies:
-    "@cli-engine/command" "^11.0.0-beta.2"
-    "@cli-engine/config" "^5.0.0-beta.2"
-    "@cli-engine/engine" "^5.0.0-beta.0"
+    "@cli-engine/command" "https://github.com/heroku/cli-engine-command#050162b"
+    "@cli-engine/config" "^5.0.0-beta.4"
+    "@cli-engine/engine" "https://github.com/heroku/cli-engine#5aacdd61"
     cli-ux "^2.0.15"
     del "^3.0.0"
     fs-extra "^5.0.0"
