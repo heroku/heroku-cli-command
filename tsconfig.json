@@ -1,13 +1,14 @@
 {
   "compilerOptions": {
-    "strict": true,
     "alwaysStrict": true,
-    "module": "commonjs",
-    "outDir": "./lib",
     "declaration": true,
+    "importHelpers": true,
+    "module": "commonjs",
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "target": "esnext"
+    "outDir": "./lib",
+    "strict": true,
+    "target": "es2017"
   },
   "include": [
     "./src/**/*"
