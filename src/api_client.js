@@ -1,6 +1,6 @@
 // @flow
 
-import HTTP, {type HTTPError, type HTTPRequestOptions} from 'http-call'
+import {HTTP, type HTTPError, type HTTPRequestOptions} from 'http-call'
 import yubikey from './yubikey'
 import Mutex from './mutex'
 import Vars from './vars'
