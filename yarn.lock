@@ -87,9 +87,9 @@
   dependencies:
     chalk "*"
 
-"@types/jest@21.1.9":
-  version "21.1.9"
-  resolved "https://registry.yarnpkg.com/@types/jest/-/jest-21.1.9.tgz#a913d6224e9d8a1f24908af536f65b5bf4d489bc"
+"@types/jest@22.0.0":
+  version "22.0.0"
+  resolved "https://registry.yarnpkg.com/@types/jest/-/jest-22.0.0.tgz#23009941178aad7979a9591e026f7a96054d7bc0"
 
 "@types/nock@9.1.0":
   version "9.1.0"
@@ -628,6 +628,24 @@ cli-flags@^2.0.6:
 cli-ux@^2.0.17:
   version "2.0.17"
   resolved "https://registry.yarnpkg.com/cli-ux/-/cli-ux-2.0.17.tgz#8e510cf169f6ad5ea70ca7a430d166a9b6b33ddf"
+  dependencies:
+    "@cli-engine/screen" "^0.0.0"
+    "@heroku-cli/color" "^1.0.4"
+    "@heroku/linewrap" "^1.0.0"
+    ansi-escapes "^3.0.0"
+    ansi-styles "^3.2.0"
+    cardinal "^1.0.0"
+    chalk "^2.3.0"
+    lodash "^4.17.4"
+    moment "^2.20.1"
+    password-prompt "^1.0.3"
+    strip-ansi "^4.0.0"
+    supports-color "^5.1.0"
+    ts-lodash "^4.0.8"
+
+cli-ux@^2.0.21:
+  version "2.0.21"
+  resolved "https://registry.yarnpkg.com/cli-ux/-/cli-ux-2.0.21.tgz#a7231097af95356e79f5d6a380f04be889703083"
   dependencies:
     "@cli-engine/screen" "^0.0.0"
     "@heroku-cli/color" "^1.0.4"

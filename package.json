@@ -7,7 +7,7 @@
   "dependencies": {
     "@cli-engine/command": "^12.0.3",
     "@cli-engine/config": "^5.0.10",
-    "cli-ux": "^2.0.17",
+    "cli-ux": "^2.0.21",
     "heroku-client": "3.0.5",
     "http-call": "^4.0.6",
     "netrc-parser": "^2.0.5"
@@ -17,7 +17,7 @@
     "@heroku-cli/tslint": "^1.0.3",
     "@types/ansi-styles": "^2.0.30",
     "@types/chalk": "^2.2.0",
-    "@types/jest": "21.1.9",
+    "@types/jest": "22.0.0",
     "@types/nock": "9.1.0",
     "@types/node": "8.5.2",
     "husky": "0.14.3",
