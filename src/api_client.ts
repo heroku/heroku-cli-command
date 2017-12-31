@@ -47,7 +47,7 @@ export class APIClient {
     if (options.required === undefined) options.required = true
     options.preauth = options.preauth !== false
     this.options = options
-    let apiUrl = url.URL ? new URL(vars.apiUrl) : url.parse(vars.apiUrl)
+    let apiUrl = url.URL ? new url.URL(vars.apiUrl) : url.parse(vars.apiUrl)
     let envHeaders = JSON.parse(process.env.HEROKU_HEADERS || '{}')
     this.preauthPromises = {}
     let auth = this.auth
