@@ -6,19 +6,19 @@
   "bugs": "https://github.com/heroku/cli-engine-heroku/issues",
   "dependencies": {
     "@cli-engine/command": "^12.0.3",
-    "@cli-engine/config": "^5.0.10",
+    "@cli-engine/config": "^5.0.11",
     "cli-ux": "^2.0.21",
-    "heroku-client": "3.0.5",
+    "heroku-client": "3.0.6",
     "http-call": "^4.0.6",
-    "netrc-parser": "^2.0.5"
+    "netrc-parser": "^2.0.6"
   },
   "devDependencies": {
-    "@cli-engine/util": "^1.0.9",
-    "@heroku-cli/tslint": "^1.0.3",
+    "@cli-engine/util": "^1.0.12",
+    "@heroku-cli/tslint": "^1.1.2",
     "@types/ansi-styles": "^2.0.30",
     "@types/chalk": "^2.2.0",
-    "@types/jest": "22.0.0",
-    "@types/nock": "9.1.0",
+    "@types/jest": "22.0.1",
+    "@types/nock": "9.1.1",
     "@types/node": "8.5.2",
     "husky": "0.14.3",
     "jest": "^22.0.4",
