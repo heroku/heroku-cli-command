@@ -1,3 +1,12 @@
+jest.mock('netrc-parser', () => {
+  return {
+    default: {
+      loadSync: jest.fn(),
+      machines: { 'api.heroku.com': { password: 'mypass' } },
+    },
+  }
+})
+
 import cli from 'cli-ux'
 import * as nock from 'nock'
 
@@ -7,14 +16,6 @@ class Command extends CommandBase {
   async run() {}
 }
 
-jest.mock('netrc-parser', () => {
-  return {
-    default: {
-      loadSync: jest.fn(),
-      machines: { 'api.heroku.com': { password: 'mypass' } },
-    },
-  }
-})
 const netrc = require('netrc-parser').default
 
 let env = process.env

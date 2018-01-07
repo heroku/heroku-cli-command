@@ -1,6 +1,5 @@
 import { Config } from '@cli-engine/config'
 import { HTTP, HTTPError, HTTPRequestOptions } from 'http-call'
-import netrc from 'netrc-parser'
 import * as url from 'url'
 
 import deps from './deps'
@@ -122,7 +121,7 @@ export class APIClient {
     let auth = process.env.HEROKU_API_KEY
     if (!auth) {
       deps.netrc.loadSync()
-      auth = netrc.machines[vars.apiHost].password
+      auth = deps.netrc.machines[vars.apiHost] && deps.netrc.machines[vars.apiHost].password
     }
     return auth
   }

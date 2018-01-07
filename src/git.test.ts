@@ -1,8 +1,8 @@
+jest.mock('child_process')
+
 import * as childProcess from 'child_process'
 
 import { Git } from './git'
-
-jest.mock('child_process')
 
 test('gets the remotes', () => {
   const git = new Git()
