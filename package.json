@@ -42,11 +42,9 @@
   "main": "lib/index.js",
   "repository": "heroku/cli-engine-heroku",
   "scripts": {
-    "posttest": "cli-engine-util",
     "precommit": "cli-engine-util",
     "prepare": "cli-engine-util",
-    "pretest": "tsc",
-    "test": "jest"
+    "test": "cli-engine-util"
   },
   "types": "./lib/index.d.ts"
 }
