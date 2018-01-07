@@ -22,9 +22,9 @@
   version "5.0.11"
   resolved "https://registry.yarnpkg.com/@cli-engine/config/-/config-5.0.11.tgz#b3b1393da09469fbcaaa99329064e775e275de24"
 
-"@cli-engine/engine@^6.1.14":
-  version "6.1.25"
-  resolved "https://registry.yarnpkg.com/@cli-engine/engine/-/engine-6.1.25.tgz#e747a98d6acf694eba8d372ffec989a6551f234b"
+"@cli-engine/engine@^6.1.25":
+  version "6.1.29"
+  resolved "https://registry.yarnpkg.com/@cli-engine/engine/-/engine-6.1.29.tgz#7b40b030db138f14ee05659e14cfc618777dab51"
   dependencies:
     "@heroku-cli/color" "^1.0.4"
     assync "^1.0.4"
@@ -38,25 +38,25 @@
     klaw "^2.1.1"
     log-chopper "^1.0.2"
     moment "^2.20.1"
-    rwlockfile "^2.0.16"
+    rwlockfile "^2.0.17"
     semver "5.4.1"
     string-similarity "^1.2.0"
     strip-ansi "4.0.0"
     tar-fs "^1.16.0"
-    ts-lodash "4.0.8"
+    ts-lodash "4.0.9"
     yarn "^1.3.2"
 
 "@cli-engine/screen@^0.0.0":
   version "0.0.0"
   resolved "https://registry.yarnpkg.com/@cli-engine/screen/-/screen-0.0.0.tgz#c2e847c7d4d998490c9097282bf21637d5162116"
 
-"@cli-engine/util@^1.0.12":
-  version "1.0.12"
-  resolved "https://registry.yarnpkg.com/@cli-engine/util/-/util-1.0.12.tgz#ecbc1fd3e0093be7139c52d6217d5cfdd6ef5c22"
+"@cli-engine/util@^1.0.13":
+  version "1.0.13"
+  resolved "https://registry.yarnpkg.com/@cli-engine/util/-/util-1.0.13.tgz#bc9fec8c9df59110133d0d0ef7e26075466c2de5"
   dependencies:
     "@cli-engine/command" "^12.0.3"
     "@cli-engine/config" "^5.0.11"
-    "@cli-engine/engine" "^6.1.14"
+    "@cli-engine/engine" "^6.1.25"
     cli-ux "^2.0.21"
     cross-spawn "^5.1.0"
     del "^3.0.0"
@@ -106,9 +106,9 @@
   version "4.0.35"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-4.0.35.tgz#2b96b8e67bea7451e6e1ba8b65eaeb8f223261ed"
 
-"@types/node@8.5.2":
-  version "8.5.2"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-8.5.2.tgz#83b8103fa9a2c2e83d78f701a9aa7c9539739aa5"
+"@types/node@8.5.7":
+  version "8.5.7"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-8.5.7.tgz#9c498c35af354dcfbca3790fb2e81129e93cf0e2"
 
 abab@^1.0.3:
   version "1.0.4"
@@ -1346,6 +1346,17 @@ http-call@^4.0.6:
     tslib "^1.8.1"
     tunnel-agent "^0.6.0"
 
+http-call@^4.0.8:
+  version "4.0.8"
+  resolved "https://registry.yarnpkg.com/http-call/-/http-call-4.0.8.tgz#fd0207764958a3f1238bb3344ff912b32ddfa64a"
+  dependencies:
+    content-type "^1.0.4"
+    debug "^3.1.0"
+    is-retry-allowed "^1.1.0"
+    is-stream "^1.1.0"
+    tslib "^1.8.1"
+    tunnel-agent "^0.6.0"
+
 http-signature@~1.1.0:
   version "1.1.1"
   resolved "https://registry.yarnpkg.com/http-signature/-/http-signature-1.1.1.tgz#df72e267066cd0ac67fb76adf8e134a8fbcf91bf"
@@ -2150,10 +2161,11 @@ natural-compare@^1.4.0:
   version "1.4.0"
   resolved "https://registry.yarnpkg.com/natural-compare/-/natural-compare-1.4.0.tgz#4abebfeed7541f2c27acfb29bdbbd15c8d5ba4f7"
 
-netrc-parser@^2.0.6:
-  version "2.0.6"
-  resolved "https://registry.yarnpkg.com/netrc-parser/-/netrc-parser-2.0.6.tgz#0a21b96810dbb2c3ac42fac0a260bf838d20ef2f"
+netrc-parser@^3.0.0:
+  version "3.0.1"
+  resolved "https://registry.yarnpkg.com/netrc-parser/-/netrc-parser-3.0.1.tgz#c5671c21046f90185a4976e8b378441f24a5b4d7"
   dependencies:
+    graceful-fs "^4.1.11"
     lex "^1.7.9"
 
 nock@9.1.5:
@@ -2691,7 +2703,7 @@ rimraf@2, rimraf@^2.2.8, rimraf@^2.5.1, rimraf@^2.5.4, rimraf@^2.6.1:
   dependencies:
     glob "^7.0.5"
 
-rwlockfile@^2.0.16:
+rwlockfile@^2.0.17:
   version "2.0.17"
   resolved "https://registry.yarnpkg.com/rwlockfile/-/rwlockfile-2.0.17.tgz#8905f09144d440833877fbb614e57607979b81e9"
   dependencies:
@@ -3024,9 +3036,9 @@ trim-right@^1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/trim-right/-/trim-right-1.0.1.tgz#cb2e1203067e0c8de1f614094b9fe45704ea6003"
 
-ts-jest@22.0.0:
-  version "22.0.0"
-  resolved "https://registry.yarnpkg.com/ts-jest/-/ts-jest-22.0.0.tgz#cce1a5f1106150ca002d09f7e85913355ceb5e8d"
+ts-jest@22.0.1:
+  version "22.0.1"
+  resolved "https://registry.yarnpkg.com/ts-jest/-/ts-jest-22.0.1.tgz#48942936a466c2e76e259b02e2f1356f1839afc3"
   dependencies:
     babel-core "^6.24.1"
     babel-plugin-istanbul "^4.1.4"
@@ -3039,13 +3051,7 @@ ts-jest@22.0.0:
     source-map-support "^0.5.0"
     yargs "^10.0.3"
 
-ts-lodash@4.0.8:
-  version "4.0.8"
-  resolved "https://registry.yarnpkg.com/ts-lodash/-/ts-lodash-4.0.8.tgz#4f424e687f9c89a3dcf1473779a251f134170f6a"
-  dependencies:
-    lodash "^4.17.4"
-
-ts-lodash@^4.0.8:
+ts-lodash@4.0.9, ts-lodash@^4.0.8:
   version "4.0.9"
   resolved "https://registry.yarnpkg.com/ts-lodash/-/ts-lodash-4.0.9.tgz#088d7ceefbf36c8c4bcdf28372249015ccafd429"
   dependencies:

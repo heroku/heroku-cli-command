@@ -1,6 +1,7 @@
 // remote
 import CLI = require('cli-ux')
 import HTTP = require('http-call')
+import netrc = require('netrc-parser')
 
 // local
 import apiClient = require('./api_client')
@@ -13,32 +14,17 @@ import flags = require('./flags')
 
 export const deps = {
   // remote
-  get cli(): typeof CLI.default {
-    return fetch('cli-ux').default
-  },
-  get HTTP(): typeof HTTP {
-    return fetch('http-call')
-  },
+  get cli(): typeof CLI.default { return fetch('cli-ux').default },
+  get HTTP(): typeof HTTP { return fetch('http-call') },
+  get netrc(): typeof netrc.default { return fetch('netrc-parser').default },
 
   // local
-  get Mutex(): typeof mutex.Mutex {
-    return fetch('./mutex').Mutex
-  },
-  get yubikey(): typeof yubikey.yubikey {
-    return fetch('./yubikey').yubikey
-  },
-  get APIClient(): typeof apiClient.APIClient {
-    return fetch('./api_client').APIClient
-  },
-  get file(): typeof file {
-    return fetch('./file')
-  },
-  get flags(): typeof flags {
-    return fetch('./flags')
-  },
-  get Git(): typeof git.Git {
-    return fetch('./git').Git
-  },
+  get Mutex(): typeof mutex.Mutex { return fetch('./mutex').Mutex },
+  get yubikey(): typeof yubikey.yubikey { return fetch('./yubikey').yubikey },
+  get APIClient(): typeof apiClient.APIClient { return fetch('./api_client').APIClient },
+  get file(): typeof file { return fetch('./file') },
+  get flags(): typeof flags { return fetch('./flags') },
+  get Git(): typeof git.Git { return fetch('./git').Git },
 }
 
 const cache: any = {}

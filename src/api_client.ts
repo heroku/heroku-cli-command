@@ -1,5 +1,6 @@
 import { Config } from '@cli-engine/config'
 import { HTTP, HTTPError, HTTPRequestOptions } from 'http-call'
+import netrc from 'netrc-parser'
 import * as url from 'url'
 
 import deps from './deps'
@@ -120,8 +121,7 @@ export class APIClient {
     if (process.env.HEROKU_API_TOKEN) deps.cli.warn('HEROKU_API_TOKEN is set but you probably meant HEROKU_API_KEY')
     let auth = process.env.HEROKU_API_KEY
     if (!auth) {
-      const Netrc = require('netrc-parser')
-      const netrc = new Netrc()
+      deps.netrc.loadSync()
       auth = netrc.machines[vars.apiHost].password
     }
     return auth

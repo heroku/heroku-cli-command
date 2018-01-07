@@ -8,10 +8,14 @@ class Command extends CommandBase {
 }
 
 jest.mock('netrc-parser', () => {
-  return class {
-    machines = { 'api.heroku.com': { password: 'mypass' } }
+  return {
+    default: {
+      loadSync: jest.fn(),
+      machines: { 'api.heroku.com': { password: 'mypass' } },
+    },
   }
 })
+const netrc = require('netrc-parser').default
 
 let env = process.env
 let api: nock.Scope
@@ -33,6 +37,7 @@ test('makes an HTTP request', async () => {
   const { cmd } = await Command.mock()
   const { body } = await cmd.heroku.get('/apps')
   expect(body).toEqual([{ name: 'myapp' }])
+  expect(netrc.loadSync).toBeCalled()
 })
 
 describe('with HEROKU_HEADERS', () => {
