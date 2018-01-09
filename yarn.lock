@@ -50,9 +50,9 @@
   version "0.0.0"
   resolved "https://registry.yarnpkg.com/@cli-engine/screen/-/screen-0.0.0.tgz#c2e847c7d4d998490c9097282bf21637d5162116"
 
-"@cli-engine/util@^1.1.2":
-  version "1.1.2"
-  resolved "https://registry.yarnpkg.com/@cli-engine/util/-/util-1.1.2.tgz#c76be91343ec5bb9dde7b4add9522b8bde7fdd29"
+"@cli-engine/util@^1.1.5":
+  version "1.1.5"
+  resolved "https://registry.yarnpkg.com/@cli-engine/util/-/util-1.1.5.tgz#6bb79740d00bc234446a87cae371b2cede3bd0c3"
   dependencies:
     "@cli-engine/command" "^12.1.0"
     "@cli-engine/config" "^5.1.0"
@@ -66,7 +66,7 @@
     handlebars "^4.0.11"
     jest-diff "^22.0.3"
     read-pkg-up "^3.0.0"
-    ts-lodash "^4.0.9"
+    ts-lodash "^4.0.10"
     tslib "^1.8.1"
 
 "@heroku-cli/color@^1.0.4":
@@ -86,9 +86,9 @@
     strip-ansi "^4.0.0"
     supports-color "^5.1.0"
 
-"@heroku-cli/tslint@^1.1.2":
-  version "1.1.2"
-  resolved "https://registry.yarnpkg.com/@heroku-cli/tslint/-/tslint-1.1.2.tgz#65a5738608d1d687df1a594f059b9d66ff52eddc"
+"@heroku-cli/tslint@^1.1.4":
+  version "1.1.4"
+  resolved "https://registry.yarnpkg.com/@heroku-cli/tslint/-/tslint-1.1.4.tgz#32f75496df3e3ecd7e14716c4250302025c7840f"
   dependencies:
     tslint "^5.8.0"
     tslint-config-prettier "*"
@@ -121,9 +121,9 @@
   version "4.0.35"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-4.0.35.tgz#2b96b8e67bea7451e6e1ba8b65eaeb8f223261ed"
 
-"@types/node@8.5.7":
-  version "8.5.7"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-8.5.7.tgz#9c498c35af354dcfbca3790fb2e81129e93cf0e2"
+"@types/node@9.3.0":
+  version "9.3.0"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-9.3.0.tgz#3a129cda7c4e5df2409702626892cb4b96546dd5"
 
 abab@^1.0.3:
   version "1.0.4"
@@ -2196,16 +2196,18 @@ natural-compare@^1.4.0:
   version "1.4.0"
   resolved "https://registry.yarnpkg.com/natural-compare/-/natural-compare-1.4.0.tgz#4abebfeed7541f2c27acfb29bdbbd15c8d5ba4f7"
 
-netrc-parser@^3.0.0:
-  version "3.0.1"
-  resolved "https://registry.yarnpkg.com/netrc-parser/-/netrc-parser-3.0.1.tgz#c5671c21046f90185a4976e8b378441f24a5b4d7"
+netrc-parser@^3.0.3:
+  version "3.0.3"
+  resolved "https://registry.yarnpkg.com/netrc-parser/-/netrc-parser-3.0.3.tgz#1b3e6cf85e7dc3618dc7daaf639b1fa624392852"
   dependencies:
+    execa "^0.8.0"
+    fs-extra "^5.0.0"
     graceful-fs "^4.1.11"
     lex "^1.7.9"
 
-nock@9.1.5:
-  version "9.1.5"
-  resolved "https://registry.yarnpkg.com/nock/-/nock-9.1.5.tgz#9e4878e0e1c050bdd93ae1e326e89461ea15618b"
+nock@9.1.6:
+  version "9.1.6"
+  resolved "https://registry.yarnpkg.com/nock/-/nock-9.1.6.tgz#16395af4c45b0fd84d1a4a9668154e16fa6624db"
   dependencies:
     chai ">=1.9.2 <4.0.0"
     debug "^2.2.0"
@@ -3089,9 +3091,15 @@ ts-jest@22.0.1:
     source-map-support "^0.5.0"
     yargs "^10.0.3"
 
-ts-lodash@4.0.9, ts-lodash@^4.0.8, ts-lodash@^4.0.9:
+ts-lodash@4.0.9, ts-lodash@^4.0.8:
   version "4.0.9"
   resolved "https://registry.yarnpkg.com/ts-lodash/-/ts-lodash-4.0.9.tgz#088d7ceefbf36c8c4bcdf28372249015ccafd429"
+  dependencies:
+    lodash "^4.17.4"
+
+ts-lodash@^4.0.10:
+  version "4.0.11"
+  resolved "https://registry.yarnpkg.com/ts-lodash/-/ts-lodash-4.0.11.tgz#f668e2ad4b6cb3bcbeceb894cf0a8cde48b3cd85"
   dependencies:
     lodash "^4.17.4"
 
