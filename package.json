@@ -9,7 +9,7 @@
     "@cli-engine/config": "^5.1.0",
     "cli-ux": "^2.0.21",
     "heroku-client": "3.0.6",
-    "http-call": "^4.0.8",
+    "http-call": "^5.0.0",
     "netrc-parser": "^3.0.3"
   },
   "devDependencies": {
