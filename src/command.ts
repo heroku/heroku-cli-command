@@ -4,11 +4,14 @@ import { deprecate } from 'util'
 import { APIClient } from './api_client'
 import deps from './deps'
 
+const pjson = require('../package.json')
+
 const deprecatedCLI = deprecate(() => {
   return require('cli-ux').cli
 }, 'this.out and this.cli is deprecated. Please import the "cli-ux" module directly instead.')
 
 export abstract class Command extends Base {
+  base = `${pjson.name}@${pjson.version}`
   _heroku: APIClient
   _legacyHerokuClient: any
 
