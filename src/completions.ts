@@ -39,9 +39,8 @@ export const AppAddonCompletion: flags.ICompletion = {
     return ctx.flags && ctx.flags.app ? `${ctx.flags.app}_addons` : ''
   },
   options: async ctx => {
-    const heroku = new deps.APIClient(ctx.config)
-    let addons = ctx.flags && ctx.flags.app ? await heroku.get(`/apps/${ctx.flags.app}/addons`) : []
-    return (addons as any).map((a: any) => a.name).sort()
+    let addons = ctx.flags && ctx.flags.app ? await herokuGet(`apps/${ctx.flags.app}/addons`, ctx) : []
+    return addons
   },
 }
 
@@ -51,9 +50,8 @@ export const AppDynoCompletion: flags.ICompletion = {
     return ctx.flags && ctx.flags.app ? `${ctx.flags.app}_dynos` : ''
   },
   options: async ctx => {
-    const heroku = new deps.APIClient(ctx.config)
-    let dynos = ctx.flags && ctx.flags.app ? await heroku.get(`/apps/${ctx.flags.app}/dynos`) : []
-    return (dynos as any).map((a: any) => a.type).sort()
+    let dynos = ctx.flags && ctx.flags.app ? await herokuGet(`apps/${ctx.flags.app}/dynos`, ctx) : []
+    return dynos
   },
 }
 
