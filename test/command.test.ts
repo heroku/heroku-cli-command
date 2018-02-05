@@ -1,40 +1,33 @@
-import { Command } from './command'
-import * as flags from './flags'
+import * as Config from '@anycli/config'
+import {expect} from 'chai'
 
-let m: jest.Mock<void>
-beforeEach(() => {
-  m = jest.fn()
-})
+import {Command} from '../src/command'
+import * as flags from '../src/flags'
 
-class AppCommand extends Command {
-  static flags = {
-    app: flags.app(),
-  }
+const config = Config.load()
 
+class MyCommand extends Command {
   async run() {
-    m(this.flags.app)
   }
 }
 
-test('sets app', async () => {
-  await AppCommand.mock(['--app=myapp'])
-  expect(m).toBeCalledWith('myapp')
-})
+describe('command', () => {
+  it('sets app', () => {
+    return class AppCommand extends Command {
+      static flags = {
+        app: flags.app(),
+      }
 
-test('has heroku clients', async () => {
-  let { cmd } = await AppCommand.mock(['--app=myapp'])
-  expect(cmd.heroku).toBeTruthy()
-  expect(cmd.legacyHerokuClient).toBeTruthy()
-})
+      async run() {
+        const {flags} = this.parse(AppCommand)
+        expect(flags.app).to.equal('myapp')
+      }
+    }.run(['--app=myapp'])
+  })
 
-test('has out/cli', async () => {
-  class LogCommand extends Command {
-    async run() {
-      this.out.log('out')
-      this.cli.log('cli')
-    }
-  }
-
-  let { stdout } = await LogCommand.mock()
-  expect(stdout).toEqual('out\ncli\n')
+  it('has heroku clients', async () => {
+    let cmd = new MyCommand([], config)
+    expect(cmd.heroku).to.be.ok
+    expect(cmd.legacyHerokuClient).to.be.ok
+  })
 })

@@ -1,8 +1,8 @@
-import { flags } from '@cli-engine/command'
+import {flags} from '@anycli/command'
 
-import { herokuGet, oneDay } from '../completions'
+import {herokuGet, oneDay} from '../completions'
 import deps from '../deps'
-import { vars } from '../vars'
+import {vars} from '../vars'
 
 class MultipleRemotesError extends Error {
   constructor(gitRemotes: IGitRemote[]) {
@@ -27,12 +27,12 @@ export const AppCompletion: flags.ICompletion = {
   },
 }
 
-export const app = flags.option({
+export const app = flags.build({
   char: 'a',
   completion: AppCompletion,
   description: 'app to run command against',
 
-  default: ({ options, flags }) => {
+  default: ({options, flags}) => {
     const envApp = process.env.HEROKU_APP
     if (envApp) return envApp
     let gitRemotes = getGitRemotes(flags.remote || configRemote())
@@ -55,7 +55,7 @@ export const RemoteCompletion: flags.ICompletion = {
   },
 }
 
-export const remote = flags.option({
+export const remote = flags.build({
   char: 'r',
   completion: RemoteCompletion,
   description: 'git remote of app to use',
@@ -65,7 +65,7 @@ function configRemote() {
   let git = new deps.Git()
   try {
     return git.exec('config heroku.remote').trim()
-  } catch (err) {}
+  } catch {}
 }
 
 interface IGitRemote {
@@ -78,7 +78,7 @@ function getGitRemotes(onlyRemote: string | undefined): IGitRemote[] {
   let remotes
   try {
     remotes = git.remotes
-  } catch (err) {
+  } catch {
     return []
   }
   for (let remote of remotes) {
