@@ -1,10 +1,11 @@
-import { flags } from '@cli-engine/command'
+import {flags} from '@anycli/command'
+import {CLIError, error} from '@anycli/errors'
 
-import { herokuGet, oneDay } from '../completions'
-import deps from '../deps'
-import { vars } from '../vars'
+import {herokuGet, oneDay} from '../completions'
+import {Git} from '../git'
+import {vars} from '../vars'
 
-class MultipleRemotesError extends Error {
+class MultipleRemotesError extends CLIError {
   constructor(gitRemotes: IGitRemote[]) {
     super(`Multiple apps in git remotes
   Usage: --remote ${gitRemotes[1].remote}
@@ -27,18 +28,18 @@ export const AppCompletion: flags.ICompletion = {
   },
 }
 
-export const app = flags.option({
+export const app = flags.build({
   char: 'a',
   completion: AppCompletion,
   description: 'app to run command against',
 
-  default: ({ options, flags }) => {
+  default: ({options, flags}) => {
     const envApp = process.env.HEROKU_APP
     if (envApp) return envApp
     let gitRemotes = getGitRemotes(flags.remote || configRemote())
     if (gitRemotes.length === 1) return gitRemotes[0].app
     if (flags.remote && gitRemotes.length === 0) {
-      throw new Error(`remote ${flags.remote} not found in git remotes`)
+      error(`remote ${flags.remote} not found in git remotes`)
     }
     if (gitRemotes.length > 1 && options.required) {
       throw new MultipleRemotesError(gitRemotes)
@@ -55,17 +56,17 @@ export const RemoteCompletion: flags.ICompletion = {
   },
 }
 
-export const remote = flags.option({
+export const remote = flags.build({
   char: 'r',
   completion: RemoteCompletion,
   description: 'git remote of app to use',
 })
 
 function configRemote() {
-  let git = new deps.Git()
+  let git = new Git()
   try {
     return git.exec('config heroku.remote').trim()
-  } catch (err) {}
+  } catch {}
 }
 
 interface IGitRemote {
@@ -73,12 +74,12 @@ interface IGitRemote {
   app: string
 }
 function getGitRemotes(onlyRemote: string | undefined): IGitRemote[] {
-  let git = new deps.Git()
+  let git = new Git()
   let appRemotes = []
   let remotes
   try {
     remotes = git.remotes
-  } catch (err) {
+  } catch {
     return []
   }
   for (let remote of remotes) {

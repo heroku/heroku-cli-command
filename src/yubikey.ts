@@ -4,9 +4,9 @@ function toggle(onoff: string) {
   try {
     cp.execSync(
       `osascript -e 'if application "yubiswitch" is running then tell application "yubiswitch" to ${onoff}'`,
-      { stdio: 'inherit' },
+      {stdio: 'inherit'},
     )
-  } catch (err) {}
+  } catch {}
 }
 
 export const yubikey = {

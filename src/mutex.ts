@@ -5,7 +5,7 @@ export type Record<T> = [Task<T>, PromiseResolve<T>, PromiseReject]
 
 export class Mutex<T> {
   private busy = false
-  private queue: Array<Record<T>> = []
+  private readonly queue: Array<Record<T>> = []
 
   synchronize(task: Task<T>): Promise<T> {
     return new Promise((resolve, reject) => {
@@ -21,7 +21,7 @@ export class Mutex<T> {
     let next = this.queue.shift()
 
     if (next) {
-      this.execute(next)
+      return this.execute(next)
     } else {
       this.busy = false
     }
@@ -30,7 +30,7 @@ export class Mutex<T> {
   execute(record: Record<T>) {
     let [task, resolve, reject] = record
 
-    task()
+    return task()
       .then(resolve, reject)
       .then(() => {
         this.dequeue()
