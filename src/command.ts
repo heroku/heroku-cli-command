@@ -1,7 +1,7 @@
-import { Command as Base } from '@cli-engine/command'
-import { deprecate } from 'util'
+import {Command as Base} from '@anycli/command'
+import {deprecate} from 'util'
 
-import { APIClient } from './api_client'
+import {APIClient} from './api_client'
 import deps from './deps'
 
 const pjson = require('../package.json')
@@ -12,7 +12,7 @@ const deprecatedCLI = deprecate(() => {
 
 export abstract class Command extends Base {
   base = `${pjson.name}@${pjson.version}`
-  _heroku: APIClient
+  _heroku!: APIClient
   _legacyHerokuClient: any
 
   get heroku(): APIClient {
@@ -26,10 +26,10 @@ export abstract class Command extends Base {
     const HerokuClient = require('heroku-client')
     let options = {
       debug: this.config.debug,
-      host: `${this.heroku.defaultOptions.protocol || 'https:'}//${this.heroku.defaultOptions.host ||
+      host: `${this.heroku.defaults.protocol || 'https:'}//${this.heroku.defaults.host ||
         'api.heroku.com'}`,
       token: this.heroku.auth,
-      userAgent: (this.heroku.defaultOptions as any).headers['user-agent'],
+      userAgent: (this.heroku.defaults as any).headers['user-agent'],
     }
 
     this._legacyHerokuClient = new HerokuClient(options)

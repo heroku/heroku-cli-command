@@ -1,10 +1,10 @@
-import { Config } from '@cli-engine/config'
-import { HTTP, HTTPError, HTTPRequestOptions } from 'http-call'
+import * as Config from '@anycli/config'
+import {HTTP, HTTPError, HTTPRequestOptions} from 'http-call'
 import * as url from 'url'
 
 import deps from './deps'
-import { Mutex } from './mutex'
-import { vars } from './vars'
+import {Mutex} from './mutex'
+import {vars} from './vars'
 
 export interface IOptions {
   required?: boolean
@@ -40,9 +40,9 @@ export class HerokuAPIError extends Error {
 export class APIClient {
   preauthPromises: { [k: string]: Promise<HTTP> }
   http: typeof HTTP
-  private _twoFactorMutex: Mutex<string>
+  private _twoFactorMutex!: Mutex<string>
 
-  constructor(protected config: Config, public options: IOptions = {}) {
+  constructor(protected config: Config.IConfig, public options: IOptions = {}) {
     this.config = config
     if (options.required === undefined) options.required = true
     options.preauth = options.preauth !== false
@@ -51,24 +51,17 @@ export class APIClient {
     let envHeaders = JSON.parse(process.env.HEROKU_HEADERS || '{}')
     this.preauthPromises = {}
     let auth = this.auth
-    let self = this
-    this.http = class APIHTTPClient extends deps.HTTP.HTTP {
-      static get defaultOptions() {
-        let opts = {
-          ...super.defaultOptions,
-          host: apiUrl.host,
-
-          headers: {
-            ...super.defaultOptions.headers,
-            accept: 'application/vnd.heroku+json; version=3',
-            'user-agent': `heroku-cli/${self.config.version} ${self.config.platform}`,
-            ...envHeaders,
-          },
-        }
-        if (auth) opts.headers.authorization = `Bearer ${auth}`
-        return opts
-      }
-
+    let self = this as any
+    const opts = {
+      host: apiUrl.host,
+      headers: {
+        accept: 'application/vnd.heroku+json; version=3',
+        'user-agent': `heroku-cli/${self.config.version} ${self.config.platform}`,
+        ...envHeaders,
+      },
+    }
+    if (auth) opts.headers.authorization = `Bearer ${auth}`
+    this.http = class APIHTTPClient extends deps.HTTP.HTTP.create(opts) {
       static async twoFactorRetry(
         err: HTTPError,
         url: string,
@@ -84,7 +77,7 @@ export class APIClient {
           // if multiple requests are run in parallel for the same app, we should
           // only preauth for the first so save the fact we already preauthed
           if (!self.preauthPromises[app]) {
-            self.preauthPromises[app] = self.twoFactorPrompt().then(factor => self.preauth(app, factor))
+            self.preauthPromises[app] = self.twoFactorPrompt().then((factor: any) => self.preauth(app, factor))
           }
 
           await self.preauthPromises[app]
@@ -130,7 +123,7 @@ export class APIClient {
     deps.yubikey.enable()
     return this.twoFactorMutex.synchronize(async () => {
       try {
-        let factor = await deps.cli.prompt('Two-factor code', { type: 'mask' })
+        let factor = await deps.cli.prompt('Two-factor code', {type: 'mask'})
         deps.yubikey.disable()
         return factor
       } catch (err) {
@@ -142,7 +135,7 @@ export class APIClient {
 
   preauth(app: string, factor: string) {
     return this.put(`/apps/${app}/pre-authorizations`, {
-      headers: { 'Heroku-Two-Factor-Code': factor },
+      headers: {'Heroku-Two-Factor-Code': factor},
     })
   }
   get(url: string, options: HTTPRequestOptions = {}) {
@@ -166,7 +159,7 @@ export class APIClient {
   request(url: string, options: HTTPRequestOptions = {}) {
     return this.http.request(url, options)
   }
-  get defaultOptions(): HTTPRequestOptions {
-    return this.http.defaultOptions
+  get defaults(): typeof HTTP.defaults {
+    return this.http.defaults
   }
 }
