@@ -1,10 +1,11 @@
 import {flags} from '@anycli/command'
+import {CLIError, error} from '@anycli/errors'
 
 import {herokuGet, oneDay} from '../completions'
 import {Git} from '../git'
 import {vars} from '../vars'
 
-class MultipleRemotesError extends Error {
+class MultipleRemotesError extends CLIError {
   constructor(gitRemotes: IGitRemote[]) {
     super(`Multiple apps in git remotes
   Usage: --remote ${gitRemotes[1].remote}
@@ -38,7 +39,7 @@ export const app = flags.build({
     let gitRemotes = getGitRemotes(flags.remote || configRemote())
     if (gitRemotes.length === 1) return gitRemotes[0].app
     if (flags.remote && gitRemotes.length === 0) {
-      throw new Error(`remote ${flags.remote} not found in git remotes`)
+      error(`remote ${flags.remote} not found in git remotes`)
     }
     if (gitRemotes.length > 1 && options.required) {
       throw new MultipleRemotesError(gitRemotes)
