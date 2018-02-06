@@ -10,12 +10,12 @@ export class Git {
       .filter(l => l.endsWith('(fetch)'))
       .map(l => {
         const [name, url] = l.split('\t')
-        return { name, url: url.split(' ')[0] }
+        return {name, url: url.split(' ')[0]}
       })
   }
 
   exec(cmd: string): string {
-    const { execSync: exec } = require('child_process')
+    const {execSync: exec} = require('child_process')
     try {
       return exec(`git ${cmd}`, {
         encoding: 'utf8',

@@ -1,55 +1,33 @@
-jest.mock('child_process')
+import {expect, fancy} from 'fancy-test'
 
 import * as childProcess from 'child_process'
 
-import { Git } from './git'
+import {Git} from '../src/git'
 
-test('gets the remotes', () => {
-  const git = new Git()
-  git.exec = jest.fn()
-  ;(git.exec as any).mockReturnValueOnce(`origin\thttps://github.com/foo/bar  (fetch)
+describe('git', () => {
+  it('gets the remotes', () => {
+    const git = new Git()
+    git.exec = () => `origin\thttps://github.com/foo/bar  (fetch)
 origin\thttps://github.com/foo/bar  (pull)
 heroku\thttps://git.heroku.com/myapp.git  (fetch)
 heroku\thttps://git.heroku.com/myapp.git  (pull)
-`)
-  expect(git.remotes).toEqual([
-    { name: 'origin', url: 'https://github.com/foo/bar' },
-    { name: 'heroku', url: 'https://git.heroku.com/myapp.git' },
-  ])
-  expect(git.exec).toBeCalledWith('remote -v')
-})
-
-test('runs git', () => {
-  const git = new Git()
-  git.exec('version')
-  expect(childProcess.execSync).toBeCalledWith('git version', {
-    encoding: 'utf8',
-    stdio: [null, 'pipe', null],
+`
+    expect(git.remotes).to.deep.equal([
+      {name: 'origin', url: 'https://github.com/foo/bar'},
+      {name: 'heroku', url: 'https://git.heroku.com/myapp.git'},
+    ])
   })
-})
 
-test('traps git not found', () => {
-  const err = new Error()
-  ;(err as any).code = 'ENOENT'
-  ;(childProcess.execSync as any).mockImplementationOnce(() => {
+  fancy
+  .stub(childProcess, 'execSync', () => {
+    const err: any = new Error('some other message')
+    err.code = 'ENOTNOENT'
     throw err
   })
-
-  const git = new Git()
-  expect(() => {
-    git.exec('version')
-  }).toThrow('Git must be installed to use the Heroku CLI.  See instructions here: http://git-scm.com')
-})
-
-test('rethrows other git error', () => {
-  const err = new Error('some other message')
-  ;(err as any).code = 'NOTENOENT'
-  ;(childProcess.execSync as any).mockImplementationOnce(() => {
-    throw err
+  .it('rethrows other git error', () => {
+    const git = new Git()
+    expect(() => {
+      git.exec('version')
+    }).to.throw('some other message')
   })
-
-  const git = new Git()
-  expect(() => {
-    git.exec('version')
-  }).toThrow(err.message)
 })

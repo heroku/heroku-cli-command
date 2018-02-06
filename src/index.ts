@@ -1,9 +1,9 @@
-import { Command } from './command'
+import {Command} from './command'
 import * as flags from './flags'
 
-export { APIClient } from './api_client'
-export { vars } from './vars'
-export { flags }
+export {APIClient} from './api_client'
+export {vars} from './vars'
+export {flags}
 
-export { Command }
+export {Command}
 export default Command

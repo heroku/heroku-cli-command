@@ -1,103 +1,94 @@
-import { Command } from '@cli-engine/command'
+import {Command} from '@anycli/command'
+import {cli} from 'cli-ux'
+import {expect, fancy} from 'fancy-test'
 
-import * as flags from '.'
-
-let env = process.env
-let teamfn: jest.Mock<{}>
-beforeEach(() => {
-  process.env = {}
-  teamfn = jest.fn()
-})
-afterEach(() => {
-  process.env = env
-})
+import * as flags from '../../src/flags'
 
 describe('required', () => {
   class TeamCommand extends Command {
-    static flags = { team: flags.team({ required: true }) }
+    static flags = {team: flags.team({required: true})}
     async run() {
-      teamfn(this.flags.team)
+      const {flags} = this.parse(this.constructor as any)
+      cli.log(flags.team)
     }
   }
 
-  test('has an team', async () => {
-    await TeamCommand.mock(['--team', 'myteam'])
-    expect(teamfn).toBeCalledWith('myteam')
+  fancy
+  .stdout()
+  .it('has an team', async ctx => {
+    await TeamCommand.run(['--team', 'myteam'])
+    expect(ctx.stdout).to.equal('myteam\n')
   })
 
-  test('-t', async () => {
-    await TeamCommand.mock(['-t', 'myteam'])
-    expect(teamfn).toBeCalledWith('myteam')
-  })
-
-  test('errors with no team', async () => {
-    expect.assertions(1)
+  fancy
+  .it('errors with no team', async (_, done) => {
     try {
-      await TeamCommand.mock()
+      await TeamCommand.run([])
     } catch (err) {
-      expect(err.message).toContain('Missing required flag:\n -t, --team TEAM')
+      expect(err.message).to.contain('Missing required flag:\n -t, --team')
+      done()
     }
   })
 })
 
 describe('optional', () => {
   class TeamCommand extends Command {
-    static flags = { team: flags.team() }
+    static flags = {team: flags.team()}
     async run() {
-      teamfn(this.flags.team)
+      const {flags} = this.parse(this.constructor as any)
+      cli.log(flags.team)
     }
   }
 
-  test('--team', async () => {
-    await TeamCommand.mock(['--team', 'myteam'])
-    expect(teamfn).toBeCalledWith('myteam')
+  fancy
+  .stdout()
+  .it('--team', async ctx => {
+    await TeamCommand.run(['--team', 'myteam'])
+    expect(ctx.stdout).to.equal('myteam\n')
   })
 
-  test('-t', async () => {
-    await TeamCommand.mock(['-t', 'myteam'])
-    expect(teamfn).toBeCalledWith('myteam')
+  fancy
+  .stdout()
+  .it('-t', async ctx => {
+    await TeamCommand.run(['-t', 'myteam'])
+    expect(ctx.stdout).to.equal('myteam\n')
   })
 
-  test('reads HEROKU_ORGANIZATION as a backup', async () => {
+  fancy
+  .stdout()
+  .env({HEROKU_ORGANIZATION: 'myteam'})
+  .it('reads HEROKU_ORGANIZATION', async ctx => {
     class TeamCommand extends Command {
-      static flags = { team: flags.team() }
+      static flags = {team: flags.team()}
       async run() {
-        teamfn(this.flags.team)
+        const {flags} = this.parse(this.constructor as any)
+        cli.log(flags.team)
       }
     }
 
-    process.env.HEROKU_ORGANIZATION = 'myenvteam'
-    await TeamCommand.mock()
-    expect(teamfn).toBeCalledWith('myenvteam')
+    await TeamCommand.run([])
+    expect(ctx.stdout).to.equal('myteam\n')
   })
 
-  test('reads --org as a backup', async () => {
+  fancy
+  .stdout()
+  .env({HEROKU_TEAM: 'myteam'})
+  .it('reads HEROKU_TEAM', async ctx => {
     class TeamCommand extends Command {
-      static flags = { team: flags.team({ required: true }), org: flags.org() }
-      team: string
+      static flags = {team: flags.team()}
       async run() {
-        teamfn(this.flags.team)
+        const {flags} = this.parse(this.constructor as any)
+        cli.log(flags.team)
       }
     }
 
-    await TeamCommand.mock(['--org', 'myteam'])
-    expect(teamfn).toBeCalledWith('myteam')
+    await TeamCommand.run([])
+    expect(ctx.stdout).to.equal('myteam\n')
   })
 
-  test('reads HEROKU_TEAM', async () => {
-    class TeamCommand extends Command {
-      static flags = { team: flags.team() }
-      async run() {
-        teamfn(this.flags.team)
-      }
-    }
-
-    process.env.HEROKU_TEAM = 'myteam'
-    await TeamCommand.mock()
-    expect(teamfn).toBeCalledWith('myteam')
-  })
-
-  test('does not error when team is not specified', async () => {
-    await TeamCommand.mock()
+  fancy
+  .stdout()
+  .it('does not error when team is not specified', async () => {
+    await TeamCommand.run([])
   })
 })

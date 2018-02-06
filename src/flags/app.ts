@@ -1,7 +1,7 @@
 import {flags} from '@anycli/command'
 
 import {herokuGet, oneDay} from '../completions'
-import deps from '../deps'
+import {Git} from '../git'
 import {vars} from '../vars'
 
 class MultipleRemotesError extends Error {
@@ -62,7 +62,7 @@ export const remote = flags.build({
 })
 
 function configRemote() {
-  let git = new deps.Git()
+  let git = new Git()
   try {
     return git.exec('config heroku.remote').trim()
   } catch {}
@@ -73,7 +73,7 @@ interface IGitRemote {
   app: string
 }
 function getGitRemotes(onlyRemote: string | undefined): IGitRemote[] {
-  let git = new deps.Git()
+  let git = new Git()
   let appRemotes = []
   let remotes
   try {

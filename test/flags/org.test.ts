@@ -1,75 +1,82 @@
-import { Command } from '@cli-engine/command'
-import { cli } from 'cli-ux'
+import {Command} from '@anycli/command'
+import {cli} from 'cli-ux'
+import {expect, fancy} from 'fancy-test'
 
-import * as flags from './org'
-
-let env = process.env
-beforeEach(() => {
-  process.env = {}
-})
-afterEach(() => {
-  process.env = env
-})
+import * as flags from '../../src/flags'
 
 describe('required', () => {
   class OrgCommand extends Command {
-    static flags = { org: flags.org({ required: true }) }
+    static flags = {org: flags.org({required: true})}
     async run() {
-      cli.log(this.flags.org)
+      const {flags} = this.parse(this.constructor as any)
+      cli.log(flags.org)
     }
   }
 
-  test('has an org', async () => {
-    const { stdout } = await OrgCommand.mock(['--org', 'myorg'])
-    expect(stdout).toEqual('myorg\n')
+  fancy
+  .stdout()
+  .it('has an org', async ctx => {
+    await OrgCommand.run(['--org', 'myorg'])
+    expect(ctx.stdout).to.equal('myorg\n')
   })
 
-  test('errors with no org', async () => {
-    expect.assertions(1)
+  fancy
+  .it('errors with no org', async (_, done) => {
     try {
-      await OrgCommand.mock()
+      await OrgCommand.run([])
     } catch (err) {
-      expect(err.message).toContain('Missing required flag:\n -o, --org')
+      expect(err.message).to.contain('Missing required flag:\n -o, --org')
+      done()
     }
   })
 })
 
 describe('optional', () => {
   class OrgCommand extends Command {
-    static flags = { org: flags.org() }
+    static flags = {org: flags.org()}
     async run() {
-      cli.log(this.flags.org)
+      const {flags} = this.parse(this.constructor as any)
+      cli.log(flags.org)
     }
   }
 
-  test('--org', async () => {
-    await OrgCommand.mock(['--org', 'myorg'])
-    expect(cli.stdout.output).toEqual('myorg\n')
+  fancy
+  .stdout()
+  .it('--org', async ctx => {
+    await OrgCommand.run(['--org', 'myorg'])
+    expect(ctx.stdout).to.equal('myorg\n')
   })
 
-  test('-o', async () => {
-    await OrgCommand.mock(['-o', 'myorg'])
-    expect(cli.stdout.output).toEqual('myorg\n')
+  fancy
+  .stdout()
+  .it('-o', async ctx => {
+    await OrgCommand.run(['-o', 'myorg'])
+    expect(ctx.stdout).to.equal('myorg\n')
   })
 
-  test('reads HEROKU_ORGANIZATION', async () => {
+  fancy
+  .stdout()
+  .env({HEROKU_ORGANIZATION: 'myorg'})
+  .it('reads HEROKU_ORGANIZATION', async ctx => {
     class OrgCommand extends Command {
-      static flags = { org: flags.org() }
+      static flags = {org: flags.org()}
       async run() {
-        cli.log(this.flags.org)
+        const {flags} = this.parse(this.constructor as any)
+        cli.log(flags.org)
       }
     }
 
-    process.env.HEROKU_ORGANIZATION = 'myorg'
-    await OrgCommand.mock()
-    expect(cli.stdout.output).toEqual('myorg\n')
+    await OrgCommand.run([])
+    expect(ctx.stdout).to.equal('myorg\n')
   })
 
-  test('is hidden by default', async () => {
-    expect(flags.org().hidden).toBe(true)
+  it('is hidden by default', async () => {
+    expect(flags.org().hidden).to.be.ok
   })
 
-  test('does not error when org is not specified', async () => {
-    await OrgCommand.mock()
+  fancy
+  .stdout()
+  .it('does not error when org is not specified', async () => {
+    await OrgCommand.run([])
   })
 })

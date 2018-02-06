@@ -42,9 +42,4 @@ export abstract class Command extends Base {
   get out(): any {
     return deprecatedCLI()
   }
-  get app(): any {
-    return deprecate(() => {
-      return this.flags.app
-    }, 'this.app is deprecated but you can implement it yourself as `get app() { return this.flags.app }`')()
-  }
 }

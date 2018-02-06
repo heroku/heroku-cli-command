@@ -1,57 +1,71 @@
-import { Command } from '@cli-engine/command'
+import {Command} from '@anycli/command'
+import {expect, fancy} from 'fancy-test'
 
-import * as flags from './pipeline'
+import * as flags from '../../src/flags'
 
 describe('required', () => {
   class PipelineCommand extends Command {
-    static flags = { pipeline: flags.pipeline({ required: true }) }
-    pipeline: string
+    static flags = {pipeline: flags.pipeline({required: true})}
 
     async run() {
-      this.pipeline = this.flags.pipeline
+      const {flags} = this.parse(this.constructor as any)
+      this.log(flags.pipeline)
     }
   }
 
-  test('has a pipeline', async () => {
-    const { cmd } = await PipelineCommand.mock(['--pipeline', 'mypipeline'])
-    expect(cmd.pipeline).toEqual('mypipeline')
+  fancy
+  .stdout()
+  .it('has a pipeline', async ctx => {
+    await PipelineCommand.run(['--pipeline', 'mypipeline'])
+    expect(ctx.stdout).to.equal('mypipeline\n')
   })
 
-  test('errors with no pipeline', async () => {
-    expect.assertions(1)
+  fancy
+  .stdout()
+  .it('errors with no pipeline', async (_, done) => {
     try {
-      await PipelineCommand.mock()
+      await PipelineCommand.run([])
     } catch (err) {
-      expect(err.message).toContain('Missing required flag:\n -p, --pipeline PIPELINE')
+      expect(err.message).to.contain('Missing required flag:\n -p, --pipeline PIPELINE')
+      done()
     }
   })
 })
 
 describe('optional', () => {
   class PipelineCommand extends Command {
-    static flags = { pipeline: flags.pipeline() }
+    static flags = {pipeline: flags.pipeline()}
     pipeline?: string
 
     async run() {
-      this.pipeline = this.flags.pipeline
+      const {flags} = this.parse(this.constructor as any)
+      this.log(flags.pipeline)
     }
   }
 
-  test('--pipeline', async () => {
-    const { cmd } = await PipelineCommand.mock(['--pipeline', 'mypipeline'])
-    expect(cmd.pipeline).toEqual('mypipeline')
+  fancy
+  .stdout()
+  .it('--pipeline', async ctx => {
+    await PipelineCommand.run(['--pipeline', 'mypipeline'])
+    expect(ctx.stdout).to.equal('mypipeline\n')
   })
 
-  test('-p', async () => {
-    const { cmd } = await PipelineCommand.mock(['-p', 'mypipeline'])
-    expect(cmd.pipeline).toEqual('mypipeline')
+  fancy
+  .stdout()
+  .it('-p', async ctx => {
+    await PipelineCommand.run(['-p', 'mypipeline'])
+    expect(ctx.stdout).to.equal('mypipeline\n')
   })
 
-  test('is not hidden by default', async () => {
-    expect(flags.pipeline().hidden).toBeFalsy()
+  fancy
+  .stdout()
+  .it('is not hidden by default', async () => {
+    expect(flags.pipeline().hidden).to.not.be.ok
   })
 
-  test('does not error when pipeline is not specified', async () => {
-    await PipelineCommand.mock()
+  fancy
+  .stdout()
+  .it('does not error when pipeline is not specified', async () => {
+    await PipelineCommand.run([])
   })
 })

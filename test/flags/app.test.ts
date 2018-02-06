@@ -1,153 +1,167 @@
-import { Config } from '@cli-engine/config'
+import * as Config from '@anycli/config'
+import {expect, fancy} from 'fancy-test'
 import * as nock from 'nock'
 
-import { Command as Base } from '../command'
+import {Command as Base} from '../../src'
+import {Git} from '../../src/git'
 
-import * as flags from './app'
-
-let mockGitRemotes = jest.fn()
-
-jest.mock('../git', () => ({
-  Git: class {
-    get remotes() {
-      return mockGitRemotes()
-    }
-  },
-}))
+import * as flags from '../../src/flags'
 
 let api: nock.Scope
-let appfn: jest.Mock<any>
+let origRemotes = Object.getOwnPropertyDescriptor(Git.prototype, 'remotes')
+let withRemotes = (remotes: any) => {
+  Object.defineProperty(Git.prototype, 'remotes', {get: () => remotes})
+}
+
 beforeEach(() => {
-  mockGitRemotes.mockReturnValue([])
   api = nock('https://api.heroku.com')
-  appfn = jest.fn()
 })
 afterEach(() => {
+  Object.defineProperty(Git.prototype, 'remotes', origRemotes as any)
   api.done()
 })
 
-describe('required', () => {
-  class Command extends Base {
-    static flags = { app: flags.app({ required: true }), remote: flags.remote() }
-
-    async run() {
-      appfn(this.flags.app)
-    }
+abstract class Command extends Base {
+  static flags = {
+    app: flags.app({required: true}),
+    remote: flags.remote(),
   }
+}
 
-  test('has an app', async () => {
-    await Command.mock(['--app', 'myapp'])
-    expect(appfn).toBeCalledWith('myapp')
+describe('required', () => {
+  it('has an app', async () => {
+    await class extends Command {
+      async run() {
+        const {flags} = this.parse(Command)
+        expect(flags.app).to.equal('myapp')
+      }
+    }.run(['--app', 'myapp'])
   })
 
-  test('gets app from --remote flag', async () => {
-    mockGitRemotes.mockReturnValueOnce([
-      { name: 'staging', url: 'https://git.heroku.com/myapp-staging.git' },
-      { name: 'production', url: 'https://git.heroku.com/myapp-production.git' },
+  fancy
+  .it('gets app from --remote flag', async () => {
+    withRemotes([
+      {name: 'staging', url: 'https://git.heroku.com/myapp-staging.git'},
+      {name: 'production', url: 'https://git.heroku.com/myapp-production.git'},
     ])
-    await Command.mock(['-r', 'staging'])
-    expect(appfn).toBeCalledWith('myapp-staging')
+    await class extends Command {
+      async run() {
+        const {flags} = this.parse(Command)
+        expect(flags.app).to.equal('myapp-staging')
+      }
+    }.run(['--remote', 'staging'])
   })
 
-  test('errors if --remote not found', async () => {
-    expect.assertions(1)
-    mockGitRemotes.mockReturnValueOnce([
-      { name: 'staging', url: 'https://git.heroku.com/myapp-staging.git' },
-      { name: 'production', url: 'https://git.heroku.com/myapp-production.git' },
+  it('errors if --remote not found', async () => {
+    withRemotes([
+      {name: 'staging', url: 'https://git.heroku.com/myapp-staging.git'},
+      {name: 'production', url: 'https://git.heroku.com/myapp-production.git'},
     ])
-    try {
-      await Command.mock(['-r', 'foo'])
-    } catch (err) {
-      expect(err.message).toEqual('remote foo not found in git remotes')
-    }
+    await class extends Command {
+      async run() {
+        expect(() => this.parse(Command)).to.throw(/remote foo not found in git remotes/)
+      }
+    }.run(['--remote', 'foo'])
   })
 
-  test('errors with no app', async () => {
-    expect.assertions(1)
-    try {
-      await Command.mock()
-    } catch (err) {
-      expect(err.message).toContain('Missing required flag:\n -a, --app')
-    }
+  it('errors with no app', async () => {
+    await class extends Command {
+      async run() {
+        expect(() => this.parse(Command)).to.throw(/Missing required flag:\n -a, --app/)
+      }
+    }.run([])
   })
 
-  test('errors with 2 git remotes', async () => {
-    expect.assertions(1)
-    mockGitRemotes.mockReturnValueOnce([
-      { name: 'staging', url: 'https://git.heroku.com/myapp-staging.git' },
-      { name: 'production', url: 'https://git.heroku.com/myapp-production.git' },
+  it('errors with 2 git remotes', async () => {
+    withRemotes([
+      {name: 'staging', url: 'https://git.heroku.com/myapp-staging.git'},
+      {name: 'production', url: 'https://git.heroku.com/myapp-production.git'},
     ])
-    try {
-      await Command.mock()
-    } catch (err) {
-      expect(err.message).toContain('Multiple apps in git remotes')
-    }
+    await class extends Command {
+      async run() {
+        expect(() => this.parse(Command)).to.throw(/Multiple apps in git remotes/)
+      }
+    }.run([])
   })
 
-  test('returns undefined with 2 git remotes when app not required', async () => {
-    class Command extends Base {
-      static flags = { app: flags.app({ required: false }), remote: flags.remote() }
+  it('returns undefined with 2 git remotes when app not required', async () => {
+    withRemotes([
+      {name: 'staging', url: 'https://git.heroku.com/myapp-staging.git'},
+      {name: 'production', url: 'https://git.heroku.com/myapp-production.git'},
+    ])
+    await class Command extends Base {
+      static flags = {
+        app: flags.app()
+      } as any
 
       async run() {
-        appfn(this.flags.app)
+        const {flags} = this.parse(Command)
+        expect(flags.app).to.be.undefined
       }
-    }
-
-    mockGitRemotes.mockReturnValueOnce([
-      { name: 'staging', url: 'https://git.heroku.com/myapp-staging.git' },
-      { name: 'production', url: 'https://git.heroku.com/myapp-production.git' },
-    ])
-    await Command.mock()
-    expect(appfn).toBeCalledWith(undefined)
+    }.run([])
   })
 
-  test('gets app from git config', async () => {
-    mockGitRemotes.mockReturnValueOnce([{ name: 'heroku', url: 'https://git.heroku.com/myapp.git' }])
-    await Command.mock()
-    expect(appfn).toBeCalledWith('myapp')
+  it('gets app from git config', async () => {
+    withRemotes([{name: 'heroku', url: 'https://git.heroku.com/myapp.git'}])
+    await class Command extends Base {
+      static flags = {
+        app: flags.app()
+      } as any
+
+      async run() {
+        const {flags} = this.parse(Command)
+        expect(flags.app).to.equal('myapp')
+      }
+    }.run([])
   })
 })
 
 describe('optional', () => {
-  class Command extends Base {
-    static flags = { app: flags.app(), remote: flags.remote() }
+  it('works when git errors out', async () => {
+    Object.defineProperty(Git.prototype, 'remotes', {get: () => { throw new Error('whoa!') }})
 
-    async run() {
-      appfn(this.flags.app)
-    }
-  }
+    await class Command extends Base {
+      static flags = {
+        app: flags.app()
+      } as any
 
-  test('works when git errors out', async () => {
-    expect.assertions(1)
-    mockGitRemotes.mockImplementationOnce(() => {
-      throw new Error('whoa!')
-    })
-    await Command.mock()
-    expect(appfn).toBeCalledWith(undefined)
+      async run() {
+        const {flags} = this.parse(Command)
+        expect(flags.app).to.be.undefined
+      }
+    }.run([])
   })
 
-  test('does not error when app is not specified', async () => {
-    await Command.mock()
-    expect(appfn).toBeCalledWith(undefined)
+  it('does not error when app is not specified', async () => {
+    await class Command extends Base {
+      static flags = {
+        app: flags.app()
+      } as any
+
+      async run() {
+        const {flags} = this.parse(Command)
+        expect(flags.app).to.be.undefined
+      }
+    }.run([])
   })
 })
 
 describe('completion', () => {
   class Command extends Base {
-    static flags = { app: flags.app({}) }
+    static flags = {app: flags.app({})}
     async run() {}
   }
 
-  test('cacheDuration defaults to 1 day', () => {
+  it('cacheDuration defaults to 1 day', () => {
     const completion = Command.flags.app.completion!
     const duration = completion.cacheDuration
-    expect(duration).toEqual(86400)
+    expect(duration).to.equal(86400)
   })
 
-  test('options returns all the apps', async () => {
+  it('options returns all the apps', async () => {
     const completion = Command.flags.app.completion!
-    api.get('/apps').reply(200, [{ id: 1, name: 'foo' }, { id: 2, name: 'bar' }])
-    const options = await completion.options({ config: new Config() })
-    expect(options).toEqual(['bar', 'foo'])
+    api.get('/apps').reply(200, [{id: 1, name: 'foo'}, {id: 2, name: 'bar'}])
+    const options = await completion.options({config: Config.load()})
+    expect(options).to.deep.equal(['bar', 'foo'])
   })
 })

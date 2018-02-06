@@ -1,4 +1,6 @@
-import { Mutex } from './mutex'
+import {expect} from 'chai'
+
+import {Mutex} from '../src/mutex'
 
 let output: string[]
 
@@ -27,8 +29,8 @@ describe('mutex', () => {
         })
       }),
     ]).then(results => {
-      expect(['foo', 'bar']).toEqual(results)
-      expect(output).toEqual(['foo', 'bar'])
+      expect(['foo', 'bar']).to.deep.equal(results)
+      expect(output).to.deep.equal(['foo', 'bar'])
     })
   })
 
@@ -58,8 +60,8 @@ describe('mutex', () => {
         throw new Error('x')
       })
       .catch(err => {
-        expect(err.message).toEqual('bar')
-        expect(output).toEqual(['foo', 'bar', 'biz'])
+        expect(err.message).to.deep.equal('bar')
+        expect(output).to.deep.equal(['foo', 'bar', 'biz'])
       })
   })
 
@@ -74,8 +76,8 @@ describe('mutex', () => {
       })
       .then(results => {
         setImmediate(() => {
-          expect('foo').toEqual(results)
-          expect(output).toEqual(['foo'])
+          expect('foo').to.deep.equal(results)
+          expect(output).to.deep.equal(['foo'])
 
           return mutex
             .synchronize(() => {
@@ -85,8 +87,8 @@ describe('mutex', () => {
               })
             })
             .then(results => {
-              expect('bar').toEqual(results)
-              expect(output).toEqual(['foo', 'bar'])
+              expect('bar').to.deep.equal(results)
+              expect(output).to.deep.equal(['foo', 'bar'])
               done()
             })
         })

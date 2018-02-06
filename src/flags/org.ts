@@ -1,6 +1,6 @@
-import { flags } from '@cli-engine/command'
+import {flags} from '@anycli/command'
 
-export const org = flags.option({
+export const org = flags.build({
   char: 'o',
   default: () => process.env.HEROKU_ORGANIZATION,
   description: 'name of org',

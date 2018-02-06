@@ -1,13 +1,15 @@
-// @flow
+import {expect} from 'chai'
 
-import { Command, flags } from './index'
+import {Command, flags} from '../src'
 
-test('has flags', async () => {
-  expect(flags).toBeTruthy()
-  expect(typeof flags.team).toEqual('function')
-  expect(typeof flags.org).toEqual('function')
-})
+describe('index', () => {
+  it('has flags', async () => {
+    expect(flags).to.be.ok
+    expect(typeof flags.team).to.equal('function')
+    expect(typeof flags.org).to.equal('function')
+  })
 
-test('has Command', async () => {
-  expect(typeof Command).toEqual('function')
+  it('has Command', async () => {
+    expect(typeof Command).to.equal('function')
+  })
 })
