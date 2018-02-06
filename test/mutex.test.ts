@@ -93,5 +93,6 @@ describe('mutex', () => {
             })
         })
       })
+    .catch(done)
   })
 })
