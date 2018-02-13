@@ -161,7 +161,7 @@ describe('completion', () => {
   it('options returns all the apps', async () => {
     const completion = Command.flags.app.completion!
     api.get('/apps').reply(200, [{id: 1, name: 'foo'}, {id: 2, name: 'bar'}])
-    const options = await completion.options({config: Config.load()})
+    const options = await completion.options({config: await Config.load()})
     expect(options).to.deep.equal(['bar', 'foo'])
   })
 })

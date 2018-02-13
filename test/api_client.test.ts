@@ -1,6 +1,6 @@
 import * as Config from '@oclif/config'
 import cli from 'cli-ux'
-import {expect} from 'fancy-test'
+import base, {expect} from 'fancy-test'
 import * as nock from 'nock'
 
 import {Command as CommandBase} from '../src/command'
@@ -36,42 +36,46 @@ afterEach(() => {
   api.done()
 })
 
-const config = Config.load()
+const test = base
+.add('config', () => Config.load())
 
 describe('api_client', () => {
-  it('makes an HTTP request', async () => {
+  test
+  .it('makes an HTTP request', async ctx => {
     api = nock('https://api.heroku.com', {
       reqheaders: {authorization: 'Bearer mypass'},
     })
     api.get('/apps').reply(200, [{name: 'myapp'}])
 
-    const cmd = new Command([], config)
+    const cmd = new Command([], ctx.config)
     const {body} = await cmd.heroku.get('/apps')
     expect(body).to.deep.equal([{name: 'myapp'}])
     // expect(netrc.loadSync).toBeCalled()
   })
 
   describe('with HEROKU_HEADERS', () => {
-    it('makes an HTTP request with HEROKU_HEADERS', async () => {
+    test
+    .it('makes an HTTP request with HEROKU_HEADERS', async ctx => {
       process.env.HEROKU_HEADERS = '{"x-foo": "bar"}'
       api = nock('https://api.heroku.com', {
         reqheaders: {'x-foo': 'bar'},
       })
       api.get('/apps').reply(200, [{name: 'myapp'}])
 
-      const cmd = new Command([], config)
+      const cmd = new Command([], ctx.config)
       const {body} = await cmd.heroku.get('/apps')
       expect(body).to.deep.equal([{name: 'myapp'}])
     })
   })
 
-  it('2fa no preauth', async () => {
+  test
+  .it('2fa no preauth', async ctx => {
     api = nock('https://api.heroku.com')
     api.get('/apps').reply(403, {id: 'two_factor'})
     let _api = api as any
     _api.get('/apps').matchHeader('heroku-two-factor-code', '123456').reply(200, [{name: 'myapp'}])
 
-    const cmd = new Command([], config)
+    const cmd = new Command([], ctx.config)
     Object.defineProperty(cli, 'prompt', {
       get: () => () => Promise.resolve('123456')
     })
@@ -79,7 +83,8 @@ describe('api_client', () => {
     expect(body).to.deep.equal([{name: 'myapp'}])
   })
 
-  it('2fa preauth', async () => {
+  test
+  .it('2fa preauth', async ctx => {
     api = nock('https://api.heroku.com')
     api.get('/apps/myapp').reply(403, {id: 'two_factor', app: {name: 'myapp'}})
     let _api = api as any
@@ -89,7 +94,7 @@ describe('api_client', () => {
     api.get('/apps/myapp/config').reply(200, {foo: 'bar'})
     api.get('/apps/myapp/dynos').reply(200, {web: 1})
 
-    const cmd = new Command([], config)
+    const cmd = new Command([], ctx.config)
     Object.defineProperty(cli, 'prompt', {
       get: () => () => Promise.resolve('123456')
     })
