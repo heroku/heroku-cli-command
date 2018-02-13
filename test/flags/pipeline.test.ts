@@ -1,4 +1,4 @@
-import {Command} from '@anycli/command'
+import {Command} from '@oclif/command'
 import {expect, fancy} from 'fancy-test'
 
 import * as flags from '../../src/flags'

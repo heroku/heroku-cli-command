@@ -1,5 +1,5 @@
-import {flags} from '@anycli/command'
-import {CLIError, error} from '@anycli/errors'
+import {flags} from '@oclif/command'
+import {CLIError, error} from '@oclif/errors'
 
 import {herokuGet, oneDay} from '../completions'
 import {Git} from '../git'

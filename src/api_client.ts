@@ -1,4 +1,4 @@
-import * as Config from '@anycli/config'
+import * as Config from '@oclif/config'
 import {HTTP, HTTPError, HTTPRequestOptions} from 'http-call'
 import * as url from 'url'
 

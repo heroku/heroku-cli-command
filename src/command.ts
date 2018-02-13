@@ -1,4 +1,4 @@
-import {Command as Base} from '@anycli/command'
+import {Command as Base} from '@oclif/command'
 import {deprecate} from 'util'
 
 import {APIClient} from './api_client'

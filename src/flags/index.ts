@@ -1,4 +1,4 @@
-export * from '@anycli/command/lib/flags'
+export * from '@oclif/command/lib/flags'
 
 export {app, remote} from './app'
 export {org} from './org'

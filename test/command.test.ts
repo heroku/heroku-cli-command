@@ -1,4 +1,4 @@
-import * as Config from '@anycli/config'
+import * as Config from '@oclif/config'
 import {expect} from 'chai'
 
 import {Command} from '../src/command'

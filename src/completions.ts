@@ -1,5 +1,5 @@
-import {flags} from '@anycli/command'
-import * as Config from '@anycli/config'
+import {flags} from '@oclif/command'
+import * as Config from '@oclif/config'
 import * as path from 'path'
 
 import deps from './deps'

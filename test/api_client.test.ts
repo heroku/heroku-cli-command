@@ -1,4 +1,4 @@
-import * as Config from '@anycli/config'
+import * as Config from '@oclif/config'
 import cli from 'cli-ux'
 import {expect} from 'fancy-test'
 import * as nock from 'nock'

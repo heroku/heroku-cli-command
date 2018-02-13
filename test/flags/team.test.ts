@@ -1,4 +1,4 @@
-import {Command} from '@anycli/command'
+import {Command} from '@oclif/command'
 import {cli} from 'cli-ux'
 import {expect, fancy} from 'fancy-test'
 
