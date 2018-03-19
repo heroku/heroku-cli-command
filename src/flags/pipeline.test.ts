@@ -5,7 +5,7 @@ import * as flags from './pipeline'
 describe('required', () => {
   class PipelineCommand extends Command {
     static flags = { pipeline: flags.pipeline({ required: true }) }
-    pipeline: string
+    pipeline!: string
 
     async run() {
       this.pipeline = this.flags.pipeline

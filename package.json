@@ -10,23 +10,23 @@
     "cli-ux": "^2.0.21",
     "heroku-client": "3.0.6",
     "http-call": "^4.0.8",
-    "netrc-parser": "^3.0.3"
+    "netrc-parser": "^3.1.1"
   },
   "devDependencies": {
     "@cli-engine/util": "^1.2.12",
     "@heroku-cli/tslint": "^1.1.4",
     "@types/ansi-styles": "^2.0.30",
     "@types/chalk": "^2.2.0",
-    "@types/jest": "22.0.1",
-    "@types/nock": "9.1.1",
-    "@types/node": "9.3.0",
+    "@types/jest": "22.2.0",
+    "@types/nock": "9.1.2",
+    "@types/node": "9.4.7",
     "husky": "0.14.3",
-    "jest": "^22.1.1",
-    "nock": "9.1.6",
-    "prettier": "1.10.2",
-    "ts-jest": "22.0.1",
+    "jest": "^22.4.2",
+    "nock": "9.2.3",
+    "prettier": "1.11.1",
+    "ts-jest": "22.4.2",
     "tslint": "^5.9.1",
-    "typescript": "2.6.2"
+    "typescript": "2.7.2"
   },
   "engines": {
     "node": ">=6.0.0"

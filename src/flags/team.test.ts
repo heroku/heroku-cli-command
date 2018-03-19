@@ -74,7 +74,7 @@ describe('optional', () => {
   test('reads --org as a backup', async () => {
     class TeamCommand extends Command {
       static flags = { team: flags.team({ required: true }), org: flags.org() }
-      team: string
+      team!: string
       async run() {
         teamfn(this.flags.team)
       }

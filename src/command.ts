@@ -12,7 +12,7 @@ const deprecatedCLI = deprecate(() => {
 
 export abstract class Command extends Base {
   base = `${pjson.name}@${pjson.version}`
-  _heroku: APIClient
+  _heroku!: APIClient
   _legacyHerokuClient: any
 
   get heroku(): APIClient {
