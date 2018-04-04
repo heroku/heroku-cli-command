@@ -40,7 +40,7 @@ export class HerokuAPIError extends Error {
 export class APIClient {
   preauthPromises: { [k: string]: Promise<HTTP> }
   http: typeof HTTP
-  private _twoFactorMutex!: Mutex<string>
+  private _twoFactorMutex: Mutex<string> | undefined
 
   constructor(protected config: Config.IConfig, public options: IOptions = {}) {
     this.config = config
