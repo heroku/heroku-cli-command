@@ -1,7 +1,7 @@
 {
   "name": "@heroku-cli/command",
   "description": "heroku specific functionality for the cli-engine",
-  "version": "8.0.0-oclif.2",
+  "version": "8.0.0",
   "author": "Jeff Dickey @jdxcode",
   "bugs": "https://github.com/heroku/cli-engine-heroku/issues",
   "dependencies": {
