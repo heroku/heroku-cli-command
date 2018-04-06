@@ -1,7 +1,7 @@
 {
   "name": "@heroku-cli/command",
   "description": "heroku specific functionality for the cli-engine",
-  "version": "7.0.15",
+  "version": "7.1.2",
   "author": "Jeff Dickey @jdxcode",
   "bugs": "https://github.com/heroku/cli-engine-heroku/issues",
   "dependencies": {
@@ -10,7 +10,7 @@
     "cli-ux": "^2.0.21",
     "heroku-client": "3.0.6",
     "http-call": "^4.0.8",
-    "netrc-parser": "^3.0.3"
+    "netrc-parser": "^3.1.2"
   },
   "devDependencies": {
     "@cli-engine/util": "^1.2.12",
