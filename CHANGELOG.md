@@ -1,0 +1,17 @@
+<a name="7.1.0"></a>
+# [7.1.0](https://github.com/heroku/heroku-cli-command/compare/v7.0.16...v7.1.0) (2018-04-06)
+
+
+### Bug Fixes
+
+* fixed repo link ([9849b51](https://github.com/heroku/heroku-cli-command/commit/9849b51))
+* fixed tests ([525b0a7](https://github.com/heroku/heroku-cli-command/commit/525b0a7))
+* oclif rename ([7fc9586](https://github.com/heroku/heroku-cli-command/commit/7fc9586))
+* oclif rename ([f3bc43d](https://github.com/heroku/heroku-cli-command/commit/f3bc43d))
+* ran oclif generator ([714d15e](https://github.com/heroku/heroku-cli-command/commit/714d15e))
+* updated netrc-parser ([df72fd7](https://github.com/heroku/heroku-cli-command/commit/df72fd7))
+
+
+### Features
+
+* anycli conversion ([201f534](https://github.com/heroku/heroku-cli-command/commit/201f534))
