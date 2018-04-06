@@ -4,7 +4,7 @@
 Base class for Heroku CLI commands. Built off of [oclif](https://oclif.io).
 
 [![Version](https://img.shields.io/npm/v/@heroku-cli/command.svg)](https://npmjs.org/package/@heroku-cli/command)
-[![CircleCI](https://circleci.com/gh/heroku/heroku-cli-command/tree/master.svg?style=svg)](https://circleci.com/gh/heroku/heroku-cli-command/tree/master)
+[![CircleCI](https://circleci.com/gh/heroku/heroku-cli-command/tree/master.svg?style=shield)](https://circleci.com/gh/heroku/heroku-cli-command/tree/master)
 [![Appveyor CI](https://ci.appveyor.com/api/projects/status/github/heroku/heroku-cli-command?branch=master&svg=true)](https://ci.appveyor.com/project/heroku/heroku-cli-command/branch/master)
 [![Codecov](https://codecov.io/gh/heroku/heroku-cli-command/branch/master/graph/badge.svg)](https://codecov.io/gh/heroku/heroku-cli-command)
 [![Greenkeeper](https://badges.greenkeeper.io/heroku/heroku-cli-command.svg)](https://greenkeeper.io/)
