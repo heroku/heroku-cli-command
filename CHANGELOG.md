@@ -1,3 +1,11 @@
+<a name="8.0.3"></a>
+## [8.0.3](https://github.com/heroku/heroku-cli-command/compare/v8.0.2...v8.0.3) (2018-04-06)
+
+
+### Bug Fixes
+
+* HEROKU_API_KEY ([7c7d31b](https://github.com/heroku/heroku-cli-command/commit/7c7d31b))
+
 <a name="8.0.2"></a>
 ## [8.0.2](https://github.com/heroku/heroku-cli-command/compare/v8.0.1...v8.0.2) (2018-04-06)
 
