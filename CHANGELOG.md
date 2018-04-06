@@ -1,3 +1,11 @@
+<a name="7.1.1"></a>
+## [7.1.1](https://github.com/heroku/heroku-cli-command/compare/v7.1.0...v7.1.1) (2018-04-06)
+
+
+### Bug Fixes
+
+* updated metadata ([960d294](https://github.com/heroku/heroku-cli-command/commit/960d294))
+
 <a name="7.1.0"></a>
 # [7.1.0](https://github.com/heroku/heroku-cli-command/compare/v7.0.16...v7.1.0) (2018-04-06)
 
