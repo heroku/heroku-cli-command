@@ -20,7 +20,7 @@ class Command extends CommandBase {
 
 const netrc = require('netrc-parser').default
 netrc.loadSync = function (this: typeof netrc) {
-  netrc._machines = {
+  netrc.machines = {
     'api.heroku.com': {password: 'mypass'}
   }
 }
