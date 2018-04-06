@@ -1,3 +1,11 @@
+<a name="8.0.4"></a>
+## [8.0.4](https://github.com/heroku/heroku-cli-command/compare/v8.0.3...v8.0.4) (2018-04-06)
+
+
+### Bug Fixes
+
+* inherit errors from CLIError ([b590cd0](https://github.com/heroku/heroku-cli-command/commit/b590cd0))
+
 <a name="8.0.3"></a>
 ## [8.0.3](https://github.com/heroku/heroku-cli-command/compare/v8.0.2...v8.0.3) (2018-04-06)
 
