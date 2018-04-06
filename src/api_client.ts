@@ -1,4 +1,5 @@
 import * as Config from '@oclif/config'
+import {CLIError} from '@oclif/errors'
 import {HTTP, HTTPError, HTTPRequestOptions} from 'http-call'
 import * as url from 'url'
 
@@ -19,7 +20,7 @@ export interface IHerokuAPIErrorOptions {
   url?: string
 }
 
-export class HerokuAPIError extends Error {
+export class HerokuAPIError extends CLIError {
   http: HTTPError
   body: IHerokuAPIErrorOptions
 
