@@ -1,3 +1,16 @@
+<a name="8.0.0"></a>
+# [8.0.0](https://github.com/heroku/heroku-cli-command/compare/v7.1.1...v8.0.0) (2018-04-06)
+
+
+### Features
+
+* oclif ([ee07cb1](https://github.com/heroku/heroku-cli-command/commit/ee07cb1))
+
+
+### BREAKING CHANGES
+
+* this is the oclif version
+
 <a name="7.1.1"></a>
 ## [7.1.1](https://github.com/heroku/heroku-cli-command/compare/v7.1.0...v7.1.1) (2018-04-06)
 
