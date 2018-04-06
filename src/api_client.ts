@@ -41,6 +41,7 @@ export class APIClient {
   preauthPromises: { [k: string]: Promise<HTTP> }
   http: typeof HTTP
   private _twoFactorMutex: Mutex<string> | undefined
+  private _auth?: string
 
   constructor(protected config: Config.IConfig, public options: IOptions = {}) {
     this.config = config
@@ -110,13 +111,16 @@ export class APIClient {
   }
 
   get auth(): string | undefined {
-    if (process.env.HEROKU_API_TOKEN) deps.cli.warn('HEROKU_API_TOKEN is set but you probably meant HEROKU_API_KEY')
-    let auth = process.env.HEROKU_API_KEY
-    if (!auth) {
-      deps.netrc.loadSync()
-      auth = deps.netrc.machines[vars.apiHost] && deps.netrc.machines[vars.apiHost].password
+    if (!this._auth) {
+      this._auth = process.env.HEROKU_API_KEY
+      if (this._auth) {
+        deps.cli.warn('HEROKU_API_TOKEN is set but you probably meant HEROKU_API_KEY')
+      } else {
+        deps.netrc.loadSync()
+        this._auth = deps.netrc.machines[vars.apiHost] && deps.netrc.machines[vars.apiHost].password
+      }
     }
-    return auth
+    return this._auth
   }
 
   twoFactorPrompt() {
