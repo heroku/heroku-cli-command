@@ -1,3 +1,11 @@
+<a name="8.0.2"></a>
+## [8.0.2](https://github.com/heroku/heroku-cli-command/compare/v8.0.1...v8.0.2) (2018-04-06)
+
+
+### Bug Fixes
+
+* memoize auth token ([145f81e](https://github.com/heroku/heroku-cli-command/commit/145f81e))
+
 <a name="8.0.0"></a>
 # [8.0.0](https://github.com/heroku/heroku-cli-command/compare/v7.1.1...v8.0.0) (2018-04-06)
 
