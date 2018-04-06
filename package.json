@@ -1,6 +1,6 @@
 {
   "name": "@heroku-cli/command",
-  "description": "heroku specific functionality for the cli-engine",
+  "description": "base class for Heroku CLI commands",
   "version": "7.1.0",
   "author": "Jeff Dickey @jdxcode",
   "bugs": "https://github.com/heroku/heroku-cli-command/issues",
