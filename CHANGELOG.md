@@ -1,3 +1,11 @@
+<a name="8.0.6"></a>
+## [8.0.6](https://github.com/heroku/heroku-cli-command/compare/v8.0.5...v8.0.6) (2018-05-01)
+
+
+### Bug Fixes
+
+* updated deps ([e8d6a78](https://github.com/heroku/heroku-cli-command/commit/e8d6a78))
+
 <a name="8.0.5"></a>
 ## [8.0.5](https://github.com/heroku/heroku-cli-command/compare/v8.0.4...v8.0.5) (2018-04-17)
 
