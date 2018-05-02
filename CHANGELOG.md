@@ -1,3 +1,11 @@
+<a name="8.0.7"></a>
+## [8.0.7](https://github.com/heroku/heroku-cli-command/compare/v8.0.6...v8.0.7) (2018-05-02)
+
+
+### Bug Fixes
+
+* skip rewriting auth header ([#32](https://github.com/heroku/heroku-cli-command/issues/32)) ([f74245f](https://github.com/heroku/heroku-cli-command/commit/f74245f))
+
 <a name="8.0.6"></a>
 ## [8.0.6](https://github.com/heroku/heroku-cli-command/compare/v8.0.5...v8.0.6) (2018-05-01)
 
