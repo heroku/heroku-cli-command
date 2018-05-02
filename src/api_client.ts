@@ -62,7 +62,7 @@ export class APIClient {
         ...envHeaders,
       },
     }
-    if (auth) opts.headers.authorization = `Bearer ${auth}`
+    if (auth && !opts.headers.authorization) opts.headers.authorization = `Bearer ${auth}`
     this.http = class APIHTTPClient extends deps.HTTP.HTTP.create(opts) {
       static async twoFactorRetry(
         err: HTTPError,
