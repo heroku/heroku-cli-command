@@ -15,6 +15,7 @@ export namespace Login {
   export interface Options {
     expiresIn?: number
     method?: 'interactive' | 'sso' | 'web'
+    browser?: string
   }
 }
 
@@ -119,6 +120,7 @@ export class Login {
 
   private async web(): Promise<NetrcEntry> {
     const {body: urls} = await this.heroku.post(`${this.loginHost}/auth`)
+    // TODO: handle browser
     await opn(`${this.loginHost}${urls.browser_url}`, {wait: false})
     cli.action.start('heroku: Waiting for login')
     const {body: auth} = await this.heroku.get(`${this.loginHost}${urls.cli_url}`)
@@ -136,7 +138,7 @@ export class Login {
   }
 
   private async interactive(login?: string, expiresIn?: number): Promise<NetrcEntry> {
-    process.stderr.write('heroku: Enter your login credentials:\n')
+    process.stderr.write('heroku: Enter your login credentials\n')
     login = await cli.prompt('Email', {default: login})
     let password = await cli.prompt('Password', {type: 'hide'})
 
@@ -228,6 +230,7 @@ export class Login {
     }
 
     cli.action.start('Opening browser for login')
+    // TODO: handle browser
     await opn(url, {wait: false})
 
     const password = await cli.prompt('Access token', {type: 'mask'})
