@@ -8,6 +8,7 @@ function debug(...args: any[]) {
 }
 
 export function exists(f: string): Promise<boolean> {
+  // tslint:disable-next-line
   return promisify(fs.exists)(f)
 }
 
