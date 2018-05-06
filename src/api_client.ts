@@ -1,9 +1,11 @@
 import * as Config from '@oclif/config'
-import {CLIError} from '@oclif/errors'
+import {CLIError, warn} from '@oclif/errors'
 import {HTTP, HTTPError, HTTPRequestOptions} from 'http-call'
+import Netrc from 'netrc-parser'
 import * as url from 'url'
 
 import deps from './deps'
+import {Login} from './login'
 import {Mutex} from './mutex'
 import {vars} from './vars'
 
@@ -40,7 +42,9 @@ export class HerokuAPIError extends CLIError {
 
 export class APIClient {
   preauthPromises: { [k: string]: Promise<HTTP> }
+  authPromise?: Promise<HTTP>
   http: typeof HTTP
+  private readonly _login = new Login(this.config, this)
   private _twoFactorMutex: Mutex<string> | undefined
   private _auth?: string
 
@@ -52,7 +56,6 @@ export class APIClient {
     let apiUrl = url.URL ? new url.URL(vars.apiUrl) : url.parse(vars.apiUrl)
     let envHeaders = JSON.parse(process.env.HEROKU_HEADERS || '{}')
     this.preauthPromises = {}
-    let auth = this.auth
     let self = this as any
     const opts = {
       host: apiUrl.host,
@@ -62,7 +65,6 @@ export class APIClient {
         ...envHeaders,
       },
     }
-    if (auth && !opts.headers.authorization) opts.headers.authorization = `Bearer ${auth}`
     this.http = class APIHTTPClient extends deps.HTTP.HTTP.create(opts) {
       static async twoFactorRetry(
         err: HTTPError,
@@ -87,13 +89,23 @@ export class APIClient {
         }
       }
 
-      static async request(url: string, opts: HTTPRequestOptions = {}, retries = 3) {
+      static async request(url: string, opts: HTTPRequestOptions = {}, retries = 3): Promise<APIHTTPClient> {
+        opts.headers = opts.headers || {}
+        if (!opts.headers.authorization) {
+          opts.headers.authorization = `Bearer ${self.auth}`
+        }
         retries--
         try {
           return await super.request(url, opts)
         } catch (err) {
           if (!(err instanceof deps.HTTP.HTTPError)) throw err
           if (retries > 0) {
+            if (err.http.statusCode === 401 && err.body.id === 'unauthorized') {
+              if (!self.authPromise) self.authPromise = self.login()
+              await self.authPromise
+              opts.headers.authorization = `Bearer ${self.auth}`
+              return this.request(url, opts, retries)
+            }
             if (err.http.statusCode === 403 && err.body.id === 'two_factor') {
               return this.twoFactorRetry(err, url, opts, retries)
             }
@@ -121,6 +133,10 @@ export class APIClient {
       }
     }
     return this._auth
+  }
+  set auth(token: string | undefined) {
+    delete this.authPromise
+    this._auth = token
   }
 
   twoFactorPrompt() {
@@ -161,7 +177,20 @@ export class APIClient {
     return this.http.stream(url, options)
   }
   request(url: string, options: HTTPRequestOptions = {}) {
-    return this.http.request(url, options)
+    this.http.request(url, options)
+  }
+  login(opts: Login.Options = {}) {
+    return this._login.login(opts)
+  }
+  async logout() {
+    try {
+      await this._login.logout()
+    } catch (err) {
+      warn(err)
+    }
+    delete Netrc.machines['api.heroku.com']
+    delete Netrc.machines['git.heroku.com']
+    await Netrc.save()
   }
   get defaults(): typeof HTTP.defaults {
     return this.http.defaults
