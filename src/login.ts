@@ -1,7 +1,6 @@
 import color from '@heroku-cli/color'
 import * as Config from '@oclif/config'
-import {CLIError} from '@oclif/errors'
-import cli from 'cli-ux'
+import ux from 'cli-ux'
 import Netrc from 'netrc-parser'
 import opn = require('opn')
 import {hostname} from 'os'
@@ -40,6 +39,7 @@ export class Login {
   constructor(private readonly config: Config.IConfig, private readonly heroku: APIClient) {}
 
   async login(opts: Login.Options = {}): Promise<void> {
+    if (process.env.HEROKU_API_KEY) ux.error('Cannot log in with HEROKU_API_KEY set')
     await Netrc.load()
     const previousEntry = Netrc.machines['api.heroku.com']
     let input: string | undefined = opts.method
@@ -49,7 +49,7 @@ export class Login {
         // can't use web with --expires-in
         input = 'interactive'
       } else if (this.enableWebLogin()) {
-        input = await cli.prompt(`heroku: Login with [${color.green('w')}]eb, [${color.green('i')}]nteractive, or [${color.green('s')}]so`, {default: defaultMethod})
+        input = await ux.prompt(`heroku: Login with [${color.green('w')}]eb, [${color.green('i')}]nteractive, or [${color.green('s')}]so`, {default: defaultMethod})
       } else {
         input = defaultMethod || 'interactive'
       }
@@ -122,13 +122,13 @@ export class Login {
     const {body: urls} = await this.heroku.post(`${this.loginHost}/auth`)
     // TODO: handle browser
     await opn(`${this.loginHost}${urls.browser_url}`, {wait: false})
-    cli.action.start('heroku: Waiting for login')
+    ux.action.start('heroku: Waiting for login')
     const {body: auth} = await this.heroku.get(`${this.loginHost}${urls.cli_url}`)
-    if (auth.error) throw new CLIError(auth.error)
+    if (auth.error) ux.error(auth.error)
     this.heroku.auth = auth.access_token
-    cli.action.start('heroku: Logging in')
+    ux.action.start('heroku: Logging in')
     const {body: account} = await this.heroku.get('/account')
-    cli.action.stop()
+    ux.action.stop()
     return {
       login: account.email,
       password: auth.access_token,
@@ -139,15 +139,15 @@ export class Login {
 
   private async interactive(login?: string, expiresIn?: number): Promise<NetrcEntry> {
     process.stderr.write('heroku: Enter your login credentials\n')
-    login = await cli.prompt('Email', {default: login})
-    let password = await cli.prompt('Password', {type: 'hide'})
+    login = await ux.prompt('Email', {default: login})
+    let password = await ux.prompt('Password', {type: 'hide'})
 
     let auth
     try {
       auth = await this.createOAuthToken(login!, password, {expiresIn})
     } catch (err) {
       if (!err.body || err.body.id !== 'two_factor') throw err
-      let secondFactor = await cli.prompt('heroku: Two-factor code', {type: 'mask'})
+      let secondFactor = await ux.prompt('heroku: Two-factor code', {type: 'mask'})
       auth = await this.createOAuthToken(login!, password, {expiresIn, secondFactor})
     }
     this.heroku.auth = auth.password
@@ -222,18 +222,18 @@ export class Login {
     if (!url) {
       org = process.env.HEROKU_ORGANIZATION || org
       if (org) {
-        org = await cli.prompt('Organization name', {default: org})
+        org = await ux.prompt('Organization name', {default: org})
       } else {
-        org = await cli.prompt('Organization name')
+        org = await ux.prompt('Organization name')
       }
       url = `https://sso.heroku.com/saml/${encodeURIComponent(org!)}/init?cli=true`
     }
 
-    cli.action.start('Opening browser for login')
+    ux.action.start('Opening browser for login')
     // TODO: handle browser
     await opn(url, {wait: false})
 
-    const password = await cli.prompt('Access token', {type: 'mask'})
+    const password = await ux.prompt('Access token', {type: 'mask'})
     this.heroku.auth = password
     const {body: account} = await this.heroku.get('/account')
 
