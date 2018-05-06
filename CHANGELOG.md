@@ -1,3 +1,11 @@
+<a name="8.1.2"></a>
+## [8.1.2](https://github.com/heroku/heroku-cli-command/compare/v8.1.1...v8.1.2) (2018-05-06)
+
+
+### Bug Fixes
+
+* error out on login when HEROKU_API_KEY is set ([eaad07f](https://github.com/heroku/heroku-cli-command/commit/eaad07f))
+
 <a name="8.1.1"></a>
 ## [8.1.1](https://github.com/heroku/heroku-cli-command/compare/v8.1.0...v8.1.1) (2018-05-06)
 
