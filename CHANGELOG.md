@@ -1,3 +1,11 @@
+<a name="8.1.0"></a>
+# [8.1.0](https://github.com/heroku/heroku-cli-command/compare/v8.0.7...v8.1.0) (2018-05-06)
+
+
+### Features
+
+* added login/logout ([#33](https://github.com/heroku/heroku-cli-command/issues/33)) ([c772322](https://github.com/heroku/heroku-cli-command/commit/c772322))
+
 <a name="8.0.7"></a>
 ## [8.0.7](https://github.com/heroku/heroku-cli-command/compare/v8.0.6...v8.0.7) (2018-05-02)
 
