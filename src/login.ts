@@ -123,7 +123,11 @@ export class Login {
     // TODO: handle browser
     await opn(`${this.loginHost}${urls.browser_url}`, {wait: false})
     ux.action.start('heroku: Waiting for login')
-    const {body: auth} = await this.heroku.get(`${this.loginHost}${urls.cli_url}`)
+    const {body: auth} = await this.heroku.get(`${this.loginHost}${urls.cli_url}`, {
+      headers: {
+        authorization: `Bearer ${urls.token}`,
+      }
+    })
     if (auth.error) ux.error(auth.error)
     this.heroku.auth = auth.access_token
     ux.action.start('heroku: Logging in')

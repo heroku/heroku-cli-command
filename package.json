@@ -34,7 +34,7 @@
     "nock": "9.2.5",
     "prettier": "1.12.1",
     "proxyquire": "^2.0.1",
-    "sinon": "^5.0.4",
+    "sinon": "^5.0.7",
     "testdouble": "^3.8.1",
     "ts-node": "^6.0.3",
     "tslint": "^5.10.0",
