@@ -1,3 +1,12 @@
+<a name="8.1.3"></a>
+## [8.1.3](https://github.com/heroku/heroku-cli-command/compare/v8.1.2...v8.1.3) (2018-05-07)
+
+
+### Bug Fixes
+
+* use jwt auth on browser login ([3ba6ac7](https://github.com/heroku/heroku-cli-command/commit/3ba6ac7))
+* web -> browser ([2a78cc0](https://github.com/heroku/heroku-cli-command/commit/2a78cc0))
+
 <a name="8.1.2"></a>
 ## [8.1.2](https://github.com/heroku/heroku-cli-command/compare/v8.1.1...v8.1.2) (2018-05-06)
 
