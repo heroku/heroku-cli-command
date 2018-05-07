@@ -13,7 +13,7 @@ const debug = require('debug')('heroku-cli-command')
 export namespace Login {
   export interface Options {
     expiresIn?: number
-    method?: 'interactive' | 'sso' | 'web'
+    method?: 'interactive' | 'sso' | 'browser'
     browser?: string
   }
 }
@@ -21,7 +21,7 @@ export namespace Login {
 interface NetrcEntry {
   login: string
   password: string
-  method?: 'interactive' | 'sso' | 'web'
+  method?: 'interactive' | 'sso' | 'browser'
   org?: string
   refresh?: string
 }
@@ -46,19 +46,19 @@ export class Login {
     const defaultMethod = (previousEntry && previousEntry.method) || 'interactive'
     if (!input) {
       if (opts.expiresIn) {
-        // can't use web with --expires-in
+        // can't use browser with --expires-in
         input = 'interactive'
-      } else if (this.enableWebLogin()) {
-        input = await ux.prompt(`heroku: Login with [${color.green('w')}]eb, [${color.green('i')}]nteractive, or [${color.green('s')}]so`, {default: defaultMethod})
+      } else if (this.enableBrowserLogin()) {
+        input = await ux.prompt(`heroku: Login with [${color.green('b')}]rowser, [${color.green('i')}]nteractive, or [${color.green('s')}]so (enterprise-only)`, {default: defaultMethod})
       } else {
         input = defaultMethod || 'interactive'
       }
     }
     let auth
     switch (input) {
-      case 'w':
-      case 'web':
-        auth = await this.web()
+      case 'b':
+      case 'browser':
+        auth = await this.browser()
         break
       case 'i':
       case 'interactive':
@@ -118,7 +118,7 @@ export class Login {
     await Promise.all(requests)
   }
 
-  private async web(): Promise<NetrcEntry> {
+  private async browser(): Promise<NetrcEntry> {
     const {body: urls} = await this.heroku.post(`${this.loginHost}/auth`)
     // TODO: handle browser
     await opn(`${this.loginHost}${urls.browser_url}`, {wait: false})
@@ -133,7 +133,7 @@ export class Login {
       login: account.email,
       password: auth.access_token,
       refresh: auth.refresh_token,
-      method: 'web',
+      method: 'browser',
     }
   }
 
@@ -211,7 +211,7 @@ export class Login {
     }
   }
 
-  private enableWebLogin() {
+  private enableBrowserLogin() {
     if (!process.env.HEROKU_LOGIN_HOST) return false
     if (this.config.name === '@heroku-cli/command') return true
     return this.config.channel !== 'stable'
