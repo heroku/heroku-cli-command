@@ -1,3 +1,11 @@
+<a name="8.1.7"></a>
+## [8.1.7](https://github.com/heroku/heroku-cli-command/compare/v8.1.6...v8.1.7) (2018-05-08)
+
+
+### Bug Fixes
+
+* prettify errors ([6192ae5](https://github.com/heroku/heroku-cli-command/commit/6192ae5))
+
 <a name="8.1.6"></a>
 ## [8.1.6](https://github.com/heroku/heroku-cli-command/compare/v8.1.5...v8.1.6) (2018-05-08)
 
