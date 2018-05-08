@@ -1,6 +1,7 @@
 import color from '@heroku-cli/color'
 import * as Config from '@oclif/config'
 import ux from 'cli-ux'
+import HTTP from 'http-call'
 import Netrc from 'netrc-parser'
 import opn = require('opn')
 import {hostname} from 'os'
@@ -119,19 +120,19 @@ export class Login {
   }
 
   private async browser(): Promise<NetrcEntry> {
-    const {body: urls} = await this.heroku.post(`${this.loginHost}/auth`)
+    const {body: urls} = await HTTP.post(`${this.loginHost}/auth`)
     // TODO: handle browser
     await opn(`${this.loginHost}${urls.browser_url}`, {wait: false})
-    ux.action.start('heroku: Waiting for login')
-    const {body: auth} = await this.heroku.get(`${this.loginHost}${urls.cli_url}`, {
+    ux.action.start('Waiting for login')
+    const {body: auth} = await HTTP.get(`${this.loginHost}${urls.cli_url}`, {
       headers: {
         authorization: `Bearer ${urls.token}`,
       }
     })
     if (auth.error) ux.error(auth.error)
     this.heroku.auth = auth.access_token
-    ux.action.start('heroku: Logging in')
-    const {body: account} = await this.heroku.get('/account')
+    ux.action.start('Logging in')
+    const {body: account} = await HTTP.get(`${vars.apiUrl}/account`, {headers: {accept: 'application/vnd.heroku+json; version=3', authorization: `Bearer ${auth.access_token}`}})
     ux.action.stop()
     return {
       login: account.email,
@@ -151,7 +152,7 @@ export class Login {
       auth = await this.createOAuthToken(login!, password, {expiresIn})
     } catch (err) {
       if (!err.body || err.body.id !== 'two_factor') throw err
-      let secondFactor = await ux.prompt('heroku: Two-factor code', {type: 'mask'})
+      let secondFactor = await ux.prompt('Two-factor code', {type: 'mask'})
       auth = await this.createOAuthToken(login!, password, {expiresIn, secondFactor})
     }
     this.heroku.auth = auth.password
@@ -167,12 +168,13 @@ export class Login {
     }
 
     let headers: {[k: string]: string} = {
+      accept: 'application/vnd.heroku+json; version=3',
       authorization: basicAuth(username, password)
     }
 
     if (opts.secondFactor) headers['Heroku-Two-Factor-Code'] = opts.secondFactor
 
-    const {body: auth} = await this.heroku.post('/oauth/authorizations', {
+    const {body: auth} = await HTTP.post(`${vars.apiUrl}/oauth/authorizations`, {
       headers,
       body: {
         scope: ['global'],
@@ -238,8 +240,9 @@ export class Login {
     await opn(url, {wait: false})
 
     const password = await ux.prompt('Access token', {type: 'mask'})
+    ux.action.start('Validating token')
     this.heroku.auth = password
-    const {body: account} = await this.heroku.get('/account')
+    const {body: account} = await HTTP.get(`${vars.apiUrl}/account`, {headers: {accept: 'application/vnd.heroku+json; version=3', authorization: `Bearer ${password}`}})
 
     return {password, login: account.email, method: 'sso', org}
   }
