@@ -1,3 +1,11 @@
+<a name="8.1.9"></a>
+## [8.1.9](https://github.com/heroku/heroku-cli-command/compare/v8.1.8...v8.1.9) (2018-05-08)
+
+
+### Bug Fixes
+
+* sso logout ([102028a](https://github.com/heroku/heroku-cli-command/commit/102028a))
+
 <a name="8.1.8"></a>
 ## [8.1.8](https://github.com/heroku/heroku-cli-command/compare/v8.1.7...v8.1.8) (2018-05-08)
 
