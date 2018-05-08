@@ -65,6 +65,16 @@ export class Login {
         }
       }
       let auth
+      const logout = async () => {
+        if (previousEntry && previousEntry.password) {
+          try {
+            await this.logout(previousEntry.password)
+            delete previousEntry.password
+          } catch (err) {
+            ux.warn(err)
+          }
+        }
+      }
       switch (input) {
         case 'b':
         case 'browser':
@@ -76,19 +86,14 @@ export class Login {
           break
         case 's':
         case 'sso':
+          await logout() // for sso logout first
           auth = await this.sso(previousEntry && previousEntry.org)
           break
         default:
           return this.login(opts)
       }
       await this.saveToken(auth)
-      if (previousEntry) {
-        try {
-          await this.logout(previousEntry.password)
-        } catch (err) {
-          ux.warn(err)
-        }
-      }
+      await logout()
     } catch (err) {
       throw new HerokuAPIError(err)
     } finally {
