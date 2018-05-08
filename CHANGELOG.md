@@ -1,3 +1,11 @@
+<a name="8.1.10"></a>
+## [8.1.10](https://github.com/heroku/heroku-cli-command/compare/v8.1.9...v8.1.10) (2018-05-08)
+
+
+### Bug Fixes
+
+* throw plain errors ([a6a821a](https://github.com/heroku/heroku-cli-command/commit/a6a821a))
+
 <a name="8.1.9"></a>
 ## [8.1.9](https://github.com/heroku/heroku-cli-command/compare/v8.1.8...v8.1.9) (2018-05-08)
 
