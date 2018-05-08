@@ -40,6 +40,10 @@ export class Login {
   constructor(private readonly config: Config.IConfig, private readonly heroku: APIClient) {}
 
   async login(opts: Login.Options = {}): Promise<void> {
+
+    // timeout after 10 minutes
+    setTimeout(() => ux.error('timed out'), 1000 * 60 * 10)
+
     if (process.env.HEROKU_API_KEY) ux.error('Cannot log in with HEROKU_API_KEY set')
     await Netrc.load()
     const previousEntry = Netrc.machines['api.heroku.com']
