@@ -40,49 +40,55 @@ export class Login {
   constructor(private readonly config: Config.IConfig, private readonly heroku: APIClient) {}
 
   async login(opts: Login.Options = {}): Promise<void> {
+    let loggedIn = false
+    try {
+      // timeout after 10 minutes
+      setTimeout(() => {
+        if (!loggedIn) ux.error('timed out')
+      }, 1000 * 60 * 10).unref()
 
-    // timeout after 10 minutes
-    setTimeout(() => ux.error('timed out'), 1000 * 60 * 10)
-
-    if (process.env.HEROKU_API_KEY) ux.error('Cannot log in with HEROKU_API_KEY set')
-    await Netrc.load()
-    const previousEntry = Netrc.machines['api.heroku.com']
-    let input: string | undefined = opts.method
-    const defaultMethod = (previousEntry && previousEntry.method) || 'interactive'
-    if (!input) {
-      if (opts.expiresIn) {
-        // can't use browser with --expires-in
-        input = 'interactive'
-      } else if (this.enableBrowserLogin()) {
-        input = await ux.prompt(`heroku: Login with [${color.green('b')}]rowser, [${color.green('i')}]nteractive, or [${color.green('s')}]so (enterprise-only)`, {default: defaultMethod})
-      } else {
-        input = defaultMethod || 'interactive'
+      if (process.env.HEROKU_API_KEY) ux.error('Cannot log in with HEROKU_API_KEY set')
+      await Netrc.load()
+      const previousEntry = Netrc.machines['api.heroku.com']
+      let input: string | undefined = opts.method
+      const defaultMethod = (previousEntry && previousEntry.method) || 'interactive'
+      if (!input) {
+        if (opts.expiresIn) {
+          // can't use browser with --expires-in
+          input = 'interactive'
+        } else if (this.enableBrowserLogin()) {
+          input = await ux.prompt(`heroku: Login with [${color.green('b')}]rowser, [${color.green('i')}]nteractive, or [${color.green('s')}]so (enterprise-only)`, {default: defaultMethod})
+        } else {
+          input = defaultMethod || 'interactive'
+        }
       }
-    }
-    let auth
-    switch (input) {
-      case 'b':
-      case 'browser':
-        auth = await this.browser()
-        break
-      case 'i':
-      case 'interactive':
-        auth = await this.interactive(previousEntry && previousEntry.login, opts.expiresIn)
-        break
-      case 's':
-      case 'sso':
-        auth = await this.sso(previousEntry && previousEntry.org)
-        break
-      default:
-        return this.login(opts)
-    }
-    await this.saveToken(auth)
-    if (previousEntry) {
-      try {
-        await this.logout(previousEntry.password)
-      } catch (err) {
-        ux.warn(err)
+      let auth
+      switch (input) {
+        case 'b':
+        case 'browser':
+          auth = await this.browser()
+          break
+        case 'i':
+        case 'interactive':
+          auth = await this.interactive(previousEntry && previousEntry.login, opts.expiresIn)
+          break
+        case 's':
+        case 'sso':
+          auth = await this.sso(previousEntry && previousEntry.org)
+          break
+        default:
+          return this.login(opts)
       }
+      await this.saveToken(auth)
+      if (previousEntry) {
+        try {
+          await this.logout(previousEntry.password)
+        } catch (err) {
+          ux.warn(err)
+        }
+      }
+    } finally {
+      loggedIn = true
     }
   }
 
