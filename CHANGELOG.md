@@ -1,3 +1,12 @@
+<a name="8.1.6"></a>
+## [8.1.6](https://github.com/heroku/heroku-cli-command/compare/v8.1.5...v8.1.6) (2018-05-08)
+
+
+### Bug Fixes
+
+* add timeout ([6527877](https://github.com/heroku/heroku-cli-command/commit/6527877))
+* unref() login timeout ([c7ea0ab](https://github.com/heroku/heroku-cli-command/commit/c7ea0ab))
+
 <a name="8.1.5"></a>
 ## [8.1.5](https://github.com/heroku/heroku-cli-command/compare/v8.1.4...v8.1.5) (2018-05-08)
 
