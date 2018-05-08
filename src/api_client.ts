@@ -28,7 +28,7 @@ export class HerokuAPIError extends CLIError {
 
   constructor(httpError: HTTPError) {
     let options: IHerokuAPIErrorOptions = httpError.body
-    if (!options.message) throw httpError
+    if (!options || !options.message) throw httpError
     let info = []
     if (options.id) info.push(`Error ID: ${options.id}`)
     if (options.app && options.app.name) info.push(`App: ${options.app.name}`)
