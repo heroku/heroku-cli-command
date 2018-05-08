@@ -34,6 +34,8 @@ interface Authorization {
   }
 }
 
+const headers = (token: string) => ({headers: {accept: 'application/vnd.heroku+json; version=3', authorization: `Bearer ${token}`}})
+
 export class Login {
   loginHost = process.env.HEROKU_LOGIN_HOST || 'https://cli-login.heroku.com'
 
@@ -99,13 +101,13 @@ export class Login {
     const requests: Promise<any>[] = []
     // for SSO logins we delete the session since those do not show up in
     // authorizations because they are created a trusted client
-    requests.push(this.heroku.delete('/oauth/sessions/~')
+    requests.push(HTTP.delete(`${vars.apiUrl}/oauth/sessions/~`, headers(this.heroku.auth!))
     .catch(err => {
-      err = err.http
-      if (err.statusCode === 404 && err.body && err.body.id === 'not_found' && err.body.resource === 'session') {
+      if (!err.http) throw err
+      if (err.http.statusCode === 404 && err.http.body && err.http.body.id === 'not_found' && err.http.body.resource === 'session') {
         return
       }
-      if (err.statusCode === 401 && err.body && err.body.id === 'unauthorized') {
+      if (err.http.statusCode === 401 && err.http.body && err.http.body.id === 'unauthorized') {
         return
       }
       throw err
@@ -114,7 +116,7 @@ export class Login {
     // grab all the authorizations so that we can delete the token they are
     // using in the CLI.  we have to do this rather than delete ~ because
     // the ~ is the API Key, not the authorization that is currently requesting
-    requests.push(this.heroku.get('/oauth/authorizations')
+    requests.push(HTTP.get(`${vars.apiUrl}/oauth/authorizations`, headers(this.heroku.auth!))
     .then(async ({body: authorizations}: {body: Authorization[]}) => {
       // grab the default authorization because that is the token shown in the
       // dashboard as API Key and they may be using it for something else and we
@@ -124,11 +126,12 @@ export class Login {
       return Promise.all(
         authorizations
         .filter(a => a.access_token && a.access_token.token !== this.heroku.auth)
-        .map(a => this.heroku.delete(`/oauth/authorizations/${a.id}`))
+        .map(a => HTTP.delete(`${vars.apiUrl}/oauth/authorizations/${a.id}`, headers(this.heroku.auth!)))
       )
     })
     .catch(err => {
-      if (err.statusCode === 401 && err.body && err.body.id === 'unauthorized') {
+      if (!err.http) throw err
+      if (err.http.statusCode === 401 && err.http.body && err.http.body.id === 'unauthorized') {
         return []
       }
       throw err
@@ -150,7 +153,7 @@ export class Login {
     if (auth.error) ux.error(auth.error)
     this.heroku.auth = auth.access_token
     ux.action.start('Logging in')
-    const {body: account} = await HTTP.get(`${vars.apiUrl}/account`, {headers: {accept: 'application/vnd.heroku+json; version=3', authorization: `Bearer ${auth.access_token}`}})
+    const {body: account} = await HTTP.get(`${vars.apiUrl}/account`, headers(auth.access_token))
     ux.action.stop()
     return {
       login: account.email,
@@ -225,7 +228,7 @@ export class Login {
 
   private async defaultToken(): Promise<string | undefined> {
     try {
-      const {body: authorization}: {body: Authorization} = await this.heroku.get('/oauth/authorizations/~')
+      const {body: authorization}: {body: Authorization} = await HTTP.get(`${vars.apiUrl}/oauth/authorizations/~`, headers(this.heroku.auth!))
       return authorization.access_token && authorization.access_token.token
     } catch (err) {
       if (!err.http) throw err
@@ -260,7 +263,7 @@ export class Login {
     const password = await ux.prompt('Access token', {type: 'mask'})
     ux.action.start('Validating token')
     this.heroku.auth = password
-    const {body: account} = await HTTP.get(`${vars.apiUrl}/account`, {headers: {accept: 'application/vnd.heroku+json; version=3', authorization: `Bearer ${password}`}})
+    const {body: account} = await HTTP.get(`${vars.apiUrl}/account`, headers(password))
 
     return {password, login: account.email, method: 'sso', org}
   }
