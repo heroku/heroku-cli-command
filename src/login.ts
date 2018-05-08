@@ -73,7 +73,13 @@ export class Login {
         return this.login(opts)
     }
     await this.saveToken(auth)
-    if (previousEntry) await this.logout(previousEntry.password)
+    if (previousEntry) {
+      try {
+        await this.logout(previousEntry.password)
+      } catch (err) {
+        ux.warn(err)
+      }
+    }
   }
 
   async logout(token = this.heroku.auth) {
