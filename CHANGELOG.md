@@ -1,3 +1,11 @@
+<a name="8.1.5"></a>
+## [8.1.5](https://github.com/heroku/heroku-cli-command/compare/v8.1.4...v8.1.5) (2018-05-08)
+
+
+### Bug Fixes
+
+* do not error out if cannot logout ([8978ad4](https://github.com/heroku/heroku-cli-command/commit/8978ad4))
+
 <a name="8.1.4"></a>
 ## [8.1.4](https://github.com/heroku/heroku-cli-command/compare/v8.1.3...v8.1.4) (2018-05-08)
 
