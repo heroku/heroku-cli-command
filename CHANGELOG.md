@@ -1,3 +1,11 @@
+<a name="8.1.4"></a>
+## [8.1.4](https://github.com/heroku/heroku-cli-command/compare/v8.1.3...v8.1.4) (2018-05-08)
+
+
+### Bug Fixes
+
+* make raw requests for http calls ([8629056](https://github.com/heroku/heroku-cli-command/commit/8629056))
+
 <a name="8.1.3"></a>
 ## [8.1.3](https://github.com/heroku/heroku-cli-command/compare/v8.1.2...v8.1.3) (2018-05-07)
 
