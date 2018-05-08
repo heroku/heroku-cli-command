@@ -6,7 +6,7 @@ import Netrc from 'netrc-parser'
 import opn = require('opn')
 import {hostname} from 'os'
 
-import {APIClient} from './api_client'
+import {APIClient, HerokuAPIError} from './api_client'
 import {vars} from './vars'
 
 const debug = require('debug')('heroku-cli-command')
@@ -87,6 +87,8 @@ export class Login {
           ux.warn(err)
         }
       }
+    } catch (err) {
+      throw new HerokuAPIError(err)
     } finally {
       loggedIn = true
     }
