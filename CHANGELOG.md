@@ -1,3 +1,11 @@
+<a name="8.1.11"></a>
+## [8.1.11](https://github.com/heroku/heroku-cli-command/compare/v8.1.10...v8.1.11) (2018-05-09)
+
+
+### Bug Fixes
+
+* show error when opn fails ([6c9fead](https://github.com/heroku/heroku-cli-command/commit/6c9fead))
+
 <a name="8.1.10"></a>
 ## [8.1.10](https://github.com/heroku/heroku-cli-command/compare/v8.1.9...v8.1.10) (2018-05-08)
 
