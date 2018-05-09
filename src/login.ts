@@ -151,9 +151,10 @@ export class Login {
     const url = `${this.loginHost}${urls.browser_url}`
     const cp = await opn(url, {wait: false})
     cp.on('error', ux.error)
+    const showUrl = () => ux.warn(`Cannot open browser. Go to ${color.greenBright(url)} to finish login or run ${color.cmd('heroku login --interactive')}\n`)
+    if (process.env.HEROKU_TESTING_HEADLESS_LOGIN === '1') showUrl()
     cp.on('close', code => {
-      if (code === 0) return
-      process.stderr.write(`Cannot open browser. Go to ${color.greenBright(url)} to finish login or run ${color.cmd('heroku login --interactive')}\n`)
+      if (code !== 0) showUrl()
     })
     ux.action.start('Waiting for login')
     const {body: auth} = await HTTP.get(`${this.loginHost}${urls.cli_url}`, {
