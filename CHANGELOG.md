@@ -1,3 +1,11 @@
+<a name="8.1.12"></a>
+## [8.1.12](https://github.com/heroku/heroku-cli-command/compare/v8.1.11...v8.1.12) (2018-05-09)
+
+
+### Bug Fixes
+
+* show url when HEROKU_TESTING_HEADLESS_LOGIN is set ([c3a3f01](https://github.com/heroku/heroku-cli-command/commit/c3a3f01))
+
 <a name="8.1.11"></a>
 ## [8.1.11](https://github.com/heroku/heroku-cli-command/compare/v8.1.10...v8.1.11) (2018-05-09)
 
