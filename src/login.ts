@@ -149,6 +149,7 @@ export class Login {
     const {body: urls} = await HTTP.post(`${this.loginHost}/auth`)
     // TODO: handle browser
     const url = `${this.loginHost}${urls.browser_url}`
+    debug(`opening browser to ${url}`)
     const cp = await opn(url, {wait: false})
     cp.on('error', ux.error)
     const showUrl = () => ux.warn(`Cannot open browser. Go to ${color.greenBright(url)} to finish login or run ${color.cmd('heroku login --interactive')}\n`)
@@ -270,6 +271,7 @@ export class Login {
 
     ux.action.start('Opening browser for login')
     // TODO: handle browser
+    debug(`opening browser to ${url}`)
     await opn(url, {wait: false})
 
     const password = await ux.prompt('Access token', {type: 'mask'})
