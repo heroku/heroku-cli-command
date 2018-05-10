@@ -183,7 +183,7 @@ export class APIClient {
     return this.http.stream(url, options)
   }
   request(url: string, options: APIClient.Options = {}) {
-    this.http.request(url, options)
+    return this.http.request(url, options)
   }
   login(opts: Login.Options = {}) {
     return this._login.login(opts)
