@@ -64,17 +64,12 @@ export class Login {
           input = defaultMethod || 'interactive'
         }
       }
-      let auth
-      const logout = async () => {
-        if (previousEntry && previousEntry.password) {
-          try {
-            await this.logout(previousEntry.password)
-            delete previousEntry.password
-          } catch (err) {
-            ux.warn(err)
-          }
-        }
+      try {
+        if (previousEntry && previousEntry.password) await this.logout(previousEntry.password)
+      } catch (err) {
+        ux.warn(err)
       }
+      let auth
       switch (input) {
         case 'b':
         case 'browser':
@@ -86,14 +81,12 @@ export class Login {
           break
         case 's':
         case 'sso':
-          await logout() // for sso logout first
           auth = await this.sso(previousEntry && previousEntry.org)
           break
         default:
           return this.login(opts)
       }
       await this.saveToken(auth)
-      await logout()
     } catch (err) {
       throw new HerokuAPIError(err)
     } finally {
@@ -106,7 +99,7 @@ export class Login {
     const requests: Promise<any>[] = []
     // for SSO logins we delete the session since those do not show up in
     // authorizations because they are created a trusted client
-    requests.push(HTTP.delete(`${vars.apiUrl}/oauth/sessions/~`, headers(this.heroku.auth!))
+    requests.push(HTTP.delete(`${vars.apiUrl}/oauth/sessions/~`, headers(token))
     .catch(err => {
       if (!err.http) throw err
       if (err.http.statusCode === 404 && err.http.body && err.http.body.id === 'not_found' && err.http.body.resource === 'session') {
@@ -121,7 +114,7 @@ export class Login {
     // grab all the authorizations so that we can delete the token they are
     // using in the CLI.  we have to do this rather than delete ~ because
     // the ~ is the API Key, not the authorization that is currently requesting
-    requests.push(HTTP.get(`${vars.apiUrl}/oauth/authorizations`, headers(this.heroku.auth!))
+    requests.push(HTTP.get(`${vars.apiUrl}/oauth/authorizations`, headers(token))
     .then(async ({body: authorizations}: {body: Authorization[]}) => {
       // grab the default authorization because that is the token shown in the
       // dashboard as API Key and they may be using it for something else and we
@@ -131,7 +124,7 @@ export class Login {
       return Promise.all(
         authorizations
         .filter(a => a.access_token && a.access_token.token !== this.heroku.auth)
-        .map(a => HTTP.delete(`${vars.apiUrl}/oauth/authorizations/${a.id}`, headers(this.heroku.auth!)))
+        .map(a => HTTP.delete(`${vars.apiUrl}/oauth/authorizations/${a.id}`, headers(token)))
       )
     })
     .catch(err => {
