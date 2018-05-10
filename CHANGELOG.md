@@ -1,3 +1,11 @@
+<a name="8.1.14"></a>
+## [8.1.14](https://github.com/heroku/heroku-cli-command/compare/v8.1.13...v8.1.14) (2018-05-10)
+
+
+### Bug Fixes
+
+* do login first to fix sso login with browser ([1785ded](https://github.com/heroku/heroku-cli-command/commit/1785ded))
+
 <a name="8.1.13"></a>
 ## [8.1.13](https://github.com/heroku/heroku-cli-command/compare/v8.1.12...v8.1.13) (2018-05-10)
 
