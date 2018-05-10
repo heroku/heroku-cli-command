@@ -9,6 +9,12 @@ import {Login} from './login'
 import {Mutex} from './mutex'
 import {vars} from './vars'
 
+export namespace APIClient {
+  export interface Options extends HTTPRequestOptions {
+    retryAuth?: boolean
+  }
+}
+
 export interface IOptions {
   required?: boolean
   preauth?: boolean
@@ -69,7 +75,7 @@ export class APIClient {
       static async twoFactorRetry(
         err: HTTPError,
         url: string,
-        opts: HTTPRequestOptions = {},
+        opts: APIClient.Options = {},
         retries = 3,
       ): Promise<APIHTTPClient> {
         const app = err.body.app ? err.body.app.name : null
@@ -89,7 +95,7 @@ export class APIClient {
         }
       }
 
-      static async request(url: string, opts: HTTPRequestOptions = {}, retries = 3): Promise<APIHTTPClient> {
+      static async request(url: string, opts: APIClient.Options = {}, retries = 3): Promise<APIHTTPClient> {
         opts.headers = opts.headers || {}
         if (!opts.headers.authorization) {
           opts.headers.authorization = `Bearer ${self.auth}`
@@ -100,7 +106,7 @@ export class APIClient {
         } catch (err) {
           if (!(err instanceof deps.HTTP.HTTPError)) throw err
           if (retries > 0) {
-            if (err.http.statusCode === 401 && err.body.id === 'unauthorized') {
+            if (opts.retryAuth !== false && err.http.statusCode === 401 && err.body.id === 'unauthorized') {
               if (!self.authPromise) self.authPromise = self.login()
               await self.authPromise
               opts.headers.authorization = `Bearer ${self.auth}`
@@ -158,25 +164,25 @@ export class APIClient {
       headers: {'Heroku-Two-Factor-Code': factor},
     })
   }
-  get(url: string, options: HTTPRequestOptions = {}) {
+  get(url: string, options: APIClient.Options = {}) {
     return this.http.get(url, options)
   }
-  post(url: string, options: HTTPRequestOptions = {}) {
+  post(url: string, options: APIClient.Options = {}) {
     return this.http.post(url, options)
   }
-  put(url: string, options: HTTPRequestOptions = {}) {
+  put(url: string, options: APIClient.Options = {}) {
     return this.http.put(url, options)
   }
-  patch(url: string, options: HTTPRequestOptions = {}) {
+  patch(url: string, options: APIClient.Options = {}) {
     return this.http.patch(url, options)
   }
-  delete(url: string, options: HTTPRequestOptions = {}) {
+  delete(url: string, options: APIClient.Options = {}) {
     return this.http.delete(url, options)
   }
-  stream(url: string, options: HTTPRequestOptions = {}) {
+  stream(url: string, options: APIClient.Options = {}) {
     return this.http.stream(url, options)
   }
-  request(url: string, options: HTTPRequestOptions = {}) {
+  request(url: string, options: APIClient.Options = {}) {
     this.http.request(url, options)
   }
   login(opts: Login.Options = {}) {
