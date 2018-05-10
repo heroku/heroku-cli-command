@@ -1,3 +1,11 @@
+<a name="8.1.15"></a>
+## [8.1.15](https://github.com/heroku/heroku-cli-command/compare/v8.1.14...v8.1.15) (2018-05-10)
+
+
+### Bug Fixes
+
+* return request ([d9ae506](https://github.com/heroku/heroku-cli-command/commit/d9ae506))
+
 <a name="8.1.14"></a>
 ## [8.1.14](https://github.com/heroku/heroku-cli-command/compare/v8.1.13...v8.1.14) (2018-05-10)
 
