@@ -1,3 +1,5 @@
+import {CLIError} from '@oclif/errors'
+
 export interface IGitRemote {
   name: string
   url: string
@@ -23,7 +25,7 @@ export class Git {
       })
     } catch (error) {
       if (error.code === 'ENOENT') {
-        throw new Error('Git must be installed to use the Heroku CLI.  See instructions here: http://git-scm.com')
+        throw new CLIError('Git must be installed to use the Heroku CLI.  See instructions here: http://git-scm.com')
       }
       throw error
     }
