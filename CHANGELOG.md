@@ -1,3 +1,11 @@
+<a name="8.1.16"></a>
+## [8.1.16](https://github.com/heroku/heroku-cli-command/compare/v8.1.15...v8.1.16) (2018-05-11)
+
+
+### Bug Fixes
+
+* use CLIError for git error ([0915f57](https://github.com/heroku/heroku-cli-command/commit/0915f57))
+
 <a name="8.1.15"></a>
 ## [8.1.15](https://github.com/heroku/heroku-cli-command/compare/v8.1.14...v8.1.15) (2018-05-10)
 
