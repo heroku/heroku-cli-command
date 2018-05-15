@@ -1,3 +1,11 @@
+<a name="8.1.17"></a>
+## [8.1.17](https://github.com/heroku/heroku-cli-command/compare/v8.1.16...v8.1.17) (2018-05-15)
+
+
+### Bug Fixes
+
+* use caret versions ([0f38127](https://github.com/heroku/heroku-cli-command/commit/0f38127))
+
 <a name="8.1.16"></a>
 ## [8.1.16](https://github.com/heroku/heroku-cli-command/compare/v8.1.15...v8.1.16) (2018-05-11)
 
