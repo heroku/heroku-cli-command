@@ -6,13 +6,14 @@ import * as fs from 'fs-extra'
 import HTTP from 'http-call'
 import Netrc from 'netrc-parser'
 import opn = require('opn')
-import {hostname} from 'os'
+import * as os from 'os'
 import * as path from 'path'
 
-import {APIClient, HerokuAPIError} from './api_client'
+import {APIClient, HerokuAPIError} from './api-client'
 import {vars} from './vars'
 
 const debug = require('debug')('heroku-cli-command')
+const hostname = os.hostname()
 
 export namespace Login {
   export interface Options {
@@ -140,7 +141,9 @@ export class Login {
   }
 
   private async browser(browser?: string): Promise<NetrcEntry> {
-    const {body: urls} = await HTTP.post<{browser_url: string, cli_url: string, token: string}>(`${this.loginHost}/auth`)
+    const {body: urls} = await HTTP.post<{browser_url: string, cli_url: string, token: string}>(`${this.loginHost}/auth`, {
+      body: {description: hostname}
+    })
     // TODO: handle browser
     const url = `${this.loginHost}${urls.browser_url}`
     debug(`opening browser to ${url}`)
@@ -159,14 +162,14 @@ export class Login {
       if (code !== 0) showUrl()
     })
     ux.action.start('heroku: Waiting for login')
-    const fetchAuth = async (retries = 3) => {
+    const fetchAuth = async (retries = 3): Promise<{error?: string, access_token: string}> => {
       try {
         const {body: auth} = await HTTP.get<{error?: string, access_token: string}>(`${this.loginHost}${urls.cli_url}`, {
           headers: {authorization: `Bearer ${urls.token}`}
         })
         return auth
       } catch (err) {
-        if (retries > 0 && err.http && err.http.statusCode > 500) fetchAuth(retries - 1)
+        if (retries > 0 && err.http && err.http.statusCode > 500) return fetchAuth(retries - 1)
         throw err
       }
     }
@@ -217,7 +220,7 @@ export class Login {
       headers,
       body: {
         scope: ['global'],
-        description: `Heroku CLI login from ${hostname()}`,
+        description: `Heroku CLI login from ${hostname}`,
         expires_in: opts.expiresIn || 60 * 60 * 24 * 365 // 1 year
       }
     })

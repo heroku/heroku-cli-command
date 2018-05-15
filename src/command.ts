@@ -1,7 +1,7 @@
 import {Command as Base} from '@oclif/command'
 import {deprecate} from 'util'
 
-import {APIClient} from './api_client'
+import {APIClient} from './api-client'
 import deps from './deps'
 
 const pjson = require('../package.json')
