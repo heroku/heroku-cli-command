@@ -1,3 +1,11 @@
+<a name="8.1.18"></a>
+## [8.1.18](https://github.com/heroku/heroku-cli-command/compare/v8.1.17...v8.1.18) (2018-05-21)
+
+
+### Bug Fixes
+
+* consolidate completions ([#38](https://github.com/heroku/heroku-cli-command/issues/38)) ([da45bf8](https://github.com/heroku/heroku-cli-command/commit/da45bf8))
+
 <a name="8.1.17"></a>
 ## [8.1.17](https://github.com/heroku/heroku-cli-command/compare/v8.1.16...v8.1.17) (2018-05-15)
 
