@@ -1,12 +1,11 @@
 import {flags} from '@oclif/command'
 import {CLIError, error} from '@oclif/errors'
 
-import {herokuGet, oneDay} from '../completions'
-import {Git} from '../git'
-import {vars} from '../vars'
+import {AppCompletion, RemoteCompletion} from '../completions'
+import {configRemote, getGitRemotes, IGitRemotes} from '../git'
 
 class MultipleRemotesError extends CLIError {
-  constructor(gitRemotes: IGitRemote[]) {
+  constructor(gitRemotes: IGitRemotes[]) {
     super(`Multiple apps in git remotes
   Usage: --remote ${gitRemotes[1].remote}
      or: --app ${gitRemotes[1].app}
@@ -18,14 +17,6 @@ class MultipleRemotesError extends CLIError {
 
   https://devcenter.heroku.com/articles/multiple-environments`)
   }
-}
-
-export const AppCompletion: flags.ICompletion = {
-  cacheDuration: oneDay,
-  options: async ctx => {
-    let apps = await herokuGet('apps', ctx)
-    return apps
-  },
 }
 
 export const app = flags.build({
@@ -47,52 +38,8 @@ export const app = flags.build({
   },
 })
 
-export const RemoteCompletion: flags.ICompletion = {
-  skipCache: true,
-
-  options: async () => {
-    let remotes = getGitRemotes(configRemote())
-    return remotes.map(r => r.remote)
-  },
-}
-
 export const remote = flags.build({
   char: 'r',
   completion: RemoteCompletion,
   description: 'git remote of app to use',
 })
-
-function configRemote() {
-  let git = new Git()
-  try {
-    return git.exec('config heroku.remote').trim()
-  } catch {}
-}
-
-interface IGitRemote {
-  remote: string
-  app: string
-}
-function getGitRemotes(onlyRemote: string | undefined): IGitRemote[] {
-  let git = new Git()
-  let appRemotes = []
-  let remotes
-  try {
-    remotes = git.remotes
-  } catch {
-    return []
-  }
-  for (let remote of remotes) {
-    if (onlyRemote && remote.name !== onlyRemote) continue
-    for (let prefix of vars.gitPrefixes) {
-      const suffix = '.git'
-      let match = remote.url.match(`${prefix}(.*)${suffix}`)
-      if (!match) continue
-      appRemotes.push({
-        app: match[1],
-        remote: remote.name,
-      })
-    }
-  }
-  return appRemotes
-}
