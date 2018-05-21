@@ -3,8 +3,7 @@ import * as Config from '@oclif/config'
 import * as path from 'path'
 
 import deps from './deps'
-
-export {AppCompletion, RemoteCompletion} from './flags/app'
+import {configRemote, getGitRemotes} from './git'
 
 export const oneDay = 60 * 60 * 24
 
@@ -15,21 +14,11 @@ export const herokuGet = async (resource: string, ctx: { config: Config.IConfig 
   return resources.map((a: any) => a.name).sort()
 }
 
-export const BuildpackCompletion: flags.ICompletion = {
-  skipCache: true,
-
-  options: async () => {
-    return [
-      'heroku/ruby',
-      'heroku/nodejs',
-      'heroku/clojure',
-      'heroku/python',
-      'heroku/java',
-      'heroku/gradle',
-      'heroku/scala',
-      'heroku/php',
-      'heroku/go',
-    ]
+export const AppCompletion: flags.ICompletion = {
+  cacheDuration: oneDay,
+  options: async ctx => {
+    let apps = await herokuGet('apps', ctx)
+    return apps
   },
 }
 
@@ -52,6 +41,24 @@ export const AppDynoCompletion: flags.ICompletion = {
   options: async ctx => {
     let dynos = ctx.flags && ctx.flags.app ? await herokuGet(`apps/${ctx.flags.app}/dynos`, ctx) : []
     return dynos
+  },
+}
+
+export const BuildpackCompletion: flags.ICompletion = {
+  skipCache: true,
+
+  options: async () => {
+    return [
+      'heroku/ruby',
+      'heroku/nodejs',
+      'heroku/clojure',
+      'heroku/python',
+      'heroku/java',
+      'heroku/gradle',
+      'heroku/scala',
+      'heroku/php',
+      'heroku/go',
+    ]
   },
 }
 
@@ -109,6 +116,15 @@ export const RegionCompletion: flags.ICompletion = {
   options: async ctx => {
     let regions = await herokuGet('regions', ctx)
     return regions
+  },
+}
+
+export const RemoteCompletion: flags.ICompletion = {
+  skipCache: true,
+
+  options: async () => {
+    let remotes = getGitRemotes(configRemote())
+    return remotes.map(r => r.remote)
   },
 }
 
