@@ -123,7 +123,7 @@ export class Login {
       if (d === token) return
       return Promise.all(
         authorizations
-        .filter(a => a.access_token && a.access_token.token !== this.heroku.auth)
+        .filter(a => a.access_token && a.access_token.token === this.heroku.auth)
         .map(a => HTTP.delete(`${vars.apiUrl}/oauth/authorizations/${a.id}`, headers(token)))
       )
     })
