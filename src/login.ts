@@ -1,4 +1,5 @@
 import color from '@heroku-cli/color'
+import * as Heroku from '@heroku-cli/schema'
 import * as Config from '@oclif/config'
 import ux from 'cli-ux'
 import HTTP from 'http-call'
@@ -25,13 +26,6 @@ interface NetrcEntry {
   method?: 'interactive' | 'sso' | 'browser'
   org?: string
   refresh?: string
-}
-
-interface Authorization {
-  id: string
-  access_token?: {
-    token: string
-  }
 }
 
 const headers = (token: string) => ({headers: {accept: 'application/vnd.heroku+json; version=3', authorization: `Bearer ${token}`}})
@@ -114,8 +108,8 @@ export class Login {
     // grab all the authorizations so that we can delete the token they are
     // using in the CLI.  we have to do this rather than delete ~ because
     // the ~ is the API Key, not the authorization that is currently requesting
-    requests.push(HTTP.get(`${vars.apiUrl}/oauth/authorizations`, headers(token))
-    .then(async ({body: authorizations}: {body: Authorization[]}) => {
+    requests.push(HTTP.get<Heroku.OAuthAuthorization[]>(`${vars.apiUrl}/oauth/authorizations`, headers(token))
+    .then(async ({body: authorizations}) => {
       // grab the default authorization because that is the token shown in the
       // dashboard as API Key and they may be using it for something else and we
       // would unwittingly break an integration that they are depending on
@@ -139,7 +133,7 @@ export class Login {
   }
 
   private async browser(): Promise<NetrcEntry> {
-    const {body: urls} = await HTTP.post(`${this.loginHost}/auth`)
+    const {body: urls} = await HTTP.post<{browser_url: string, cli_url: string, token: string}>(`${this.loginHost}/auth`)
     // TODO: handle browser
     const url = `${this.loginHost}${urls.browser_url}`
     debug(`opening browser to ${url}`)
@@ -151,7 +145,7 @@ export class Login {
       if (code !== 0) showUrl()
     })
     ux.action.start('Waiting for login')
-    const {body: auth} = await HTTP.get(`${this.loginHost}${urls.cli_url}`, {
+    const {body: auth} = await HTTP.get<{error?: string, access_token: string}>(`${this.loginHost}${urls.cli_url}`, {
       headers: {
         authorization: `Bearer ${urls.token}`,
       }
@@ -159,12 +153,11 @@ export class Login {
     if (auth.error) ux.error(auth.error)
     this.heroku.auth = auth.access_token
     ux.action.start('Logging in')
-    const {body: account} = await HTTP.get(`${vars.apiUrl}/account`, headers(auth.access_token))
+    const {body: account} = await HTTP.get<Heroku.Account>(`${vars.apiUrl}/account`, headers(auth.access_token))
     ux.action.stop()
     return {
-      login: account.email,
+      login: account.email!,
       password: auth.access_token,
-      refresh: auth.refresh_token,
       method: 'browser',
     }
   }
@@ -201,7 +194,7 @@ export class Login {
 
     if (opts.secondFactor) headers['Heroku-Two-Factor-Code'] = opts.secondFactor
 
-    const {body: auth} = await HTTP.post(`${vars.apiUrl}/oauth/authorizations`, {
+    const {body: auth} = await HTTP.post<Heroku.OAuthAuthorization>(`${vars.apiUrl}/oauth/authorizations`, {
       headers,
       body: {
         scope: ['global'],
@@ -209,7 +202,7 @@ export class Login {
         expires_in: opts.expiresIn || 60 * 60 * 24 * 365 // 1 year
       }
     })
-    return {password: auth.access_token.token, login: auth.user.email}
+    return {password: auth.access_token!.token!, login: auth.user!.email!}
   }
 
   private async saveToken(entry: NetrcEntry) {
@@ -234,7 +227,7 @@ export class Login {
 
   private async defaultToken(): Promise<string | undefined> {
     try {
-      const {body: authorization}: {body: Authorization} = await HTTP.get(`${vars.apiUrl}/oauth/authorizations/~`, headers(this.heroku.auth!))
+      const {body: authorization} = await HTTP.get<Heroku.OAuthAuthorization>(`${vars.apiUrl}/oauth/authorizations/~`, headers(this.heroku.auth!))
       return authorization.access_token && authorization.access_token.token
     } catch (err) {
       if (!err.http) throw err
@@ -270,8 +263,8 @@ export class Login {
     const password = await ux.prompt('Access token', {type: 'mask'})
     ux.action.start('Validating token')
     this.heroku.auth = password
-    const {body: account} = await HTTP.get(`${vars.apiUrl}/account`, headers(password))
+    const {body: account} = await HTTP.get<Heroku.Account>(`${vars.apiUrl}/account`, headers(password))
 
-    return {password, login: account.email, method: 'sso', org}
+    return {password, login: account.email!, method: 'sso', org}
   }
 }

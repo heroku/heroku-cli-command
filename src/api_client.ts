@@ -47,8 +47,8 @@ export class HerokuAPIError extends CLIError {
 }
 
 export class APIClient {
-  preauthPromises: { [k: string]: Promise<HTTP> }
-  authPromise?: Promise<HTTP>
+  preauthPromises: { [k: string]: Promise<HTTP<any>> }
+  authPromise?: Promise<HTTP<any>>
   http: typeof HTTP
   private readonly _login = new Login(this.config, this)
   private _twoFactorMutex: Mutex<string> | undefined
@@ -71,13 +71,13 @@ export class APIClient {
         ...envHeaders,
       },
     }
-    this.http = class APIHTTPClient extends deps.HTTP.HTTP.create(opts) {
+    this.http = class APIHTTPClient<T> extends deps.HTTP.HTTP.create(opts)<T> {
       static async twoFactorRetry(
         err: HTTPError,
         url: string,
         opts: APIClient.Options = {},
         retries = 3,
-      ): Promise<APIHTTPClient> {
+      ): Promise<APIHTTPClient<any>> {
         const app = err.body.app ? err.body.app.name : null
         if (!app || !options.preauth) {
           opts.headers = opts.headers || {}
@@ -95,14 +95,14 @@ export class APIClient {
         }
       }
 
-      static async request(url: string, opts: APIClient.Options = {}, retries = 3): Promise<APIHTTPClient> {
+      static async request<T>(url: string, opts: APIClient.Options = {}, retries = 3): Promise<APIHTTPClient<T>> {
         opts.headers = opts.headers || {}
         if (!opts.headers.authorization) {
           opts.headers.authorization = `Bearer ${self.auth}`
         }
         retries--
         try {
-          return await super.request(url, opts)
+          return await super.request<T>(url, opts)
         } catch (err) {
           if (!(err instanceof deps.HTTP.HTTPError)) throw err
           if (retries > 0) {
@@ -110,7 +110,7 @@ export class APIClient {
               if (!self.authPromise) self.authPromise = self.login()
               await self.authPromise
               opts.headers.authorization = `Bearer ${self.auth}`
-              return this.request(url, opts, retries)
+              return this.request<T>(url, opts, retries)
             }
             if (err.http.statusCode === 403 && err.body.id === 'two_factor') {
               return this.twoFactorRetry(err, url, opts, retries)
@@ -164,26 +164,26 @@ export class APIClient {
       headers: {'Heroku-Two-Factor-Code': factor},
     })
   }
-  get(url: string, options: APIClient.Options = {}) {
-    return this.http.get(url, options)
+  get<T>(url: string, options: APIClient.Options = {}) {
+    return this.http.get<T>(url, options)
   }
-  post(url: string, options: APIClient.Options = {}) {
-    return this.http.post(url, options)
+  post<T>(url: string, options: APIClient.Options = {}) {
+    return this.http.post<T>(url, options)
   }
-  put(url: string, options: APIClient.Options = {}) {
-    return this.http.put(url, options)
+  put<T>(url: string, options: APIClient.Options = {}) {
+    return this.http.put<T>(url, options)
   }
-  patch(url: string, options: APIClient.Options = {}) {
-    return this.http.patch(url, options)
+  patch<T>(url: string, options: APIClient.Options = {}) {
+    return this.http.patch<T>(url, options)
   }
-  delete(url: string, options: APIClient.Options = {}) {
-    return this.http.delete(url, options)
+  delete<T>(url: string, options: APIClient.Options = {}) {
+    return this.http.delete<T>(url, options)
   }
   stream(url: string, options: APIClient.Options = {}) {
     return this.http.stream(url, options)
   }
-  request(url: string, options: APIClient.Options = {}) {
-    return this.http.request(url, options)
+  request<T>(url: string, options: APIClient.Options = {}) {
+    return this.http.request<T>(url, options)
   }
   login(opts: Login.Options = {}) {
     return this._login.login(opts)

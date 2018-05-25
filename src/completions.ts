@@ -9,7 +9,7 @@ export const oneDay = 60 * 60 * 24
 
 export const herokuGet = async (resource: string, ctx: { config: Config.IConfig }): Promise<string[]> => {
   const heroku = new deps.APIClient(ctx.config)
-  let {body: resources} = await heroku.get(`/${resource}`)
+  let {body: resources} = await heroku.get<any>(`/${resource}`)
   if (typeof resources === 'string') resources = JSON.parse(resources)
   return resources.map((a: any) => a.name).sort()
 }
