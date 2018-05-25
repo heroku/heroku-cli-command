@@ -1,3 +1,11 @@
+<a name="8.1.20"></a>
+## [8.1.20](https://github.com/heroku/heroku-cli-command/compare/v8.1.19...v8.1.20) (2018-05-25)
+
+
+### Bug Fixes
+
+* add generic types to requests ([4b7e5d9](https://github.com/heroku/heroku-cli-command/commit/4b7e5d9))
+
 <a name="8.1.18"></a>
 ## [8.1.18](https://github.com/heroku/heroku-cli-command/compare/v8.1.17...v8.1.18) (2018-05-21)
 
