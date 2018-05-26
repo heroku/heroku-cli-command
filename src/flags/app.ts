@@ -1,7 +1,6 @@
 import {flags} from '@oclif/command'
 import {CLIError, error} from '@oclif/errors'
 
-import {AppCompletion, RemoteCompletion} from '../completions'
 import {configRemote, getGitRemotes, IGitRemotes} from '../git'
 
 class MultipleRemotesError extends CLIError {
@@ -21,7 +20,6 @@ class MultipleRemotesError extends CLIError {
 
 export const app = flags.build({
   char: 'a',
-  completion: AppCompletion,
   description: 'app to run command against',
 
   default: ({options, flags}) => {
@@ -40,6 +38,5 @@ export const app = flags.build({
 
 export const remote = flags.build({
   char: 'r',
-  completion: RemoteCompletion,
   description: 'git remote of app to use',
 })
