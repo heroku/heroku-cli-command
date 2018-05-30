@@ -97,7 +97,7 @@ export class APIClient {
 
       static async request<T>(url: string, opts: APIClient.Options = {}, retries = 3): Promise<APIHTTPClient<T>> {
         opts.headers = opts.headers || {}
-        if (!opts.headers.authorization) {
+        if (!Object.keys(opts.headers).find(h => h.toLowerCase() === 'authorization')) {
           opts.headers.authorization = `Bearer ${self.auth}`
         }
         retries--

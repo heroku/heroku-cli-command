@@ -53,6 +53,18 @@ describe('api_client', () => {
     // expect(netrc.loadSync).toBeCalled()
   })
 
+  test
+  .it('can override authorization header', async ctx => {
+    api = nock('https://api.heroku.com', {
+      reqheaders: {authorization: 'Bearer myotherpass'},
+    })
+    api.get('/apps').reply(200, [{name: 'myapp'}])
+
+    const cmd = new Command([], ctx.config)
+    const {body} = await cmd.heroku.get('/apps', {headers: {Authorization: 'Bearer myotherpass'}})
+    expect(body).to.deep.equal([{name: 'myapp'}])
+  })
+
   describe('with HEROKU_HEADERS', () => {
     test
     .it('makes an HTTP request with HEROKU_HEADERS', async ctx => {
