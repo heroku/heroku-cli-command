@@ -1,3 +1,11 @@
+<a name="8.1.21"></a>
+## [8.1.21](https://github.com/heroku/heroku-cli-command/compare/v8.1.20...v8.1.21) (2018-05-31)
+
+
+### Bug Fixes
+
+* use settings file for login insted of netrc ([a8340b4](https://github.com/heroku/heroku-cli-command/commit/a8340b4))
+
 <a name="8.1.20"></a>
 ## [8.1.20](https://github.com/heroku/heroku-cli-command/compare/v8.1.19...v8.1.20) (2018-05-25)
 
