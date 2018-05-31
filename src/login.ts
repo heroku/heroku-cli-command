@@ -215,6 +215,8 @@ export class Login {
       if (!Netrc.machines[host]) Netrc.machines[host] = {}
       Netrc.machines[host].login = entry.login
       Netrc.machines[host].password = entry.password
+      delete Netrc.machines[host].method
+      delete Netrc.machines[host].org
     })
     if (Netrc.machines._tokens) {
       (Netrc.machines._tokens as any).forEach((token: any) => {

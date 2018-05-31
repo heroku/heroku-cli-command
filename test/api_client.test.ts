@@ -1,7 +1,7 @@
 import * as Config from '@oclif/config'
 import cli from 'cli-ux'
 import base, {expect} from 'fancy-test'
-import * as nock from 'nock'
+import nock from 'nock'
 
 import {Command as CommandBase} from '../src/command'
 
