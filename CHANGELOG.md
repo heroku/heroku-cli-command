@@ -1,3 +1,11 @@
+<a name="8.1.22"></a>
+## [8.1.22](https://github.com/heroku/heroku-cli-command/compare/v8.1.21...v8.1.22) (2018-05-31)
+
+
+### Bug Fixes
+
+* typescript 2.9 ([29daebc](https://github.com/heroku/heroku-cli-command/commit/29daebc))
+
 <a name="8.1.21"></a>
 ## [8.1.21](https://github.com/heroku/heroku-cli-command/compare/v8.1.20...v8.1.21) (2018-05-31)
 
