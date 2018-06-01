@@ -1,3 +1,11 @@
+<a name="8.1.23"></a>
+## [8.1.23](https://github.com/heroku/heroku-cli-command/compare/v8.1.22...v8.1.23) (2018-06-01)
+
+
+### Bug Fixes
+
+* allow specifying Authorization for header ([#42](https://github.com/heroku/heroku-cli-command/issues/42)) ([a522961](https://github.com/heroku/heroku-cli-command/commit/a522961))
+
 <a name="8.1.22"></a>
 ## [8.1.22](https://github.com/heroku/heroku-cli-command/compare/v8.1.21...v8.1.22) (2018-05-31)
 
