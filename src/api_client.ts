@@ -33,6 +33,7 @@ export class HerokuAPIError extends CLIError {
   body: IHerokuAPIErrorOptions
 
   constructor(httpError: HTTPError) {
+    if (!httpError) throw new Error('invalid error')
     let options: IHerokuAPIErrorOptions = httpError.body
     if (!options || !options.message) throw httpError
     let info = []
