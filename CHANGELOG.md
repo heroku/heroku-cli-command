@@ -1,3 +1,11 @@
+<a name="8.1.24"></a>
+## [8.1.24](https://github.com/heroku/heroku-cli-command/compare/v8.1.23...v8.1.24) (2018-06-09)
+
+
+### Bug Fixes
+
+* ensure error is defined ([22175e1](https://github.com/heroku/heroku-cli-command/commit/22175e1))
+
 <a name="8.1.23"></a>
 ## [8.1.23](https://github.com/heroku/heroku-cli-command/compare/v8.1.22...v8.1.23) (2018-06-01)
 
