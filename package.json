@@ -36,7 +36,7 @@
     "mocha": "^5.2.0",
     "nock": "^9.3.2",
     "proxyquire": "^2.0.1",
-    "sinon": "^5.1.1",
+    "sinon": "^6.0.0",
     "testdouble": "^3.8.1",
     "ts-node": "^6.1.0",
     "tslint": "^5.10.0",
