@@ -1,5 +1,5 @@
 import {expect, fancy} from 'fancy-test'
-import * as nock from 'nock'
+import nock from 'nock'
 
 import {Command as Base} from '../../src'
 import {Git} from '../../src/git'

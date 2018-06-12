@@ -33,6 +33,7 @@ export class HerokuAPIError extends CLIError {
   body: IHerokuAPIErrorOptions
 
   constructor(httpError: HTTPError) {
+    if (!httpError) throw new Error('invalid error')
     let options: IHerokuAPIErrorOptions = httpError.body
     if (!options || !options.message) throw httpError
     let info = []
@@ -97,7 +98,7 @@ export class APIClient {
 
       static async request<T>(url: string, opts: APIClient.Options = {}, retries = 3): Promise<APIHTTPClient<T>> {
         opts.headers = opts.headers || {}
-        if (!opts.headers.authorization) {
+        if (!Object.keys(opts.headers).find(h => h.toLowerCase() === 'authorization')) {
           opts.headers.authorization = `Bearer ${self.auth}`
         }
         retries--

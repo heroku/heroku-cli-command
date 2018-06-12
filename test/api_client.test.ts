@@ -1,7 +1,7 @@
 import * as Config from '@oclif/config'
 import cli from 'cli-ux'
 import base, {expect} from 'fancy-test'
-import * as nock from 'nock'
+import nock from 'nock'
 
 import {Command as CommandBase} from '../src/command'
 
@@ -51,6 +51,18 @@ describe('api_client', () => {
     const {body} = await cmd.heroku.get('/apps')
     expect(body).to.deep.equal([{name: 'myapp'}])
     // expect(netrc.loadSync).toBeCalled()
+  })
+
+  test
+  .it('can override authorization header', async ctx => {
+    api = nock('https://api.heroku.com', {
+      reqheaders: {authorization: 'Bearer myotherpass'},
+    })
+    api.get('/apps').reply(200, [{name: 'myapp'}])
+
+    const cmd = new Command([], ctx.config)
+    const {body} = await cmd.heroku.get('/apps', {headers: {Authorization: 'Bearer myotherpass'}})
+    expect(body).to.deep.equal([{name: 'myapp'}])
   })
 
   describe('with HEROKU_HEADERS', () => {

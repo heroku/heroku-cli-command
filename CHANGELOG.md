@@ -1,3 +1,35 @@
+<a name="8.1.24"></a>
+## [8.1.24](https://github.com/heroku/heroku-cli-command/compare/v8.1.23...v8.1.24) (2018-06-09)
+
+
+### Bug Fixes
+
+* ensure error is defined ([22175e1](https://github.com/heroku/heroku-cli-command/commit/22175e1))
+
+<a name="8.1.23"></a>
+## [8.1.23](https://github.com/heroku/heroku-cli-command/compare/v8.1.22...v8.1.23) (2018-06-01)
+
+
+### Bug Fixes
+
+* allow specifying Authorization for header ([#42](https://github.com/heroku/heroku-cli-command/issues/42)) ([a522961](https://github.com/heroku/heroku-cli-command/commit/a522961))
+
+<a name="8.1.22"></a>
+## [8.1.22](https://github.com/heroku/heroku-cli-command/compare/v8.1.21...v8.1.22) (2018-05-31)
+
+
+### Bug Fixes
+
+* typescript 2.9 ([29daebc](https://github.com/heroku/heroku-cli-command/commit/29daebc))
+
+<a name="8.1.21"></a>
+## [8.1.21](https://github.com/heroku/heroku-cli-command/compare/v8.1.20...v8.1.21) (2018-05-31)
+
+
+### Bug Fixes
+
+* use settings file for login insted of netrc ([a8340b4](https://github.com/heroku/heroku-cli-command/commit/a8340b4))
+
 <a name="8.1.20"></a>
 ## [8.1.20](https://github.com/heroku/heroku-cli-command/compare/v8.1.19...v8.1.20) (2018-05-25)
 

@@ -2,10 +2,12 @@ import color from '@heroku-cli/color'
 import * as Heroku from '@heroku-cli/schema'
 import * as Config from '@oclif/config'
 import ux from 'cli-ux'
+import * as fs from 'fs-extra'
 import HTTP from 'http-call'
 import Netrc from 'netrc-parser'
 import opn = require('opn')
 import {hostname} from 'os'
+import * as path from 'path'
 
 import {APIClient, HerokuAPIError} from './api_client'
 import {vars} from './vars'
@@ -23,19 +25,21 @@ export namespace Login {
 interface NetrcEntry {
   login: string
   password: string
-  method?: 'interactive' | 'sso' | 'browser'
-  org?: string
-  refresh?: string
 }
 
 const headers = (token: string) => ({headers: {accept: 'application/vnd.heroku+json; version=3', authorization: `Bearer ${token}`}})
 
 export class Login {
   loginHost = process.env.HEROKU_LOGIN_HOST || 'https://cli-login.heroku.com'
+  settings!: {
+    method?: string
+    org?: string
+  }
 
   constructor(private readonly config: Config.IConfig, private readonly heroku: APIClient) {}
 
   async login(opts: Login.Options = {}): Promise<void> {
+    await this.loadSettings()
     let loggedIn = false
     try {
       // timeout after 10 minutes
@@ -47,7 +51,7 @@ export class Login {
       await Netrc.load()
       const previousEntry = Netrc.machines['api.heroku.com']
       let input: string | undefined = opts.method
-      const defaultMethod = (previousEntry && previousEntry.method) || 'interactive'
+      const defaultMethod = this.settings.method || 'interactive'
       if (!input) {
         if (opts.expiresIn) {
           // can't use browser with --expires-in
@@ -64,6 +68,7 @@ export class Login {
         ux.warn(err)
       }
       let auth
+      delete this.settings.method
       switch (input) {
         case 'b':
         case 'browser':
@@ -75,12 +80,13 @@ export class Login {
           break
         case 's':
         case 'sso':
-          auth = await this.sso(previousEntry && previousEntry.org)
+          auth = await this.sso()
           break
         default:
           return this.login(opts)
       }
       await this.saveToken(auth)
+      await this.saveSettings()
     } catch (err) {
       throw new HerokuAPIError(err)
     } finally {
@@ -158,7 +164,6 @@ export class Login {
     return {
       login: account.email!,
       password: auth.access_token,
-      method: 'browser',
     }
   }
 
@@ -176,7 +181,6 @@ export class Login {
       auth = await this.createOAuthToken(login!, password, {expiresIn, secondFactor})
     }
     this.heroku.auth = auth.password
-    auth.method = 'interactive'
     return auth
   }
 
@@ -211,10 +215,9 @@ export class Login {
       if (!Netrc.machines[host]) Netrc.machines[host] = {}
       Netrc.machines[host].login = entry.login
       Netrc.machines[host].password = entry.password
+      delete Netrc.machines[host].method
+      delete Netrc.machines[host].org
     })
-    Netrc.machines[vars.apiHost].refresh = entry.refresh
-    Netrc.machines[vars.apiHost].method = entry.method
-    Netrc.machines[vars.apiHost].org = entry.org
     if (Netrc.machines._tokens) {
       (Netrc.machines._tokens as any).forEach((token: any) => {
         if (hosts.includes(token.host)) {
@@ -243,10 +246,10 @@ export class Login {
     return this.config.channel !== 'stable'
   }
 
-  private async sso(org?: string): Promise<NetrcEntry> {
+  private async sso(): Promise<NetrcEntry> {
     let url = process.env.SSO_URL
+    let org = process.env.HEROKU_ORGANIZATION || this.settings.org
     if (!url) {
-      org = process.env.HEROKU_ORGANIZATION || org
       if (org) {
         org = await ux.prompt('Organization name', {default: org})
       } else {
@@ -265,6 +268,32 @@ export class Login {
     this.heroku.auth = password
     const {body: account} = await HTTP.get<Heroku.Account>(`${vars.apiUrl}/account`, headers(password))
 
-    return {password, login: account.email!, method: 'sso', org}
+    this.settings.method = 'sso'
+    this.settings.org = org
+    return {password, login: account.email!}
   }
+
+  private async loadSettings() {
+    try {
+      this.settings = await fs.readJSON(this.settingsPath)
+    } catch (err) {
+      if (err.code !== 'ENOENT') ux.warn(err)
+      else debug(err)
+      this.settings = {}
+    }
+  }
+
+  private async saveSettings() {
+    try {
+      if (Object.keys(this.settings).length === 0) {
+        await fs.remove(this.settingsPath)
+      } else {
+        await fs.outputJSON(this.settingsPath, this.settings)
+      }
+    } catch (err) {
+      ux.warn(err)
+    }
+  }
+
+  private get settingsPath() { return path.join(this.config.dataDir, 'login.json') }
 }
