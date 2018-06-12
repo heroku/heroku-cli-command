@@ -1,4 +1,3 @@
-import * as Config from '@oclif/config'
 import {expect, fancy} from 'fancy-test'
 import nock from 'nock'
 
@@ -143,25 +142,5 @@ describe('optional', () => {
         expect(flags.app).to.be.undefined
       }
     }.run([])
-  })
-})
-
-describe('completion', () => {
-  class Command extends Base {
-    static flags = {app: flags.app({})}
-    async run() {}
-  }
-
-  it('cacheDuration defaults to 1 day', () => {
-    const completion = Command.flags.app.completion!
-    const duration = completion.cacheDuration
-    expect(duration).to.equal(86400)
-  })
-
-  it('options returns all the apps', async () => {
-    const completion = Command.flags.app.completion!
-    api.get('/apps').reply(200, [{id: 1, name: 'foo'}, {id: 2, name: 'bar'}])
-    const options = await completion.options({config: await Config.load()})
-    expect(options).to.deep.equal(['bar', 'foo'])
   })
 })
