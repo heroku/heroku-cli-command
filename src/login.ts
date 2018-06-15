@@ -57,7 +57,8 @@ export class Login {
           // can't use browser with --expires-in
           input = 'interactive'
         } else if (this.enableBrowserLogin()) {
-          input = await ux.prompt(`heroku: Login with [${color.green('b')}]rowser, [${color.green('i')}]nteractive, or [${color.green('s')}]so (enterprise-only)`, {default: defaultMethod})
+          await ux.anykey(`heroku: Press any key to open up the browser to login or ${color.yellow('q')} to exit`)
+          input = 'browser'
         } else {
           input = defaultMethod || 'interactive'
         }
@@ -72,7 +73,7 @@ export class Login {
       switch (input) {
         case 'b':
         case 'browser':
-          auth = await this.browser()
+          auth = await this.browser(opts.browser)
           break
         case 'i':
         case 'interactive':
@@ -138,19 +139,26 @@ export class Login {
     await Promise.all(requests)
   }
 
-  private async browser(): Promise<NetrcEntry> {
+  private async browser(browser?: string): Promise<NetrcEntry> {
     const {body: urls} = await HTTP.post<{browser_url: string, cli_url: string, token: string}>(`${this.loginHost}/auth`)
     // TODO: handle browser
     const url = `${this.loginHost}${urls.browser_url}`
     debug(`opening browser to ${url}`)
-    const cp = await opn(url, {wait: false})
-    cp.on('error', ux.error)
-    const showUrl = () => ux.warn(`Cannot open browser. Go to ${color.greenBright(url)} to finish login or run ${color.cmd('heroku login --interactive')}\n`)
+    let urlDisplayed = false
+    const showUrl = () => {
+      if (!urlDisplayed) ux.warn(`Cannot open browser. Go to ${color.greenBright(url)} to finish login or run ${color.cmd('heroku login --interactive')}\n`)
+      urlDisplayed = true
+    }
+    const cp = await opn(url, {app: browser, wait: false})
+    cp.on('error', err => {
+      ux.warn(err)
+      showUrl()
+    })
     if (process.env.HEROKU_TESTING_HEADLESS_LOGIN === '1') showUrl()
     cp.on('close', code => {
       if (code !== 0) showUrl()
     })
-    ux.action.start('Waiting for login')
+    ux.action.start('heroku: Waiting for login')
     const {body: auth} = await HTTP.get<{error?: string, access_token: string}>(`${this.loginHost}${urls.cli_url}`, {
       headers: {
         authorization: `Bearer ${urls.token}`,
