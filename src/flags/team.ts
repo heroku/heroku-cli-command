@@ -1,7 +1,10 @@
 import {flags} from '@oclif/command'
 
+import {TeamCompletion} from '../completions'
+
 export const team = flags.build({
   char: 't',
+  completion: TeamCompletion,
   description: 'team to use',
 
   default: ({flags}) => {
