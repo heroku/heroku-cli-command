@@ -1,3 +1,11 @@
+<a name="8.1.25"></a>
+## [8.1.25](https://github.com/heroku/heroku-cli-command/compare/v8.1.24...v8.1.25) (2018-06-18)
+
+
+### Bug Fixes
+
+* only use browser login when available ([#44](https://github.com/heroku/heroku-cli-command/issues/44)) ([b178343](https://github.com/heroku/heroku-cli-command/commit/b178343))
+
 <a name="8.1.24"></a>
 ## [8.1.24](https://github.com/heroku/heroku-cli-command/compare/v8.1.23...v8.1.24) (2018-06-09)
 
