@@ -159,11 +159,18 @@ export class Login {
       if (code !== 0) showUrl()
     })
     ux.action.start('heroku: Waiting for login')
-    const {body: auth} = await HTTP.get<{error?: string, access_token: string}>(`${this.loginHost}${urls.cli_url}`, {
-      headers: {
-        authorization: `Bearer ${urls.token}`,
+    const fetchAuth = async (retries = 3) => {
+      try {
+        const {body: auth} = await HTTP.get<{error?: string, access_token: string}>(`${this.loginHost}${urls.cli_url}`, {
+          headers: {authorization: `Bearer ${urls.token}`}
+        })
+        return auth
+      } catch (err) {
+        if (retries > 0 && err.http && err.http.statusCode > 500) fetchAuth(retries - 1)
+        throw err
       }
-    })
+    }
+    const auth = await fetchAuth()
     if (auth.error) ux.error(auth.error)
     this.heroku.auth = auth.access_token
     ux.action.start('Logging in')
