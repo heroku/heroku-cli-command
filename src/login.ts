@@ -142,7 +142,7 @@ export class Login {
 
   private async browser(browser?: string): Promise<NetrcEntry> {
     const {body: urls} = await HTTP.post<{browser_url: string, cli_url: string, token: string}>(`${this.loginHost}/auth`, {
-      body: {description: hostname}
+      body: {description: `Heroku CLI login from ${hostname}`},
     })
     // TODO: handle browser
     const url = `${this.loginHost}${urls.browser_url}`
