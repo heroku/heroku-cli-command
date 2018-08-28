@@ -1,3 +1,11 @@
+<a name="8.1.28"></a>
+## [8.1.28](https://github.com/heroku/heroku-cli-command/compare/v8.1.27...v8.1.28) (2018-08-28)
+
+
+### Bug Fixes
+
+* description of login token ([c8e7975](https://github.com/heroku/heroku-cli-command/commit/c8e7975))
+
 <a name="8.1.27"></a>
 ## [8.1.27](https://github.com/heroku/heroku-cli-command/compare/v8.1.26...v8.1.27) (2018-08-28)
 
