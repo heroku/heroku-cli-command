@@ -1,3 +1,12 @@
+<a name="8.1.27"></a>
+## [8.1.27](https://github.com/heroku/heroku-cli-command/compare/v8.1.26...v8.1.27) (2018-08-28)
+
+
+### Bug Fixes
+
+* **login:** retry browser auth up to 3 times on 5xx ([5f7b570](https://github.com/heroku/heroku-cli-command/commit/5f7b570))
+* add hostname to browser auth ([0dc9248](https://github.com/heroku/heroku-cli-command/commit/0dc9248))
+
 <a name="8.1.26"></a>
 ## [8.1.26](https://github.com/heroku/heroku-cli-command/compare/v8.1.25...v8.1.26) (2018-06-18)
 
