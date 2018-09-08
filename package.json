@@ -20,7 +20,7 @@
     "@heroku-cli/tslint": "^1.1.4",
     "@oclif/command": "^1.5.0",
     "@oclif/config": "^1.7.2",
-    "@oclif/tslint": "^2.0.0",
+    "@oclif/tslint": "^3.1.0",
     "@types/ansi-styles": "^3.2.0",
     "@types/chai": "^4.1.4",
     "@types/fs-extra": "^5.0.4",
