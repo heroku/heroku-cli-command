@@ -39,18 +39,18 @@ describe('required', () => {
   })
 
   fancy
-  .it('gets app from --remote flag', async () => {
-    withRemotes([
+    .it('gets app from --remote flag', async () => {
+      withRemotes([
       {name: 'staging', url: 'https://git.heroku.com/myapp-staging.git'},
       {name: 'production', url: 'https://git.heroku.com/myapp-production.git'},
-    ])
-    await class extends Command {
-      async run() {
-        const {flags} = this.parse(Command)
-        expect(flags.app).to.equal('myapp-staging')
-      }
-    }.run(['--remote', 'staging'])
-  })
+      ])
+      await class extends Command {
+        async run() {
+          const {flags} = this.parse(Command)
+          expect(flags.app).to.equal('myapp-staging')
+        }
+      }.run(['--remote', 'staging'])
+    })
 
   it('errors if --remote not found', async () => {
     withRemotes([

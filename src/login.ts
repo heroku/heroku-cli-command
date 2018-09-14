@@ -72,20 +72,20 @@ export class Login {
       let auth
       delete this.settings.method
       switch (input) {
-        case 'b':
-        case 'browser':
-          auth = await this.browser(opts.browser)
-          break
-        case 'i':
-        case 'interactive':
-          auth = await this.interactive(previousEntry && previousEntry.login, opts.expiresIn)
-          break
-        case 's':
-        case 'sso':
-          auth = await this.sso()
-          break
-        default:
-          return this.login(opts)
+      case 'b':
+      case 'browser':
+        auth = await this.browser(opts.browser)
+        break
+      case 'i':
+      case 'interactive':
+        auth = await this.interactive(previousEntry && previousEntry.login, opts.expiresIn)
+        break
+      case 's':
+      case 'sso':
+        auth = await this.sso()
+        break
+      default:
+        return this.login(opts)
       }
       await this.saveToken(auth)
       await this.saveSettings()
@@ -102,40 +102,40 @@ export class Login {
     // for SSO logins we delete the session since those do not show up in
     // authorizations because they are created a trusted client
     requests.push(HTTP.delete(`${vars.apiUrl}/oauth/sessions/~`, headers(token))
-    .catch(err => {
-      if (!err.http) throw err
-      if (err.http.statusCode === 404 && err.http.body && err.http.body.id === 'not_found' && err.http.body.resource === 'session') {
-        return
-      }
-      if (err.http.statusCode === 401 && err.http.body && err.http.body.id === 'unauthorized') {
-        return
-      }
-      throw err
-    }))
+      .catch(err => {
+        if (!err.http) throw err
+        if (err.http.statusCode === 404 && err.http.body && err.http.body.id === 'not_found' && err.http.body.resource === 'session') {
+          return
+        }
+        if (err.http.statusCode === 401 && err.http.body && err.http.body.id === 'unauthorized') {
+          return
+        }
+        throw err
+      }))
 
     // grab all the authorizations so that we can delete the token they are
     // using in the CLI.  we have to do this rather than delete ~ because
     // the ~ is the API Key, not the authorization that is currently requesting
     requests.push(HTTP.get<Heroku.OAuthAuthorization[]>(`${vars.apiUrl}/oauth/authorizations`, headers(token))
-    .then(async ({body: authorizations}) => {
+      .then(async ({body: authorizations}) => {
       // grab the default authorization because that is the token shown in the
       // dashboard as API Key and they may be using it for something else and we
       // would unwittingly break an integration that they are depending on
-      const d = await this.defaultToken()
-      if (d === token) return
-      return Promise.all(
+        const d = await this.defaultToken()
+        if (d === token) return
+        return Promise.all(
         authorizations
-        .filter(a => a.access_token && a.access_token.token === this.heroku.auth)
-        .map(a => HTTP.delete(`${vars.apiUrl}/oauth/authorizations/${a.id}`, headers(token)))
+          .filter(a => a.access_token && a.access_token.token === this.heroku.auth)
+          .map(a => HTTP.delete(`${vars.apiUrl}/oauth/authorizations/${a.id}`, headers(token)))
       )
-    })
-    .catch(err => {
-      if (!err.http) throw err
-      if (err.http.statusCode === 401 && err.http.body && err.http.body.id === 'unauthorized') {
-        return []
-      }
-      throw err
-    }))
+      })
+      .catch(err => {
+        if (!err.http) throw err
+        if (err.http.statusCode === 401 && err.http.body && err.http.body.id === 'unauthorized') {
+          return []
+        }
+        throw err
+      }))
 
     await Promise.all(requests)
   }
