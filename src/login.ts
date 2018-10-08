@@ -31,7 +31,7 @@ interface NetrcEntry {
 const headers = (token: string) => ({headers: {accept: 'application/vnd.heroku+json; version=3', authorization: `Bearer ${token}`}})
 
 export class Login {
-  loginHost = process.env.HEROKU_LOGIN_HOST || 'https://cli-login.heroku.com'
+  loginHost = process.env.HEROKU_LOGIN_HOST || 'https://cli-auth.heroku.com'
   settings!: {
     method?: string
     org?: string
@@ -259,7 +259,6 @@ export class Login {
   }
 
   private enableBrowserLogin() {
-    if (!process.env.HEROKU_LOGIN_HOST) return false
     if (this.config.name === '@heroku-cli/command') return true
     return this.config.channel !== 'stable'
   }
