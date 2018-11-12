@@ -1,3 +1,10 @@
+## [8.2.1](https://github.com/heroku/heroku-cli-command/compare/v8.2.0...v8.2.1) (2018-11-12)
+
+
+### Bug Fixes
+
+* enable login on stable ([e782654](https://github.com/heroku/heroku-cli-command/commit/e782654))
+
 ## [8.1.29](https://github.com/heroku/heroku-cli-command/compare/v8.1.28...v8.1.29) (2018-09-14)
 
 
