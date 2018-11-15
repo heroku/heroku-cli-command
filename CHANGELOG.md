@@ -1,3 +1,10 @@
+## [8.2.2](https://github.com/heroku/heroku-cli-command/compare/v8.2.1...v8.2.2) (2018-11-15)
+
+
+### Bug Fixes
+
+* timeout and warn if browser fails to render ([e15c0b6](https://github.com/heroku/heroku-cli-command/commit/e15c0b6))
+
 ## [8.2.1](https://github.com/heroku/heroku-cli-command/compare/v8.2.0...v8.2.1) (2018-11-12)
 
 
