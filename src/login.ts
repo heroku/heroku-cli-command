@@ -140,7 +140,9 @@ export class Login {
       if (!urlDisplayed) ux.warn(`Cannot open browser. Go to ${color.greenBright(url)} to finish login or run ${color.cmd('heroku login --interactive')}\n`)
       urlDisplayed = true
     }
+    const browserTimeout = setTimeout(showUrl, 2000)
     const cp = await opn(url, {app: browser, wait: false})
+    clearTimeout(browserTimeout)
     cp.on('error', err => {
       ux.warn(err)
       showUrl()
