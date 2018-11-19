@@ -7,5 +7,5 @@ class LoginCommand extends Command {
   }
 }
 
-LoginCommand.run([])
+(LoginCommand.run([]) as any)
 .catch(require('@oclif/errors/handle'))
