@@ -51,7 +51,7 @@ export class Login {
           input = 'interactive'
         } else {
           await ux.anykey(`heroku: Press any key to open up the browser to login or ${color.yellow('q')} to exit`)
-          input = 'browser'
+          input = process.env.HEROKU_LEGACY_SSO === '1' ? 'sso' : 'browser'
         }
       }
       try {
