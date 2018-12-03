@@ -49,9 +49,11 @@ export class Login {
         if (opts.expiresIn) {
           // can't use browser with --expires-in
           input = 'interactive'
+        } else if (process.env.HEROKU_LEGACY_SSO === '1') {
+          input = 'sso'
         } else {
           await ux.anykey(`heroku: Press any key to open up the browser to login or ${color.yellow('q')} to exit`)
-          input = process.env.HEROKU_LEGACY_SSO === '1' ? 'sso' : 'browser'
+          input = 'browser'
         }
       }
       try {
