@@ -1,3 +1,10 @@
+## [8.2.4](https://github.com/heroku/heroku-cli-command/compare/v8.2.3...v8.2.4) (2018-12-03)
+
+
+### Bug Fixes
+
+* use SSO when HEROKU_LEGACY_SSO is set ([ae031d9](https://github.com/heroku/heroku-cli-command/commit/ae031d9))
+
 ## [8.2.3](https://github.com/heroku/heroku-cli-command/compare/v8.2.2...v8.2.3) (2018-11-26)
 
 
