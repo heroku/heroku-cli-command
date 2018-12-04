@@ -134,7 +134,6 @@ export class Login {
     const {body: urls} = await HTTP.post<{browser_url: string, cli_url: string, token: string}>(`${this.loginHost}/auth`, {
       body: {description: `Heroku CLI login from ${hostname}`},
     })
-    // TODO: handle browser
     const url = `${this.loginHost}${urls.browser_url}`
     debug(`opening browser to ${url}`)
     let urlDisplayed = false
@@ -142,7 +141,7 @@ export class Login {
       if (!urlDisplayed) ux.warn(`Cannot open browser. Go to ${color.greenBright(url)} to finish login or run ${color.cmd('heroku login --interactive')}\n`)
       urlDisplayed = true
     }
-    ux.warn(`If browser does not open, visit ${color.greenBright(url)}`)
+    // ux.warn(`If browser does not open, visit ${color.greenBright(url)}`)
     const cp = await opn(url, {app: browser, wait: false})
     cp.on('error', err => {
       ux.warn(err)
