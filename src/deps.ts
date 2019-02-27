@@ -3,14 +3,12 @@ import CLI = require('cli-ux')
 import HTTP = require('http-call')
 import netrc = require('netrc-parser')
 
-// local
 import apiClient = require('./api-client')
 import file = require('./file')
+import flags = require('./flags')
 import git = require('./git')
 import mutex = require('./mutex')
 import yubikey = require('./yubikey')
-
-import flags = require('./flags')
 
 export const deps = {
   // remote
