@@ -3,9 +3,8 @@ import {expect, fancy} from 'fancy-test'
 import nock from 'nock'
 
 import {Command as Base} from '../../src'
-import {Git} from '../../src/git'
-
 import * as flags from '../../src/flags'
+import {Git} from '../../src/git'
 
 let api: nock.Scope
 let origRemotes = Object.getOwnPropertyDescriptor(Git.prototype, 'remotes')
