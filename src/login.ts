@@ -135,7 +135,7 @@ export class Login {
       body: {description: `Heroku CLI login from ${hostname}`},
     })
     const url = `${this.loginHost}${urls.browser_url}`
-    ux.log(`Opening browser to ${url}...`)
+    ux.log(`Opening browser to ${url}`)
     let urlDisplayed = false
     const showUrl = () => {
       if (!urlDisplayed) ux.warn('Cannot open browser.')
