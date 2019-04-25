@@ -4,7 +4,7 @@ import * as Config from '@oclif/config'
 import ux from 'cli-ux'
 import HTTP from 'http-call'
 import Netrc from 'netrc-parser'
-import opn = require('opn')
+import open = require('open')
 import * as os from 'os'
 
 import {APIClient, HerokuAPIError} from './api-client'
@@ -142,7 +142,7 @@ export class Login {
       urlDisplayed = true
     }
     // ux.warn(`If browser does not open, visit ${color.greenBright(url)}`)
-    const cp = await opn(url, {app: browser, wait: false})
+    const cp = await open(url, {app: browser, wait: false})
     cp.on('error', err => {
       ux.warn(err)
       showUrl()
@@ -263,7 +263,7 @@ export class Login {
     ux.action.start('Opening browser for login')
     // TODO: handle browser
     debug(`opening browser to ${url}`)
-    await opn(url, {wait: false})
+    await open(url, {wait: false})
 
     const password = await ux.prompt('Access token', {type: 'mask'})
     ux.action.start('Validating token')
