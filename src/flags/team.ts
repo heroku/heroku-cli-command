@@ -9,8 +9,8 @@ export const team = flags.build({
 
   default: ({flags}) => {
     let {HEROKU_ORGANIZATION: org, HEROKU_TEAM: team} = process.env
+    if (flags.org) return flags.org
     if (team) return team
     if (org) return org
-    if (flags.org) return flags.org
-  },
+  }
 })
