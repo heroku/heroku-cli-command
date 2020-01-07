@@ -29,7 +29,7 @@ interface NetrcEntry {
 const headers = (token: string) => ({headers: {accept: 'application/vnd.heroku+json; version=3', authorization: `Bearer ${token}`}})
 
 export class Login {
-  loginHost = process.env.HEROKU_LOGIN_HOST || 'https://cli-auth.heroku.com'
+  loginHost = process.env.HEROKU_LOGIN_HOST || 'https://auth.heroku.com'
 
   constructor(private readonly config: Config.IConfig, private readonly heroku: APIClient) {}
 
