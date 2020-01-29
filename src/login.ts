@@ -184,7 +184,12 @@ export class Login {
     try {
       auth = await this.createOAuthToken(login!, password, {expiresIn})
     } catch (err) {
-      if (!err.body || err.body.id !== 'two_factor') throw err
+      if (!err.body || err.body.id !== 'two_factor') {
+        if (err.body.id === 'device_trust_required') {
+          err.body.message = 'The interactive flag requires Two-Factor Authentication to be enabled on your account. Please use heroku login.'
+        }
+        throw err
+      }
       let secondFactor = await ux.prompt('Two-factor code', {type: 'mask'})
       auth = await this.createOAuthToken(login!, password, {expiresIn, secondFactor})
     }
