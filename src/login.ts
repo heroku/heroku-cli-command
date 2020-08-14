@@ -265,9 +265,14 @@ export class Login {
       url = `https://sso.heroku.com/saml/${encodeURIComponent(org!)}/init?cli=true`
     }
 
-    ux.action.start('Opening browser for login')
     // TODO: handle browser
     debug(`opening browser to ${url}`)
+    process.stderr.write(`Opening browser to ${url}\n`)
+    process.stderr.write(color.gray(
+      'If the browser fails to open or you’re authenticating on a ' +
+      'remote machine, please manually open the URL above in your ' +
+      'browser.\n'
+    ))
     await open(url, {wait: false})
 
     const password = await ux.prompt('Access token', {type: 'mask'})
