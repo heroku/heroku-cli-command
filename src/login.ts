@@ -267,7 +267,7 @@ export class Login {
 
     // TODO: handle browser
     debug(`opening browser to ${url}`)
-    process.stderr.write(`Opening browser to ${url}\n`)
+    process.stderr.write(`Opening browser to:\n${url}\n`)
     process.stderr.write(color.gray(
       'If the browser fails to open or you’re authenticating on a ' +
       'remote machine, please manually open the URL above in your ' +
