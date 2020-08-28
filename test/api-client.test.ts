@@ -5,18 +5,11 @@ import nock from 'nock'
 
 import {Command as CommandBase} from '../src/command'
 
+// tslint:disable no-http-string
+
 class Command extends CommandBase {
   async run() {}
 }
-
-// jest.mock('netrc-parser', () => {
-//   return {
-//     default: {
-//       loadSync: jest.fn(),
-//       machines: {'api.heroku.com': {password: 'mypass'}},
-//     },
-//   }
-// })
 
 const netrc = require('netrc-parser').default
 netrc.loadSync = function (this: typeof netrc) {
