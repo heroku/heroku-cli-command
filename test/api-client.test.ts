@@ -80,6 +80,19 @@ describe('api_client', () => {
       })
   })
 
+  describe('with HEROKU_HOST', () => {
+    test
+      .it('makes an HTTP request with HEROKU_HOST', async ctx => {
+        process.env.HEROKU_HOST = 'http://localhost:5000'
+        api = nock('https://localhost')
+        api.get('/apps').reply(200, [{name: 'myapp'}])
+
+        const cmd = new Command([], ctx.config)
+        const {body} = await cmd.heroku.get('/apps')
+        expect(body).to.deep.equal([{name: 'myapp'}])
+      })
+  })
+
   test
     .it('2fa no preauth', async ctx => {
       api = nock('https://api.heroku.com')
