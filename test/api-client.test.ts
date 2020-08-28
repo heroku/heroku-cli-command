@@ -84,7 +84,7 @@ describe('api_client', () => {
     test
       .it('makes an HTTP request with HEROKU_HOST', async ctx => {
         process.env.HEROKU_HOST = 'http://localhost:5000'
-        api = nock('https://localhost')
+        api = nock('http://localhost:5000')
         api.get('/apps').reply(200, [{name: 'myapp'}])
 
         const cmd = new Command([], ctx.config)
