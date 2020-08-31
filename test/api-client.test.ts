@@ -5,18 +5,11 @@ import nock from 'nock'
 
 import {Command as CommandBase} from '../src/command'
 
+// tslint:disable no-http-string
+
 class Command extends CommandBase {
   async run() {}
 }
-
-// jest.mock('netrc-parser', () => {
-//   return {
-//     default: {
-//       loadSync: jest.fn(),
-//       machines: {'api.heroku.com': {password: 'mypass'}},
-//     },
-//   }
-// })
 
 const netrc = require('netrc-parser').default
 netrc.loadSync = function (this: typeof netrc) {
@@ -72,6 +65,19 @@ describe('api_client', () => {
         api = nock('https://api.heroku.com', {
           reqheaders: {'x-foo': 'bar'},
         })
+        api.get('/apps').reply(200, [{name: 'myapp'}])
+
+        const cmd = new Command([], ctx.config)
+        const {body} = await cmd.heroku.get('/apps')
+        expect(body).to.deep.equal([{name: 'myapp'}])
+      })
+  })
+
+  describe('with HEROKU_HOST', () => {
+    test
+      .it('makes an HTTP request with HEROKU_HOST', async ctx => {
+        process.env.HEROKU_HOST = 'http://localhost:5000'
+        api = nock('http://localhost:5000')
         api.get('/apps').reply(200, [{name: 'myapp'}])
 
         const cmd = new Command([], ctx.config)
