@@ -65,7 +65,9 @@ export class APIClient {
     this.preauthPromises = {}
     let self = this as any
     const opts = {
-      host: apiUrl.host,
+      host: apiUrl.hostname,
+      port: apiUrl.port,
+      protocol: apiUrl.protocol,
       headers: {
         accept: 'application/vnd.heroku+json; version=3',
         'user-agent': `heroku-cli/${self.config.version} ${self.config.platform}`,
