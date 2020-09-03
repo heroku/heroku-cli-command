@@ -1,13 +1,14 @@
 import {v4 as uuid} from 'uuid'
 
-let requestId: string
+// tslint:disable-next-line: no-unnecessary-class
+export class RequestId {
+  private static _id: string
 
-// `requestId` is generated once per entire node session
-// upon the first call of `getRequestId`
-export function getRequestId(): string {
-  if (!requestId) {
-    requestId = uuid()
+  static get id() {
+    if (!RequestId._id) {
+      RequestId._id = uuid()
+    }
+
+    return RequestId._id
   }
-
-  return requestId
 }

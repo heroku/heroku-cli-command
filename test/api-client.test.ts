@@ -4,7 +4,7 @@ import base, {expect} from 'fancy-test'
 import nock from 'nock'
 
 import {Command as CommandBase} from '../src/command'
-import {getRequestId} from '../src/request-id'
+import {RequestId} from '../src/request-id'
 
 // tslint:disable no-http-string
 
@@ -34,13 +34,13 @@ const test = base
 .add('config', () => Config.load())
 
 describe('api_client', () => {
-  const requestId = getRequestId()
+  const requestId = RequestId.id
 
   test
     .it('makes multiple HTTP requests with the same Request ID', async ctx => {
       api = nock('https://api.heroku.com', {
         reqheaders: {
-          'Request-ID': requestId,
+          'Request-ID': RequestId.id,
         },
       }).get('/apps').twice().reply(200, [{name: 'myapp'}])
 

@@ -7,7 +7,7 @@ import * as url from 'url'
 import deps from './deps'
 import {Login} from './login'
 import {Mutex} from './mutex'
-import {getRequestId} from './request-id'
+import {RequestId} from './request-id'
 import {vars} from './vars'
 
 export namespace APIClient {
@@ -72,7 +72,7 @@ export class APIClient {
       headers: {
         accept: 'application/vnd.heroku+json; version=3',
         'user-agent': `heroku-cli/${self.config.version} ${self.config.platform}`,
-        'Request-ID': getRequestId(),
+        'Request-ID': RequestId.id,
         ...envHeaders,
       },
     }
