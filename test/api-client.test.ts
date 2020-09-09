@@ -2,8 +2,10 @@ import * as Config from '@oclif/config'
 import cli from 'cli-ux'
 import base, {expect} from 'fancy-test'
 import nock from 'nock'
+import * as sinon from 'sinon'
 
 import {Command as CommandBase} from '../src/command'
+import {RequestId, requestIdHeader} from '../src/request-id'
 
 // tslint:disable no-http-string
 
@@ -125,4 +127,57 @@ describe('api_client', () => {
       expect((await _config).body).to.deep.equal({foo: 'bar'})
       expect((await dynos).body).to.deep.equal({web: 1})
     })
+
+  context('request ids', function () {
+    let generateStub: any
+
+    beforeEach(function () {
+      RequestId.empty()
+      generateStub = sinon.stub(RequestId, '_generate')
+    })
+
+    afterEach(function () {
+      generateStub.restore()
+    })
+
+    test
+      .it('makes requests with a generated request id', async ctx => {
+        const cmd = new Command([], ctx.config)
+
+        generateStub.returns('random-uuid')
+        api = nock('https://api.heroku.com').get('/apps').reply(200, [{name: 'myapp'}])
+
+        const {request} = await cmd.heroku.get('/apps')
+        expect(request.getHeader(requestIdHeader)).to.deep.equal('random-uuid')
+      })
+
+    test
+      .it('makes requests including previous request ids', async ctx => {
+        const cmd = new Command([], ctx.config)
+        api = nock('https://api.heroku.com').get('/apps').twice().reply(200, [{name: 'myapp'}])
+
+        generateStub.returns('random-uuid')
+        await cmd.heroku.get('/apps')
+
+        generateStub.returns('second-random-uuid')
+        const {request: secondRequest} = await cmd.heroku.get('/apps')
+
+        expect(secondRequest.getHeader(requestIdHeader)).to.deep.equal('second-random-uuid,random-uuid')
+      })
+
+    test
+      .it('tracks response request ids for subsequent request ids', async ctx => {
+        const cmd = new Command([], ctx.config)
+        const existingRequestIds = ['first-existing-request-id', 'second-existing-request-id'].join(',')
+        api = nock('https://api.heroku.com').get('/apps').twice().reply(() => [200, JSON.stringify({name: 'myapp'}), {[requestIdHeader]: existingRequestIds}])
+
+        generateStub.returns('random-uuid')
+        await cmd.heroku.get('/apps')
+
+        generateStub.returns('second-random-uuid')
+        const {request: secondRequest} = await cmd.heroku.get('/apps')
+
+        expect(secondRequest.getHeader(requestIdHeader)).to.deep.equal('second-random-uuid,first-existing-request-id,second-existing-request-id,random-uuid')
+      })
+  })
 })
