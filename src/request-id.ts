@@ -1,14 +1,33 @@
-import {v4 as uuid} from 'uuid'
+import * as uuid from 'uuid'
+
+export const requestIdHeader = 'Request-Id'
 
 // tslint:disable-next-line: no-unnecessary-class
 export class RequestId {
-  private static _id: string
+  static ids: string[] = []
 
-  static get id() {
-    if (!RequestId._id) {
-      RequestId._id = uuid()
-    }
+  static track(...ids: string[]) {
+    const tracked = RequestId.ids
+    RequestId.ids = [...ids, ...tracked]
+    return RequestId.ids
+  }
 
-    return RequestId._id
+  static create(): string[] {
+    const tracked = RequestId.ids
+    const generatedId = RequestId._generate()
+    RequestId.ids = [generatedId, ...tracked]
+    return RequestId.ids
+  }
+
+  static empty(): void {
+    RequestId.ids = []
+  }
+
+  static get headerValue() {
+    return RequestId.ids.join(',')
+  }
+
+  static _generate() {
+    return uuid.v4()
   }
 }
