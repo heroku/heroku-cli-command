@@ -8,6 +8,7 @@ export class RequestId {
 
   static track(...ids: string[]) {
     const tracked = RequestId.ids
+    ids = ids.filter(id => !(tracked.includes(id)))
     RequestId.ids = [...ids, ...tracked]
     return RequestId.ids
   }

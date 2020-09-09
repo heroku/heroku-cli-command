@@ -60,4 +60,17 @@ describe('getRequestId', () => {
     expect(RequestId.ids).to.deep.equal(['another-random', 'tracked', 'random'])
     expect(RequestId.headerValue).to.deep.equal('another-random,tracked,random')
   })
+
+  it('tracked ids are not added if they are already included', function () {
+    expect(RequestId.ids).to.deep.equal([])
+
+    RequestId.track('tracked')
+    expect(RequestId.ids).to.deep.equal(['tracked'])
+
+    RequestId.track('tracked')
+    expect(RequestId.ids).to.deep.equal(['tracked'])
+
+    RequestId.track('other-tracked', 'tracked', 'another-tracked')
+    expect(RequestId.ids).to.deep.equal(['other-tracked', 'another-tracked', 'tracked'])
+  })
 })
