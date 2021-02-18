@@ -75,6 +75,24 @@ describe('api_client', () => {
       })
   })
 
+  describe('with HEROKU_API_KEY', () => {
+    test
+      .it('errors out before attempting a login when HEROKU_API_KEY is set, but invalid', async ctx => {
+        process.env.HEROKU_API_KEY = 'blah'
+        api = nock('https://api.heroku.com', {
+          reqheaders: {Authorization: 'Bearer blah'}
+        })
+        api.get('/account').reply(401, {id: 'unauthorized'})
+
+        const cmd = new Command([], ctx.config)
+        try {
+          await cmd.heroku.get('/account')
+        } catch (error) {
+          expect(error.message).to.equal('The token provided to HEROKU_API_KEY is invalid. Please double-check that you have the correct token, or run `heroku login` without HEROKU_API_KEY set.')
+        }
+      })
+  })
+
   describe('with HEROKU_HOST', () => {
     test
       .it('makes an HTTP request with HEROKU_HOST', async ctx => {
