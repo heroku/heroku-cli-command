@@ -12,6 +12,7 @@ import {vars} from './vars'
 
 const debug = require('debug')('heroku-cli-command')
 const hostname = os.hostname()
+const thirtyDays = 60 * 60 * 24 * 30
 
 export namespace Login {
   export interface Options {
@@ -42,6 +43,8 @@ export class Login {
       }, 1000 * 60 * 10).unref()
 
       if (process.env.HEROKU_API_KEY) ux.error('Cannot log in with HEROKU_API_KEY set')
+      if (opts.expiresIn && opts.expiresIn > thirtyDays) ux.error('Cannot set an expiration longer than thirty days')
+
       await Netrc.load()
       const previousEntry = Netrc.machines['api.heroku.com']
       let input: string | undefined = opts.method
@@ -184,10 +187,11 @@ export class Login {
     try {
       auth = await this.createOAuthToken(login!, password, {expiresIn})
     } catch (err) {
+      if (err.body && err.body.id === 'device_trust_required') {
+        err.body.message = 'The interactive flag requires Two-Factor Authentication to be enabled on your account. Please use heroku login.'
+        throw err
+      }
       if (!err.body || err.body.id !== 'two_factor') {
-        if (err.body.id === 'device_trust_required') {
-          err.body.message = 'The interactive flag requires Two-Factor Authentication to be enabled on your account. Please use heroku login.'
-        }
         throw err
       }
       let secondFactor = await ux.prompt('Two-factor code', {type: 'mask'})
@@ -216,7 +220,7 @@ export class Login {
       body: {
         scope: ['global'],
         description: `Heroku CLI login from ${hostname}`,
-        expires_in: opts.expiresIn || 60 * 60 * 24 * 365 // 1 year
+        expires_in: opts.expiresIn || thirtyDays
       }
     })
     return {password: auth.access_token!.token!, login: auth.user!.email!}

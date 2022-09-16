@@ -7,6 +7,7 @@ import * as url from 'url'
 import deps from './deps'
 import {Login} from './login'
 import {Mutex} from './mutex'
+import {RequestId, requestIdHeader} from './request-id'
 import {vars} from './vars'
 
 export namespace APIClient {
@@ -98,18 +99,33 @@ export class APIClient {
         }
       }
 
+      static trackRequestIds<T>(response: HTTP<T>) {
+        const responseRequestIdHeader = response.headers[requestIdHeader]
+        if (responseRequestIdHeader) {
+          const requestIds = Array.isArray(responseRequestIdHeader) ? responseRequestIdHeader : responseRequestIdHeader.split(',')
+          RequestId.track(...requestIds)
+        }
+      }
+
       static async request<T>(url: string, opts: APIClient.Options = {}, retries = 3): Promise<APIHTTPClient<T>> {
         opts.headers = opts.headers || {}
+        opts.headers[requestIdHeader] = RequestId.create() && RequestId.headerValue
+
         if (!Object.keys(opts.headers).find(h => h.toLowerCase() === 'authorization')) {
           opts.headers.authorization = `Bearer ${self.auth}`
         }
         retries--
         try {
-          return await super.request<T>(url, opts)
+          const response = await super.request<T>(url, opts)
+          this.trackRequestIds<T>(response)
+          return response
         } catch (err) {
           if (!(err instanceof deps.HTTP.HTTPError)) throw err
           if (retries > 0) {
             if (opts.retryAuth !== false && err.http.statusCode === 401 && err.body.id === 'unauthorized') {
+              if (process.env.HEROKU_API_KEY) {
+                throw new Error('The token provided to HEROKU_API_KEY is invalid. Please double-check that you have the correct token, or run `heroku login` without HEROKU_API_KEY set.')
+              }
               if (!self.authPromise) self.authPromise = self.login()
               await self.authPromise
               opts.headers.authorization = `Bearer ${self.auth}`

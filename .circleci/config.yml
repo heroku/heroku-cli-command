@@ -1,4 +1,3 @@
-# ---
 # version: 2
 # jobs:
 #   node-latest: &test
@@ -31,11 +30,3 @@
 #     <<: *test
 #     docker:
 #       - image: node:8
-
-# workflows:
-#   version: 2
-#   "@heroku-cli/command":
-#     jobs:
-#       - node-latest
-#       - node-10
-#       - node-8
