@@ -1,5 +1,5 @@
 import {Command as Base} from '@oclif/command'
-import {deprecate} from 'util'
+import {deprecate} from 'node:util'
 
 import {APIClient} from './api-client'
 import deps from './deps'
@@ -24,7 +24,7 @@ export abstract class Command extends Base {
   get legacyHerokuClient(): any {
     if (this._legacyHerokuClient) return this._legacyHerokuClient
     const HerokuClient = require('heroku-client')
-    let options = {
+    const options = {
       debug: this.config.debug,
       host: `${this.heroku.defaults.protocol || 'https:'}//${this.heroku.defaults.host ||
         'api.heroku.com'}`,
@@ -39,6 +39,7 @@ export abstract class Command extends Base {
   get cli(): any {
     return deprecatedCLI()
   }
+
   get out(): any {
     return deprecatedCLI()
   }

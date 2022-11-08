@@ -8,8 +8,7 @@ const test = base
 .add('config', () => Config.load())
 
 class MyCommand extends Command {
-  async run() {
-  }
+  async run() {}
 }
 
 describe('command', () => {
@@ -27,9 +26,9 @@ describe('command', () => {
   })
 
   test
-    .it('has heroku clients', async ctx => {
-      let cmd = new MyCommand([], ctx.config)
-      expect(cmd.heroku).to.be.ok
-      expect(cmd.legacyHerokuClient).to.be.ok
-    })
+  .it('has heroku clients', async ctx => {
+    const cmd = new MyCommand([], ctx.config)
+    expect(cmd.heroku).to.be.ok
+    expect(cmd.legacyHerokuClient).to.be.ok
+  })
 })

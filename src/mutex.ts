@@ -18,22 +18,22 @@ export class Mutex<T> {
 
   dequeue() {
     this.busy = true
-    let next = this.queue.shift()
+    const next = this.queue.shift()
 
     if (next) {
       return this.execute(next)
-    } else {
-      this.busy = false
     }
+
+    this.busy = false
   }
 
   execute(record: Record<T>) {
-    let [task, resolve, reject] = record
+    const [task, resolve, reject] = record
 
     return task()
-      .then(resolve, reject)
-      .then(() => {
-        this.dequeue()
-      })
+    .then(resolve, reject)
+    .then(() => {
+      this.dequeue()
+    })
   }
 }

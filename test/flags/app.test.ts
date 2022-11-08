@@ -7,8 +7,8 @@ import * as flags from '../../src/flags'
 import {Git} from '../../src/git'
 
 let api: nock.Scope
-let origRemotes = Object.getOwnPropertyDescriptor(Git.prototype, 'remotes')
-let withRemotes = (remotes: any) => {
+const origRemotes = Object.getOwnPropertyDescriptor(Git.prototype, 'remotes')
+const withRemotes = (remotes: any) => {
   Object.defineProperty(Git.prototype, 'remotes', {get: () => remotes})
 }
 
@@ -38,18 +38,18 @@ describe('required', () => {
   })
 
   fancy
-    .it('gets app from --remote flag', async () => {
-      withRemotes([
+  .it('gets app from --remote flag', async () => {
+    withRemotes([
       {name: 'staging', url: 'https://git.heroku.com/myapp-staging.git'},
       {name: 'production', url: 'https://git.heroku.com/myapp-production.git'},
-      ])
-      await class extends Command {
-        async run() {
-          const {flags} = this.parse(Command)
-          expect(flags.app).to.equal('myapp-staging')
-        }
-      }.run(['--remote', 'staging'])
-    })
+    ])
+    await class extends Command {
+      async run() {
+        const {flags} = this.parse(Command)
+        expect(flags.app).to.equal('myapp-staging')
+      }
+    }.run(['--remote', 'staging'])
+  })
 
   it('errors if --remote not found', async () => {
     withRemotes([
@@ -90,7 +90,7 @@ describe('required', () => {
     ])
     await class Command extends Base {
       static flags = {
-        app: flags.app()
+        app: flags.app(),
       } as any
 
       async run() {
@@ -104,7 +104,7 @@ describe('required', () => {
     withRemotes([{name: 'heroku', url: 'https://git.heroku.com/myapp.git'}])
     await class Command extends Base {
       static flags = {
-        app: flags.app()
+        app: flags.app(),
       } as any
 
       async run() {
@@ -117,11 +117,13 @@ describe('required', () => {
 
 describe('optional', () => {
   it('works when git errors out', async () => {
-    Object.defineProperty(Git.prototype, 'remotes', {get: () => { throw new Error('whoa!') }})
+    Object.defineProperty(Git.prototype, 'remotes', {get: () => {
+      throw new Error('whoa!')
+    }})
 
     await class Command extends Base {
       static flags = {
-        app: flags.app()
+        app: flags.app(),
       } as any
 
       async run() {
@@ -134,7 +136,7 @@ describe('optional', () => {
   it('does not error when app is not specified', async () => {
     await class Command extends Base {
       static flags = {
-        app: flags.app()
+        app: flags.app(),
       } as any
 
       async run() {
@@ -154,7 +156,7 @@ describe('completion', () => {
   it('cacheDuration defaults to 1 day', () => {
     const completion = Command.flags.app.completion!
     const duration = completion.cacheDuration
-    expect(duration).to.equal(86400)
+    expect(duration).to.equal(86_400)
   })
 
   it('options returns all the apps', async () => {

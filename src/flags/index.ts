@@ -1,4 +1,4 @@
-export * from '@oclif/command/lib/flags'
+export * from '@oclif/core'
 
 export {app, remote} from './app'
 export {org} from './org'
