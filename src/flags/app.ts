@@ -1,5 +1,5 @@
-import {flags} from '@oclif/command'
-import {CLIError, error} from '@oclif/errors'
+import { Flags } from '@oclif/core'
+import { error, CLIError } from '@oclif/core/lib/errors'
 
 import {AppCompletion, RemoteCompletion} from '../completions'
 import {configRemote, getGitRemotes, IGitRemotes} from '../git'
@@ -19,12 +19,12 @@ class MultipleRemotesError extends CLIError {
   }
 }
 
-export const app = flags.build({
+export const app = Flags.custom({
   char: 'a',
-  completion: AppCompletion,
+  options: AppCompletion.options,
   description: 'app to run command against',
-
-  default: ({options, flags}) => {
+  
+  default: async ({options, flags}) => {
     const envApp = process.env.HEROKU_APP
     if (envApp) return envApp
     let gitRemotes = getGitRemotes(flags.remote || configRemote())
@@ -38,8 +38,8 @@ export const app = flags.build({
   },
 })
 
-export const remote = flags.build({
+export const remote = Flags.build({
   char: 'r',
-  completion: RemoteCompletion,
-  description: 'git remote of app to use',
+  options: [ RemoteCompletion.options ],
+  description: 'git remote of app to use'
 })

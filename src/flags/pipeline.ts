@@ -1,6 +1,6 @@
-import {flags} from '@oclif/command'
+import {Flags} from '@oclif/core'
 
-export const pipeline = flags.build({
+export const pipeline = Flags.build({
   char: 'p',
   description: 'name of pipeline',
 })

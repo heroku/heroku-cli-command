@@ -1,6 +1,6 @@
-import {flags} from '@oclif/command'
+import {Flags} from '@oclif/core'
 
-export const org = flags.build({
+export const org = Flags.custom({
   char: 'o',
   default: () => process.env.HEROKU_ORGANIZATION,
   description: 'name of org',

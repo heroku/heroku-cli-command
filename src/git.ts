@@ -1,5 +1,4 @@
-import {CLIError} from '@oclif/errors'
-
+import { CLIError } from '@oclif/core/lib/errors'
 import {vars} from './vars'
 
 export interface IGitRemote {
@@ -10,12 +9,12 @@ export interface IGitRemote {
 export class Git {
   get remotes(): IGitRemote[] {
     return this.exec('remote -v')
-      .split('\n')
-      .filter(l => l.endsWith('(fetch)'))
-      .map(l => {
-        const [name, url] = l.split('\t')
-        return {name, url: url.split(' ')[0]}
-      })
+    .split('\n')
+    .filter(l => l.endsWith('(fetch)'))
+    .map(l => {
+      const [name, url] = l.split('\t')
+      return {name, url: url.split(' ')[0]}
+    })
   }
 
   exec(cmd: string): string {
@@ -26,16 +25,17 @@ export class Git {
         stdio: [null, 'pipe', null],
       })
     } catch (error) {
-      if (error.code === 'ENOENT') {
+      if ((error as CLIError).code === 'ENOENT') {
         throw new CLIError('Git must be installed to use the Heroku CLI.  See instructions here: http://git-scm.com')
       }
+
       throw error
     }
   }
 }
 
 export function configRemote() {
-  let git = new Git()
+  const git = new Git()
   try {
     return git.exec('config heroku.remote').trim()
   } catch {}
@@ -47,19 +47,20 @@ export interface IGitRemotes {
 }
 
 export function getGitRemotes(onlyRemote: string | undefined): IGitRemotes[] {
-  let git = new Git()
-  let appRemotes = []
+  const git = new Git()
+  const appRemotes = []
   let remotes
   try {
     remotes = git.remotes
   } catch {
     return []
   }
-  for (let remote of remotes) {
+
+  for (const remote of remotes) {
     if (onlyRemote && remote.name !== onlyRemote) continue
-    for (let prefix of vars.gitPrefixes) {
+    for (const prefix of vars.gitPrefixes) {
       const suffix = '.git'
-      let match = remote.url.match(`${prefix}(.*)${suffix}`)
+      const match = remote.url.match(`${prefix}(.*)${suffix}`)
       if (!match) continue
       appRemotes.push({
         app: match[1],
@@ -67,5 +68,6 @@ export function getGitRemotes(onlyRemote: string | undefined): IGitRemotes[] {
       })
     }
   }
+
   return appRemotes
 }
