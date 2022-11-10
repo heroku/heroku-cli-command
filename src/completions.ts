@@ -1,4 +1,4 @@
-import {Flags, Config } from '@oclif/core'
+import {Flags, Config, Command } from '@oclif/core'
 import { Completion, CompletionContext } from '@oclif/core/lib/interfaces'
 import * as path from 'path'
 
@@ -7,8 +7,8 @@ import {configRemote, getGitRemotes} from './git'
 
 export const oneDay = 60 * 60 * 24
 
-export const herokuGet = async (resource: string, cfg: { config: Config }): Promise<string[]> => {
-  const heroku = new deps.APIClient(cfg.config)
+export const herokuGet = async (resource: string, ctx: { config: Config }): Promise<string[]> => {
+  const heroku = new deps.APIClient(ctx.config)
   let {body: resources} = await heroku.get<any>(`/${resource}`)
   if (typeof resources === 'string') resources = JSON.parse(resources)
   return resources.map((a: any) => a.name).sort()
