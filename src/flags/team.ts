@@ -4,7 +4,7 @@ import {TeamCompletion} from '../completions'
 
 export const team = Flags.custom({
   char: 't',
-  options: TeamCompletion.options,
+  // options: TeamCompletion.options,
   description: 'team to use',
 
   default: async ({flags}) => {

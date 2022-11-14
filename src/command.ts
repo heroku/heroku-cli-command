@@ -1,5 +1,5 @@
-import {Command as Base} from '@oclif/command'
-import {deprecate} from 'node:util'
+import {Command as Base} from '@oclif/core'
+import {deprecate} from 'util'
 
 import {APIClient} from './api-client'
 import deps from './deps'

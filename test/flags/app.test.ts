@@ -1,4 +1,4 @@
-import * as Config from '@oclif/config'
+import {Config} from '@oclif/core'
 import {expect, fancy} from 'fancy-test'
 import nock from 'nock'
 
@@ -31,7 +31,7 @@ describe('required', () => {
   it('has an app', async () => {
     await class extends Command {
       async run() {
-        const {flags} = this.parse(Command)
+        const {flags} = await this.parse(Command)
         expect(flags.app).to.equal('myapp')
       }
     }.run(['--app', 'myapp'])
@@ -45,7 +45,7 @@ describe('required', () => {
     ])
     await class extends Command {
       async run() {
-        const {flags} = this.parse(Command)
+        const {flags} = await this.parse(Command)
         expect(flags.app).to.equal('myapp-staging')
       }
     }.run(['--remote', 'staging'])
@@ -94,7 +94,7 @@ describe('required', () => {
       } as any
 
       async run() {
-        const {flags} = this.parse(Command)
+        const {flags} = await this.parse(Command)
         expect(flags.app).to.be.undefined
       }
     }.run([])
@@ -108,7 +108,7 @@ describe('required', () => {
       } as any
 
       async run() {
-        const {flags} = this.parse(Command)
+        const {flags} = await this.parse(Command)
         expect(flags.app).to.equal('myapp')
       }
     }.run([])
@@ -127,7 +127,7 @@ describe('optional', () => {
       } as any
 
       async run() {
-        const {flags} = this.parse(Command)
+        const {flags} = await this.parse(Command)
         expect(flags.app).to.be.undefined
       }
     }.run([])
@@ -140,7 +140,7 @@ describe('optional', () => {
       } as any
 
       async run() {
-        const {flags} = this.parse(Command)
+        const {flags} = await this.parse(Command)
         expect(flags.app).to.be.undefined
       }
     }.run([])
