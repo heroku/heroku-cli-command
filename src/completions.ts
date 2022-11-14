@@ -1,5 +1,5 @@
-import {Flags, Config, Command } from '@oclif/core'
 import { Completion, CompletionContext } from '@oclif/core/lib/interfaces'
+import { CLIError } from '@oclif/core/lib/errors'
 import * as path from 'path'
 
 import deps from './deps'
@@ -7,7 +7,7 @@ import {configRemote, getGitRemotes} from './git'
 
 export const oneDay = 60 * 60 * 24
 
-export const herokuGet = async (resource: string, ctx: { config: Config }): Promise<string[]> => {
+export const herokuGet = async (resource: string, ctx: CompletionContext): Promise<string[]> => {
   const heroku = new deps.APIClient(ctx.config)
   let {body: resources} = await heroku.get<any>(`/${resource}`)
   if (typeof resources === 'string') resources = JSON.parse(resources)
@@ -98,14 +98,14 @@ export const ProcessTypeCompletion: Completion = {
       types = buff
       .toString()
       .split('\n')
-      .map(s => {
+      .map((s: string) => {
         if (!s) return false
         const m = s.match(/^([\w-]+)/)
         return m ? m[0] : false
       })
-      .filter(t => t) as string[]
+      .filter((t: any) => t) as string[]
     } catch (error) {
-      if (error.code !== 'ENOENT') throw error
+      if (error instanceof CLIError && error.code !== 'ENOENT') throw error
     }
 
     return types
