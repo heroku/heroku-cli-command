@@ -38,7 +38,7 @@ export const app = Flags.custom({
   },
 })
 
-export const remote = Flags.build({
+export const remote = Flags.custom({
   char: 'r',
   options: [ RemoteCompletion.options ],
   description: 'git remote of app to use'
