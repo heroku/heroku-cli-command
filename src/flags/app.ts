@@ -1,10 +1,7 @@
 import { Flags } from '@oclif/core'
 import { error, CLIError } from '@oclif/core/lib/errors'
 
-import {AppCompletion, RemoteCompletion} from '../completions'
 import {configRemote, getGitRemotes, IGitRemotes} from '../git'
-import {Completion} from '@oclif/core/lib/interfaces'
-import {OptionFlagProps, OptionFlag} from '@oclif/core/lib/interfaces/parser'
 
 class MultipleRemotesError extends CLIError {
   constructor(gitRemotes: IGitRemotes[]) {
@@ -21,7 +18,7 @@ class MultipleRemotesError extends CLIError {
   }
 }
 
-const _app = Flags.custom({
+export const app = Flags.custom({
   char: 'a',
   description: 'app to run command against',
   default: async ({options, flags}) => {
@@ -38,10 +35,7 @@ const _app = Flags.custom({
   },
 })
 
-export const app = (blerg:  Partial<OptionFlag<string>> = {}) => _app({...blerg, completion: AppCompletion})
-
 export const remote = Flags.custom({
   char: 'r',
-  // options: [ RemoteCompletion.options ],
   description: 'git remote of app to use'
 })
