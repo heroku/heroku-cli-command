@@ -228,8 +228,8 @@ export class APIClient {
   async logout() {
     try {
       await this._login.logout()
-    } catch (error: any) {
-      warn(error)
+    } catch (error) {
+      if (error instanceof CLIError) warn(error)
     }
 
     delete Netrc.machines['api.heroku.com']

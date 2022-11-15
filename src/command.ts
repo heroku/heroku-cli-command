@@ -4,11 +4,11 @@ import {deprecate} from 'util'
 import {APIClient} from './api-client'
 import deps from './deps'
 
-const pjson = require('../package.json')
+import pjson from '../package.json'
 
 const deprecatedCLI = deprecate(() => {
-  return require('cli-ux').cli
-}, 'this.out and this.cli is deprecated. Please import the "cli-ux" module directly instead.')
+  return require('CliUx').cli
+}, 'this.out and this.cli is deprecated. Please import "CliUx" from the @oclif/core module directly instead.')
 
 export abstract class Command extends Base {
   base = `${pjson.name}@${pjson.version}`
