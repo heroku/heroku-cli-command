@@ -1,5 +1,4 @@
-import * as Config from '@oclif/config'
-import cli from 'cli-ux'
+import {Config, Hook, CliUx} from '@oclif/core'
 import base, {expect} from 'fancy-test'
 import nock from 'nock'
 import * as sinon from 'sinon'
