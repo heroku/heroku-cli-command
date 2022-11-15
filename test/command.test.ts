@@ -1,4 +1,4 @@
-import * as Config from '@oclif/config'
+import {Config, Interfaces} from '@oclif/core'
 import base, {expect} from 'fancy-test'
 
 import {Command} from '../src/command'
@@ -19,7 +19,7 @@ describe('command', () => {
       }
 
       async run() {
-        const {flags} = this.parse(AppCommand)
+        const {flags} = await this.parse(AppCommand)
         expect(flags.app).to.equal('myapp')
       }
     }.run(['--app=myapp'])
