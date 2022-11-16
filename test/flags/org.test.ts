@@ -1,14 +1,15 @@
-import {Command} from '@oclif/command'
-import {cli} from 'cli-ux'
+import {Command, CliUx} from '@oclif/core'
 import {expect, fancy} from 'fancy-test'
 
 import * as flags from '../../src/flags'
+
+const cli = CliUx.ux
 
 describe('required', () => {
   class OrgCommand extends Command {
     static flags = {org: flags.org({required: true})}
     async run() {
-      const {flags} = this.parse(this.constructor as any)
+      const {flags} = await this.parse(this.constructor as any)
       cli.log(flags.org)
     }
   }
@@ -25,7 +26,12 @@ describe('required', () => {
     try {
       await OrgCommand.run([])
     } catch (error) {
-      expect(error.message).to.contain('Missing required flag:\n -o, --org')
+      if (error instanceof Error) {
+        expect(error.message).to.contain('Missing required flag org')
+      } else {
+        throw new TypeError('Unhandled error state')
+      }
+
       done()
     }
   })
@@ -35,7 +41,7 @@ describe('optional', () => {
   class OrgCommand extends Command {
     static flags = {org: flags.org()}
     async run() {
-      const {flags} = this.parse(this.constructor as any)
+      const {flags} = await this.parse(this.constructor as any)
       cli.log(flags.org)
     }
   }
@@ -61,7 +67,7 @@ describe('optional', () => {
     class OrgCommand extends Command {
         static flags = {org: flags.org()}
         async run() {
-          const {flags} = this.parse(this.constructor as any)
+          const {flags} = await this.parse(this.constructor as any)
           cli.log(flags.org)
         }
     }
