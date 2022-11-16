@@ -1,6 +1,6 @@
 import {Config} from '@oclif/core'
 import base, {expect} from 'fancy-test'
-import {resolve} from 'path'
+import {resolve} from 'node:path'
 
 import {Command} from '../src/command'
 import * as flags from '../src/flags'

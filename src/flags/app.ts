@@ -1,5 +1,5 @@
-import { Flags } from '@oclif/core'
-import { error, CLIError } from '@oclif/core/lib/errors'
+import {Flags} from '@oclif/core'
+import {error, CLIError} from '@oclif/core/lib/errors'
 
 import {configRemote, getGitRemotes, IGitRemotes} from '../git'
 
@@ -29,6 +29,7 @@ export const app = Flags.custom({
     if (flags.remote && gitRemotes.length === 0) {
       error(`remote ${flags.remote} not found in git remotes`)
     }
+
     if (gitRemotes.length > 1 && options.required) {
       throw new MultipleRemotesError(gitRemotes)
     }
@@ -37,5 +38,5 @@ export const app = Flags.custom({
 
 export const remote = Flags.custom({
   char: 'r',
-  description: 'git remote of app to use'
+  description: 'git remote of app to use',
 })

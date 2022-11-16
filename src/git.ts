@@ -1,4 +1,4 @@
-import { CLIError } from '@oclif/core/lib/errors'
+import {CLIError} from '@oclif/core/lib/errors'
 import {vars} from './vars'
 
 export interface IGitRemote {
