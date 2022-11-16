@@ -29,7 +29,7 @@ describe('required', () => {
       if (error instanceof Error) {
         expect(error.message).to.contain('Missing required flag pipeline')
       } else {
-        throw new TypeError('Unhandled error state')
+        throw new TypeError('Unexpected error')
       }
 
       done()
