@@ -1,4 +1,4 @@
-import {Config, Interfaces} from '@oclif/core'
+import {Config} from '@oclif/core'
 import base, {expect} from 'fancy-test'
 
 import {Command} from '../src/command'
@@ -27,7 +27,7 @@ describe('command', () => {
 
   test
   .it('has heroku clients', async ctx => {
-    const cmd = new MyCommand([], ctx.config)
+    const cmd = new MyCommand([], ctx.config as Config)
     expect(cmd.heroku).to.be.ok
     expect(cmd.legacyHerokuClient).to.be.ok
   })
