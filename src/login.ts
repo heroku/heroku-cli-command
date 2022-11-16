@@ -4,7 +4,7 @@ import {Config, CliUx} from '@oclif/core'
 import HTTP from 'http-call'
 import Netrc from 'netrc-parser'
 import open = require('open')
-import * as os from 'os'
+import * as os from 'node:os'
 
 const {ux} = CliUx
 
