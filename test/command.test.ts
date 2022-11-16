@@ -1,11 +1,12 @@
 import {Config} from '@oclif/core'
 import base, {expect} from 'fancy-test'
+import {resolve} from 'path'
 
 import {Command} from '../src/command'
 import * as flags from '../src/flags'
 
 const test = base
-.add('config', () => Config.load())
+.add('config', new Config({root: resolve(__dirname, '../package.json')}))
 
 class MyCommand extends Command {
   async run() {}
@@ -27,7 +28,7 @@ describe('command', () => {
 
   test
   .it('has heroku clients', async ctx => {
-    const cmd = new MyCommand([], ctx.config as Config)
+    const cmd = new MyCommand([], ctx.config)
     expect(cmd.heroku).to.be.ok
     expect(cmd.legacyHerokuClient).to.be.ok
   })
