@@ -1,12 +1,13 @@
-import {Config, Hook, CliUx} from '@oclif/core'
+import {CliUx, Config} from '@oclif/core'
 import base, {expect} from 'fancy-test'
 import nock from 'nock'
 import * as sinon from 'sinon'
+import {resolve} from 'node:path'
 
 import {Command as CommandBase} from '../src/command'
 import {RequestId, requestIdHeader} from '../src/request-id'
 
-// tslint:disable no-http-string
+const cli = CliUx.ux
 
 class Command extends CommandBase {
   async run() {}
@@ -31,7 +32,7 @@ afterEach(() => {
 })
 
 const test = base
-.add('config', () => Config.load())
+.add('config', new Config({root: resolve(__dirname, '../package.json')}))
 
 describe('api_client', () => {
   test
@@ -87,7 +88,11 @@ describe('api_client', () => {
       try {
         await cmd.heroku.get('/account')
       } catch (error) {
-        expect(error.message).to.equal('The token provided to HEROKU_API_KEY is invalid. Please double-check that you have the correct token, or run `heroku login` without HEROKU_API_KEY set.')
+        if (error instanceof Error) {
+          expect(error.message).to.equal('The token provided to HEROKU_API_KEY is invalid. Please double-check that you have the correct token, or run `heroku login` without HEROKU_API_KEY set.')
+        } else {
+          throw new TypeError('Unexpected error')
+        }
       }
     })
   })

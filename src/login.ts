@@ -1,6 +1,6 @@
 import color from '@heroku-cli/color'
 import * as Heroku from '@heroku-cli/schema'
-import {Config, CliUx} from '@oclif/core'
+import {CliUx, Interfaces} from '@oclif/core'
 import HTTP from 'http-call'
 import Netrc from 'netrc-parser'
 import open = require('open')
@@ -33,7 +33,7 @@ const headers = (token: string) => ({headers: {accept: 'application/vnd.heroku+j
 export class Login {
   loginHost = process.env.HEROKU_LOGIN_HOST || 'https://cli-auth.heroku.com'
 
-  constructor(private readonly config: Config, private readonly heroku: APIClient) {}
+  constructor(private readonly config: Interfaces.Config, private readonly heroku: APIClient) {}
 
   async login(opts: Login.Options = {}): Promise<void> {
     let loggedIn = false

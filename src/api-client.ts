@@ -1,8 +1,8 @@
-import {Config} from '@oclif/core'
-import { CLIError, warn } from '@oclif/core/lib/errors'
+import {Interfaces} from '@oclif/core'
+import {CLIError, warn} from '@oclif/core/lib/errors'
 import {HTTP, HTTPError, HTTPRequestOptions} from 'http-call'
 import Netrc from 'netrc-parser'
-import * as url from 'url'
+import * as url from 'node:url'
 
 import deps from './deps'
 import {Login} from './login'
@@ -56,7 +56,7 @@ export class APIClient {
   private _twoFactorMutex: Mutex<string> | undefined
   private _auth?: string
 
-  constructor(protected config: Config, public options: IOptions = {}) {
+  constructor(protected config: Interfaces.Config, public options: IOptions = {}) {
     this.config = config
     if (options.required === undefined) options.required = true
     options.preauth = options.preauth !== false

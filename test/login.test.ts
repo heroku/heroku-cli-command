@@ -1,6 +1,7 @@
-import * as Config from '@oclif/config'
+import {Config} from '@oclif/core'
 import base, {expect} from 'fancy-test'
 import nock from 'nock'
+import {resolve} from 'node:path'
 
 import {Command as CommandBase} from '../src/command'
 
@@ -17,7 +18,7 @@ beforeEach(() => {
 })
 
 const test = base
-.add('config', () => Config.load())
+.add('config', new Config({root: resolve(__dirname, '../package.json')}))
 
 describe('login with interactive', () => {
   test

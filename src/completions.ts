@@ -1,20 +1,20 @@
-import { Completion, Config } from '@oclif/core/lib/interfaces'
-import { CLIError } from '@oclif/core/lib/errors'
-import * as path from 'path'
+import {Interfaces} from '@oclif/core'
+import {CLIError} from '@oclif/core/lib/errors'
+import * as path from 'node:path'
 
 import deps from './deps'
 import {configRemote, getGitRemotes} from './git'
 
 export const oneDay = 60 * 60 * 24
 
-export const herokuGet = async (resource: string, ctx: {config: Config}): Promise<string[]> => {
+export const herokuGet = async (resource: string, ctx: {config: Interfaces.Config}): Promise<string[]> => {
   const heroku = new deps.APIClient(ctx.config)
   let {body: resources} = await heroku.get<any>(`/${resource}`)
   if (typeof resources === 'string') resources = JSON.parse(resources)
   return resources.map((a: any) => a.name).sort()
 }
 
-export const AppCompletion: Completion = {
+export const AppCompletion: Interfaces.Completion = {
   cacheDuration: oneDay,
   options: async ctx => {
     const apps = await herokuGet('apps', ctx)
@@ -22,7 +22,7 @@ export const AppCompletion: Completion = {
   },
 }
 
-export const AppAddonCompletion: Completion = {
+export const AppAddonCompletion: Interfaces.Completion = {
   cacheDuration: oneDay,
   cacheKey: async ctx => {
     return ctx.flags && ctx.flags.app ? `${ctx.flags.app}_addons` : ''
@@ -33,7 +33,7 @@ export const AppAddonCompletion: Completion = {
   },
 }
 
-export const AppDynoCompletion: Completion = {
+export const AppDynoCompletion: Interfaces.Completion = {
   cacheDuration: oneDay,
   cacheKey: async ctx => {
     return ctx.flags && ctx.flags.app ? `${ctx.flags.app}_dynos` : ''
@@ -44,7 +44,7 @@ export const AppDynoCompletion: Completion = {
   },
 }
 
-export const BuildpackCompletion: Completion = {
+export const BuildpackCompletion: Interfaces.Completion = {
   skipCache: true,
 
   options: async () => {
@@ -62,7 +62,7 @@ export const BuildpackCompletion: Completion = {
   },
 }
 
-export const DynoSizeCompletion: Completion = {
+export const DynoSizeCompletion: Interfaces.Completion = {
   cacheDuration: oneDay * 90,
   options: async ctx => {
     const sizes = await herokuGet('dyno-sizes', ctx)
@@ -70,7 +70,7 @@ export const DynoSizeCompletion: Completion = {
   },
 }
 
-export const FileCompletion: Completion = {
+export const FileCompletion: Interfaces.Completion = {
   skipCache: true,
 
   options: async () => {
@@ -79,7 +79,7 @@ export const FileCompletion: Completion = {
   },
 }
 
-export const PipelineCompletion: Completion = {
+export const PipelineCompletion: Interfaces.Completion = {
   cacheDuration: oneDay,
   options: async ctx => {
     const pipelines = await herokuGet('pipelines', ctx)
@@ -87,7 +87,7 @@ export const PipelineCompletion: Completion = {
   },
 }
 
-export const ProcessTypeCompletion: Completion = {
+export const ProcessTypeCompletion: Interfaces.Completion = {
   skipCache: true,
 
   options: async () => {
@@ -112,7 +112,7 @@ export const ProcessTypeCompletion: Completion = {
   },
 }
 
-export const RegionCompletion: Completion = {
+export const RegionCompletion: Interfaces.Completion = {
   cacheDuration: oneDay * 7,
   options: async ctx => {
     const regions = await herokuGet('regions', ctx)
@@ -120,7 +120,7 @@ export const RegionCompletion: Completion = {
   },
 }
 
-export const RemoteCompletion: Completion = {
+export const RemoteCompletion: Interfaces.Completion = {
   skipCache: true,
 
   options: async () => {
@@ -129,7 +129,7 @@ export const RemoteCompletion: Completion = {
   },
 }
 
-export const RoleCompletion: Completion = {
+export const RoleCompletion: Interfaces.Completion = {
   skipCache: true,
 
   options: async () => {
@@ -137,7 +137,7 @@ export const RoleCompletion: Completion = {
   },
 }
 
-export const ScopeCompletion: Completion = {
+export const ScopeCompletion: Interfaces.Completion = {
   skipCache: true,
 
   options: async () => {
@@ -145,7 +145,7 @@ export const ScopeCompletion: Completion = {
   },
 }
 
-export const SpaceCompletion: Completion = {
+export const SpaceCompletion: Interfaces.Completion = {
   cacheDuration: oneDay,
   options: async ctx => {
     const spaces = await herokuGet('spaces', ctx)
@@ -153,7 +153,7 @@ export const SpaceCompletion: Completion = {
   },
 }
 
-export const StackCompletion: Completion = {
+export const StackCompletion: Interfaces.Completion = {
   cacheDuration: oneDay,
   options: async ctx => {
     const stacks = await herokuGet('stacks', ctx)
@@ -161,7 +161,7 @@ export const StackCompletion: Completion = {
   },
 }
 
-export const StageCompletion: Completion = {
+export const StageCompletion: Interfaces.Completion = {
   skipCache: true,
 
   options: async () => {
@@ -169,7 +169,7 @@ export const StageCompletion: Completion = {
   },
 }
 
-export const TeamCompletion: Completion = {
+export const TeamCompletion: Interfaces.Completion = {
   cacheDuration: oneDay,
   options: async ctx => {
     const teams = await herokuGet('teams', ctx)

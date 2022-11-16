@@ -1,5 +1,5 @@
 import {Command as Base} from '@oclif/core'
-import {deprecate} from 'util'
+import {deprecate} from 'node:util'
 
 import {APIClient} from './api-client'
 import deps from './deps'
@@ -7,7 +7,7 @@ import deps from './deps'
 import pjson from '../package.json'
 
 const deprecatedCLI = deprecate(() => {
-  return require('CliUx').cli
+  return require('cli-ux').cli
 }, 'this.out and this.cli is deprecated. Please import "CliUx" from the @oclif/core module directly instead.')
 
 export abstract class Command extends Base {
