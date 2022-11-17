@@ -1,4 +1,4 @@
-import childProcess from 'node:child_process'
+import childProcess from 'child_process'
 import {expect, fancy} from 'fancy-test'
 
 import {Git} from '../src/git'
@@ -18,15 +18,15 @@ heroku\thttps://git.heroku.com/myapp.git  (pull)
   })
 
   fancy
-  .stub(childProcess, 'execSync', () => {
-    const err: any = new Error('some other message')
-    err.code = 'ENOTNOENT'
-    throw err
-  })
-  .it('rethrows other git error', () => {
-    const git = new Git()
-    expect(() => {
-      git.exec('version')
-    }).to.throw('some other message')
-  })
+    .stub(childProcess, 'execSync', () => {
+      const err: any = new Error('some other message')
+      err.code = 'ENOTNOENT'
+      throw err
+    })
+    .it('rethrows other git error', () => {
+      const git = new Git()
+      expect(() => {
+        git.exec('version')
+      }).to.throw('some other message')
+    })
 })

@@ -27,9 +27,9 @@ describe('command', () => {
   })
 
   test
-  .it('has heroku clients', async ctx => {
-    const cmd = new MyCommand([], ctx.config)
-    expect(cmd.heroku).to.be.ok
-    expect(cmd.legacyHerokuClient).to.be.ok
-  })
+    .it('has heroku clients', async ctx => {
+      const cmd = new MyCommand([], ctx.config)
+      expect(cmd.heroku).to.be.ok
+      expect(cmd.legacyHerokuClient).to.be.ok
+    })
 })
