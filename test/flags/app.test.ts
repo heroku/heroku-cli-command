@@ -3,7 +3,6 @@ import {expect, fancy} from 'fancy-test'
 import nock from 'nock'
 
 import {Command as Base} from '../../src'
-import {AppCompletion} from '../../src/completions'
 import * as flags from '../../src/flags'
 import {Git} from '../../src/git'
 
@@ -155,14 +154,23 @@ describe('optional', () => {
 })
 
 describe('completion', () => {
+  class Command extends Base {
+    // options passed to flags.app below are to confirm typing and nothing else
+    static flags = {app: flags.app({required: true, multiple: true})}
+    async run() {}
+  }
+
   it('cacheDuration defaults to 1 day', () => {
-    const duration = AppCompletion.cacheDuration
+    // @ts-ignore
+    const duration = Command.flags.app.completion.cacheDuration
     expect(duration).to.equal(86_400)
   })
 
   it('options returns all the apps', async () => {
+    // @ts-ignore
+    const completion = Command.flags.app.completion
     api.get('/apps').reply(200, [{id: 1, name: 'foo'}, {id: 2, name: 'bar'}])
-    const options = await AppCompletion.options({config: await Config.load()})
+    const options = await completion.options({config: await Config.load()})
     expect(options).to.deep.equal(['bar', 'foo'])
   })
 })
