@@ -96,14 +96,14 @@ export const ProcessTypeCompletion: Interfaces.Completion = {
     try {
       const buff = await deps.file.readFile(procfile)
       types = buff
-      .toString()
-      .split('\n')
-      .map((s: string) => {
-        if (!s) return false
-        const m = s.match(/^([\w-]+)/)
-        return m ? m[0] : false
-      })
-      .filter((t: any) => t) as string[]
+        .toString()
+        .split('\n')
+        .map((s: string) => {
+          if (!s) return false
+          const m = s.match(/^([\w-]+)/)
+          return m ? m[0] : false
+        })
+        .filter((t: any) => t) as string[]
     } catch (error) {
       if (error instanceof CLIError && error.code !== 'ENOENT') throw error
     }

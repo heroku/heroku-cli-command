@@ -29,7 +29,6 @@ export const app = Flags.custom({
     if (flags.remote && gitRemotes.length === 0) {
       error(`remote ${flags.remote} not found in git remotes`)
     }
-
     if (gitRemotes.length > 1 && options.required) {
       throw new MultipleRemotesError(gitRemotes)
     }
