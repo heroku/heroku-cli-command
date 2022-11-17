@@ -1,11 +1,12 @@
 import color from '@heroku-cli/color'
 import * as Heroku from '@heroku-cli/schema'
-import * as Config from '@oclif/config'
-import ux from 'cli-ux'
+import {Config, CliUx} from '@oclif/core'
 import HTTP from 'http-call'
 import Netrc from 'netrc-parser'
 import open = require('open')
 import * as os from 'node:os'
+
+const {ux} = CliUx
 
 import {APIClient, HerokuAPIError} from './api-client'
 import {vars} from './vars'
@@ -32,7 +33,7 @@ const headers = (token: string) => ({headers: {accept: 'application/vnd.heroku+j
 export class Login {
   loginHost = process.env.HEROKU_LOGIN_HOST || 'https://cli-auth.heroku.com'
 
-  constructor(private readonly config: Config.IConfig, private readonly heroku: APIClient) {}
+  constructor(private readonly config: Config, private readonly heroku: APIClient) {}
 
   async login(opts: Login.Options = {}): Promise<void> {
     let loggedIn = false
@@ -62,7 +63,7 @@ export class Login {
 
       try {
         if (previousEntry && previousEntry.password) await this.logout(previousEntry.password)
-      } catch (error) {
+      } catch (error: any) {
         ux.warn(error)
       }
 
@@ -85,7 +86,7 @@ export class Login {
       }
 
       await this.saveToken(auth)
-    } catch (error) {
+    } catch (error: any) {
       throw new HerokuAPIError(error)
     } finally {
       loggedIn = true
@@ -168,7 +169,7 @@ export class Login {
           headers: {authorization: `Bearer ${urls.token}`},
         })
         return auth
-      } catch (error) {
+      } catch (error: any) {
         if (retries > 0 && error.http && error.http.statusCode > 500) return fetchAuth(retries - 1)
         throw error
       }
@@ -194,7 +195,7 @@ export class Login {
     let auth
     try {
       auth = await this.createOAuthToken(login!, password, {expiresIn})
-    } catch (error) {
+    } catch (error: any) {
       if (error.body && error.body.id === 'device_trust_required') {
         error.body.message = 'The interactive flag requires Two-Factor Authentication to be enabled on your account. Please use heroku login.'
         throw error
@@ -262,7 +263,7 @@ export class Login {
     try {
       const {body: authorization} = await HTTP.get<Heroku.OAuthAuthorization>(`${vars.apiUrl}/oauth/authorizations/~`, headers(this.heroku.auth!))
       return authorization.access_token && authorization.access_token.token
-    } catch (error) {
+    } catch (error: any) {
       if (!error.http) throw error
       if (error.http.statusCode === 404 && error.http.body && error.http.body.id === 'not_found' && error.body.resource === 'authorization') return
       if (error.http.statusCode === 401 && error.http.body && error.http.body.id === 'unauthorized') return

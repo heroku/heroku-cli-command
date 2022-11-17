@@ -1,7 +1,6 @@
 import { Flags } from '@oclif/core'
 import { error, CLIError } from '@oclif/core/lib/errors'
 
-import {AppCompletion, RemoteCompletion} from '../completions'
 import {configRemote, getGitRemotes, IGitRemotes} from '../git'
 
 class MultipleRemotesError extends CLIError {
@@ -21,13 +20,11 @@ class MultipleRemotesError extends CLIError {
 
 export const app = Flags.custom({
   char: 'a',
-  options: AppCompletion.options,
   description: 'app to run command against',
-  
   default: async ({options, flags}) => {
     const envApp = process.env.HEROKU_APP
     if (envApp) return envApp
-    let gitRemotes = getGitRemotes(flags.remote || configRemote())
+    const gitRemotes = getGitRemotes(flags.remote || configRemote())
     if (gitRemotes.length === 1) return gitRemotes[0].app
     if (flags.remote && gitRemotes.length === 0) {
       error(`remote ${flags.remote} not found in git remotes`)
@@ -40,6 +37,5 @@ export const app = Flags.custom({
 
 export const remote = Flags.custom({
   char: 'r',
-  completion: [ RemoteCompletion ],
   description: 'git remote of app to use'
 })
