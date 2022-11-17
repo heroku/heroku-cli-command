@@ -70,20 +70,20 @@ export class Login {
 
       let auth
       switch (input) {
-        case 'b':
-        case 'browser':
-          auth = await this.browser(opts.browser)
-          break
-        case 'i':
-        case 'interactive':
-          auth = await this.interactive(previousEntry && previousEntry.login, opts.expiresIn)
-          break
-        case 's':
-        case 'sso':
-          auth = await this.sso()
-          break
-        default:
-          return this.login(opts)
+      case 'b':
+      case 'browser':
+        auth = await this.browser(opts.browser)
+        break
+      case 'i':
+      case 'interactive':
+        auth = await this.interactive(previousEntry && previousEntry.login, opts.expiresIn)
+        break
+      case 's':
+      case 'sso':
+        auth = await this.sso()
+        break
+      default:
+        return this.login(opts)
       }
 
       await this.saveToken(auth)

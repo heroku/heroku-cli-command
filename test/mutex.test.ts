@@ -80,17 +80,17 @@ describe('mutex', () => {
           expect(output).to.deep.equal(['foo'])
 
           return mutex
-          .synchronize(() => {
-            return new Promise(resolve => {
-              output.push('bar')
-              resolve('bar')
+            .synchronize(() => {
+              return new Promise(resolve => {
+                output.push('bar')
+                resolve('bar')
+              })
             })
-          })
-          .then(results => {
-            expect('bar').to.deep.equal(results)
-            expect(output).to.deep.equal(['foo', 'bar'])
-            done()
-          })
+            .then(results => {
+              expect('bar').to.deep.equal(results)
+              expect(output).to.deep.equal(['foo', 'bar'])
+              done()
+            })
         })
       })
       .catch(done)
