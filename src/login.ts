@@ -63,7 +63,12 @@ export class Login {
 
       try {
         if (previousEntry && previousEntry.password) await this.logout(previousEntry.password)
-      } catch (error: any) {
+      } catch (error) {
+        let message
+        if (error instanceof Error) message = error.message
+        else message = String(error)
+        ux.warn(message)
+      }
         ux.warn(error)
       }
 
