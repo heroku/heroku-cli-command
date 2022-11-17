@@ -3,9 +3,9 @@ import {expect, fancy} from 'fancy-test'
 import nock from 'nock'
 
 import {Command as Base} from '../../src'
+import {AppCompletion} from '../../src/completions'
 import * as flags from '../../src/flags'
 import {Git} from '../../src/git'
-import {AppCompletion} from '../../src/completions'
 
 let api: nock.Scope
 const origRemotes = Object.getOwnPropertyDescriptor(Git.prototype, 'remotes')
@@ -39,7 +39,7 @@ describe('required', () => {
   })
 
   fancy
-  .it('gets app from --remote flag', async () => {
+    .it('gets app from --remote flag', async () => {
     withRemotes([
       {name: 'staging', url: 'https://git.heroku.com/myapp-staging.git'},
       {name: 'production', url: 'https://git.heroku.com/myapp-production.git'},

@@ -1,5 +1,5 @@
 import {Flags} from '@oclif/core'
-import {error, CLIError} from '@oclif/core/lib/errors'
+import {CLIError, error} from '@oclif/core/lib/errors'
 
 import {configRemote, getGitRemotes, IGitRemotes} from '../git'
 

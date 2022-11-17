@@ -56,10 +56,10 @@ describe('mutex', () => {
         })
       }),
     ])
-    .then(() => {
+      .then(() => {
       throw new Error('x')
     })
-    .catch(error => {
+      .catch(error => {
       expect(error.message).to.deep.equal('bar')
       expect(output).to.deep.equal(['foo', 'bar', 'biz'])
     })
@@ -68,31 +68,31 @@ describe('mutex', () => {
   it('should run promises after draining the queue', done => {
     const mutex = new Mutex()
     mutex
-    .synchronize(() => {
+      .synchronize(() => {
       return new Promise(resolve => {
         output.push('foo')
         resolve('foo')
       })
     })
-    .then(results => {
+      .then(results => {
       setImmediate(() => {
         expect('foo').to.deep.equal(results)
         expect(output).to.deep.equal(['foo'])
 
         return mutex
-        .synchronize(() => {
+          .synchronize(() => {
           return new Promise(resolve => {
             output.push('bar')
             resolve('bar')
           })
         })
-        .then(results => {
+          .then(results => {
           expect('bar').to.deep.equal(results)
           expect(output).to.deep.equal(['foo', 'bar'])
           done()
         })
       })
     })
-    .catch(done)
+      .catch(done)
   })
 })

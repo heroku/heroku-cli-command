@@ -1,4 +1,5 @@
 import {CLIError} from '@oclif/core/lib/errors'
+
 import {vars} from './vars'
 
 export interface IGitRemote {
@@ -9,12 +10,12 @@ export interface IGitRemote {
 export class Git {
   get remotes(): IGitRemote[] {
     return this.exec('remote -v')
-    .split('\n')
-    .filter(l => l.endsWith('(fetch)'))
-    .map(l => {
-      const [name, url] = l.split('\t')
-      return {name, url: url.split(' ')[0]}
-    })
+      .split('\n')
+      .filter(l => l.endsWith('(fetch)'))
+      .map(l => {
+        const [name, url] = l.split('\t')
+        return {name, url: url.split(' ')[0]}
+      })
   }
 
   exec(cmd: string): string {

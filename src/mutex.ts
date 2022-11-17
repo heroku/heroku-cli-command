@@ -31,9 +31,9 @@ export class Mutex<T> {
     const [task, resolve, reject] = record
 
     return task()
-    .then(resolve, reject)
-    .then(() => {
-      this.dequeue()
-    })
+      .then(resolve, reject)
+      .then(() => {
+        this.dequeue()
+      })
   }
 }

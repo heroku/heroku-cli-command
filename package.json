@@ -19,6 +19,7 @@
   "devDependencies": {
     "@heroku-cli/schema": "^1.0.25",
     "@heroku-cli/tslint": "^1.1.4",
+    "@oclif/tslint": "^3.1.1",
     "@types/ansi-styles": "^3.2.1",
     "@types/chai": "^4.1.7",
     "@types/fs-extra": "^5.0.5",
@@ -30,9 +31,6 @@
     "@types/supports-color": "^5.3.0",
     "@types/uuid": "^8.3.0",
     "chai": "^4.2.0",
-    "eslint": "7.32.0",
-    "eslint-config-oclif": "^4.0.0",
-    "eslint-config-oclif-typescript": "^1.0.3",
     "fancy-test": "^1.4.3",
     "mocha": "^6.1.4",
     "nock": "^10.0.6",
@@ -56,9 +54,8 @@
   "repository": "heroku/heroku-cli-command",
   "scripts": {
     "build": "rm -rf lib && tsc",
-    "lint": "eslint . --ext .ts --config .eslintrc",
-    "pretest": "tsc -p test --noEmit",
-    "posttest": "yarn lint",
+    "lint": "tsc -p test --noEmit && tslint -p test -t stylish",
+    "posttest": "yarn run lint",
     "prepublishOnly": "yarn run build",
     "test": "mocha --forbid-only \"test/**/*.test.ts\""
   },

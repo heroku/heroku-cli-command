@@ -1,8 +1,8 @@
 import {CliUx, Config} from '@oclif/core'
 import base, {expect} from 'fancy-test'
 import nock from 'nock'
-import * as sinon from 'sinon'
 import {resolve} from 'node:path'
+import * as sinon from 'sinon'
 
 import {Command as CommandBase} from '../src/command'
 import {RequestId, requestIdHeader} from '../src/request-id'
@@ -36,7 +36,7 @@ const test = base
 
 describe('api_client', () => {
   test
-  .it('makes an HTTP request', async ctx => {
+    .it('makes an HTTP request', async ctx => {
     api = nock('https://api.heroku.com', {
       reqheaders: {authorization: 'Bearer mypass'},
     })
@@ -49,7 +49,7 @@ describe('api_client', () => {
   })
 
   test
-  .it('can override authorization header', async ctx => {
+    .it('can override authorization header', async ctx => {
     api = nock('https://api.heroku.com', {
       reqheaders: {authorization: 'Bearer myotherpass'},
     })
@@ -62,7 +62,7 @@ describe('api_client', () => {
 
   describe('with HEROKU_HEADERS', () => {
     test
-    .it('makes an HTTP request with HEROKU_HEADERS', async ctx => {
+      .it('makes an HTTP request with HEROKU_HEADERS', async ctx => {
       process.env.HEROKU_HEADERS = '{"x-foo": "bar"}'
       api = nock('https://api.heroku.com', {
         reqheaders: {'x-foo': 'bar'},
@@ -77,7 +77,7 @@ describe('api_client', () => {
 
   describe('with HEROKU_API_KEY', () => {
     test
-    .it('errors out before attempting a login when HEROKU_API_KEY is set, but invalid', async ctx => {
+      .it('errors out before attempting a login when HEROKU_API_KEY is set, but invalid', async ctx => {
       process.env.HEROKU_API_KEY = 'blah'
       api = nock('https://api.heroku.com', {
         reqheaders: {Authorization: 'Bearer blah'},
@@ -99,7 +99,7 @@ describe('api_client', () => {
 
   describe('with HEROKU_HOST', () => {
     test
-    .it('makes an HTTP request with HEROKU_HOST', async ctx => {
+      .it('makes an HTTP request with HEROKU_HOST', async ctx => {
       process.env.HEROKU_HOST = 'http://localhost:5000'
       api = nock('http://localhost:5000')
       api.get('/apps').reply(200, [{name: 'myapp'}])
@@ -111,7 +111,7 @@ describe('api_client', () => {
   })
 
   test
-  .it('2fa no preauth', async ctx => {
+    .it('2fa no preauth', async ctx => {
     api = nock('https://api.heroku.com')
     api.get('/apps').reply(403, {id: 'two_factor'})
     const _api = api as any
@@ -126,7 +126,7 @@ describe('api_client', () => {
   })
 
   test
-  .it('2fa preauth', async ctx => {
+    .it('2fa preauth', async ctx => {
     api = nock('https://api.heroku.com')
     api.get('/apps/myapp').reply(403, {id: 'two_factor', app: {name: 'myapp'}})
     const _api = api as any
@@ -163,7 +163,7 @@ describe('api_client', () => {
     })
 
     test
-    .it('makes requests with a generated request id', async ctx => {
+      .it('makes requests with a generated request id', async ctx => {
       const cmd = new Command([], ctx.config)
 
       generateStub.returns('random-uuid')
@@ -174,7 +174,7 @@ describe('api_client', () => {
     })
 
     test
-    .it('makes requests including previous request ids', async ctx => {
+      .it('makes requests including previous request ids', async ctx => {
       const cmd = new Command([], ctx.config)
       api = nock('https://api.heroku.com').get('/apps').twice().reply(200, [{name: 'myapp'}])
 
@@ -188,7 +188,7 @@ describe('api_client', () => {
     })
 
     test
-    .it('tracks response request ids for subsequent request ids', async ctx => {
+      .it('tracks response request ids for subsequent request ids', async ctx => {
       const cmd = new Command([], ctx.config)
       const existingRequestIds = ['first-existing-request-id', 'second-existing-request-id'].join(',')
       api = nock('https://api.heroku.com').get('/apps').twice().reply(() => [200, JSON.stringify({name: 'myapp'}), {[requestIdHeader]: existingRequestIds}])

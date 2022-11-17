@@ -14,15 +14,15 @@ describe('required', () => {
   }
 
   fancy
-  .stdout()
-  .it('has a pipeline', async ctx => {
+    .stdout()
+    .it('has a pipeline', async ctx => {
     await PipelineCommand.run(['--pipeline', 'mypipeline'])
     expect(ctx.stdout).to.equal('mypipeline\n')
   })
 
   fancy
-  .stdout()
-  .it('errors with no pipeline', async (_, done) => {
+    .stdout()
+    .it('errors with no pipeline', async (_, done) => {
     try {
       await PipelineCommand.run([])
     } catch (error) {
@@ -49,28 +49,28 @@ describe('optional', () => {
   }
 
   fancy
-  .stdout()
-  .it('--pipeline', async ctx => {
+    .stdout()
+    .it('--pipeline', async ctx => {
     await PipelineCommand.run(['--pipeline', 'mypipeline'])
     expect(ctx.stdout).to.equal('mypipeline\n')
   })
 
   fancy
-  .stdout()
-  .it('-p', async ctx => {
+    .stdout()
+    .it('-p', async ctx => {
     await PipelineCommand.run(['-p', 'mypipeline'])
     expect(ctx.stdout).to.equal('mypipeline\n')
   })
 
   fancy
-  .stdout()
-  .it('is not hidden by default', async () => {
+    .stdout()
+    .it('is not hidden by default', async () => {
     expect(flags.pipeline().hidden).to.not.be.ok
   })
 
   fancy
-  .stdout()
-  .it('does not error when pipeline is not specified', async () => {
+    .stdout()
+    .it('does not error when pipeline is not specified', async () => {
     await PipelineCommand.run([])
   })
 })
