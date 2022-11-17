@@ -1,11 +1,12 @@
-import {Config, Interfaces} from '@oclif/core'
+import {Config} from '@oclif/core'
 import base, {expect} from 'fancy-test'
+import {resolve} from 'path'
 
 import {Command} from '../src/command'
 import * as flags from '../src/flags'
 
 const test = base
-.add('config', () => Config.load())
+.add('config', new Config({root: resolve(__dirname, '../package.json')}))
 
 class MyCommand extends Command {
   async run() {}
