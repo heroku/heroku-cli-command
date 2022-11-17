@@ -1,4 +1,4 @@
-export type PromiseResolve<T> = (value: T | PromiseLike<T> | undefined) => void
+export type PromiseResolve<T> = (value: T | PromiseLike<T>) => void
 export type PromiseReject = (reason?: any) => void
 export type Task<T> = () => Promise<T>
 export type Record<T> = [Task<T>, PromiseResolve<T>, PromiseReject]
@@ -31,9 +31,9 @@ export class Mutex<T> {
     const [task, resolve, reject] = record
 
     return task()
-    .then(resolve, reject)
-    .then(() => {
-      this.dequeue()
-    })
+      .then(resolve, reject)
+      .then(() => {
+        this.dequeue()
+      })
   }
 }

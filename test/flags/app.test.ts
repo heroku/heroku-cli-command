@@ -5,7 +5,6 @@ import nock from 'nock'
 import {Command as Base} from '../../src'
 import * as flags from '../../src/flags'
 import {Git} from '../../src/git'
-import {AppCompletion} from '../../src/completions'
 
 let api: nock.Scope
 const origRemotes = Object.getOwnPropertyDescriptor(Git.prototype, 'remotes')
@@ -39,18 +38,18 @@ describe('required', () => {
   })
 
   fancy
-  .it('gets app from --remote flag', async () => {
-    withRemotes([
+    .it('gets app from --remote flag', async () => {
+      withRemotes([
       {name: 'staging', url: 'https://git.heroku.com/myapp-staging.git'},
       {name: 'production', url: 'https://git.heroku.com/myapp-production.git'},
-    ])
-    await class extends Command {
-      async run() {
-        const {flags} = await this.parse(Command)
-        expect(flags.app).to.equal('myapp-staging')
-      }
-    }.run(['--remote', 'staging'])
-  })
+      ])
+      await class extends Command {
+        async run() {
+          const {flags} = await this.parse(Command)
+          expect(flags.app).to.equal('myapp-staging')
+        }
+      }.run(['--remote', 'staging'])
+    })
 
   it('errors if --remote not found', async () => {
     withRemotes([
@@ -156,18 +155,20 @@ describe('optional', () => {
 
 describe('completion', () => {
   class Command extends Base {
-    static flags = {app: flags.app({})}
+    // options passed to flags.app below are to confirm typing and nothing else
+    static flags = {app: flags.app({required: true, multiple: true})}
     async run() {}
   }
 
   it('cacheDuration defaults to 1 day', () => {
-    const completion = AppCompletion
-    const duration = completion.cacheDuration
+    // @ts-ignore
+    const duration = Command.flags.app.completion.cacheDuration
     expect(duration).to.equal(86_400)
   })
 
   it('options returns all the apps', async () => {
-    const completion = AppCompletion
+    // @ts-ignore
+    const completion = Command.flags.app.completion
     api.get('/apps').reply(200, [{id: 1, name: 'foo'}, {id: 2, name: 'bar'}])
     const options = await completion.options({config: await Config.load()})
     expect(options).to.deep.equal(['bar', 'foo'])

@@ -1,10 +1,10 @@
 import color from '@heroku-cli/color'
 import * as Heroku from '@heroku-cli/schema'
-import {Config, CliUx} from '@oclif/core'
+import {CliUx, Interfaces} from '@oclif/core'
 import HTTP from 'http-call'
 import Netrc from 'netrc-parser'
 import open = require('open')
-import * as os from 'node:os'
+import * as os from 'os'
 
 const {ux} = CliUx
 
@@ -33,7 +33,7 @@ const headers = (token: string) => ({headers: {accept: 'application/vnd.heroku+j
 export class Login {
   loginHost = process.env.HEROKU_LOGIN_HOST || 'https://cli-auth.heroku.com'
 
-  constructor(private readonly config: Config, private readonly heroku: APIClient) {}
+  constructor(private readonly config: Interfaces.Config, private readonly heroku: APIClient) {}
 
   async login(opts: Login.Options = {}): Promise<void> {
     let loggedIn = false
@@ -63,8 +63,9 @@ export class Login {
 
       try {
         if (previousEntry && previousEntry.password) await this.logout(previousEntry.password)
-      } catch (error: any) {
-        ux.warn(error)
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        ux.warn(message)
       }
 
       let auth
@@ -99,43 +100,43 @@ export class Login {
     // for SSO logins we delete the session since those do not show up in
     // authorizations because they are created a trusted client
     requests.push(HTTP.delete(`${vars.apiUrl}/oauth/sessions/~`, headers(token))
-    .catch(error => {
-      if (!error.http) throw error
-      if (error.http.statusCode === 404 && error.http.body && error.http.body.id === 'not_found' && error.http.body.resource === 'session') {
-        return
-      }
+      .catch(error => {
+        if (!error.http) throw error
+        if (error.http.statusCode === 404 && error.http.body && error.http.body.id === 'not_found' && error.http.body.resource === 'session') {
+          return
+        }
 
-      if (error.http.statusCode === 401 && error.http.body && error.http.body.id === 'unauthorized') {
-        return
-      }
+        if (error.http.statusCode === 401 && error.http.body && error.http.body.id === 'unauthorized') {
+          return
+        }
 
-      throw error
-    }))
+        throw error
+      }))
 
     // grab all the authorizations so that we can delete the token they are
     // using in the CLI.  we have to do this rather than delete ~ because
     // the ~ is the API Key, not the authorization that is currently requesting
     requests.push(HTTP.get<Heroku.OAuthAuthorization[]>(`${vars.apiUrl}/oauth/authorizations`, headers(token))
-    .then(async ({body: authorizations}) => {
+      .then(async ({body: authorizations}) => {
       // grab the default authorization because that is the token shown in the
       // dashboard as API Key and they may be using it for something else and we
       // would unwittingly break an integration that they are depending on
-      const d = await this.defaultToken()
-      if (d === token) return
-      return Promise.all(
+        const d = await this.defaultToken()
+        if (d === token) return
+        return Promise.all(
         authorizations
-        .filter(a => a.access_token && a.access_token.token === this.heroku.auth)
-        .map(a => HTTP.delete(`${vars.apiUrl}/oauth/authorizations/${a.id}`, headers(token))),
+          .filter(a => a.access_token && a.access_token.token === this.heroku.auth)
+          .map(a => HTTP.delete(`${vars.apiUrl}/oauth/authorizations/${a.id}`, headers(token))),
       )
-    })
-    .catch(error => {
-      if (!error.http) throw error
-      if (error.http.statusCode === 401 && error.http.body && error.http.body.id === 'unauthorized') {
-        return []
-      }
+      })
+      .catch(error => {
+        if (!error.http) throw error
+        if (error.http.statusCode === 401 && error.http.body && error.http.body.id === 'unauthorized') {
+          return []
+        }
 
-      throw error
-    }))
+        throw error
+      }))
 
     await Promise.all(requests)
   }

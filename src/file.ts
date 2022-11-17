@@ -1,5 +1,5 @@
-import * as fs from 'node:fs'
-import {promisify} from 'node:util'
+import * as fs from 'fs'
+import {promisify} from 'util'
 
 let _debug: any
 function debug(...args: any[]) {

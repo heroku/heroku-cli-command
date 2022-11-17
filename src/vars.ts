@@ -1,4 +1,4 @@
-import * as url from 'node:url'
+import * as url from 'url'
 
 export class Vars {
   get host(): string {
