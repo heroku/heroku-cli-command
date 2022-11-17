@@ -1,6 +1,6 @@
 import {Interfaces} from '@oclif/core'
 import {CLIError} from '@oclif/core/lib/errors'
-import * as path from 'node:path'
+import * as path from 'path'
 
 import deps from './deps'
 import {configRemote, getGitRemotes} from './git'

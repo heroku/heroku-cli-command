@@ -1,7 +1,7 @@
 import {Config} from '@oclif/core'
 import base, {expect} from 'fancy-test'
 import nock from 'nock'
-import {resolve} from 'node:path'
+import {resolve} from 'path'
 
 import {Command as CommandBase} from '../src/command'
 
@@ -23,67 +23,67 @@ const test = base
 describe('login with interactive', () => {
   test
     .it('throws a custom error message body for device_trust_required error', async ctx => {
-    const cmd = new Command([], ctx.config)
-    api
+      const cmd = new Command([], ctx.config)
+      api
       .post('/oauth/authorizations')
       .reply(401, {id: 'device_trust_required', message: 'original error message'})
 
-    await cmd.heroku.login({method: 'interactive'})
+      await cmd.heroku.login({method: 'interactive'})
       .catch(error => {
-      expect(error.message).to.contain('The interactive flag requires Two-Factor Authentication')
-      expect(error.message).to.contain('Error ID: device_trust_required')
+        expect(error.message).to.contain('The interactive flag requires Two-Factor Authentication')
+        expect(error.message).to.contain('Error ID: device_trust_required')
+      })
     })
-  })
 
   test
     .it('sends any other error message body through', async ctx => {
-    const cmd = new Command([], ctx.config)
-    api
+      const cmd = new Command([], ctx.config)
+      api
       .post('/oauth/authorizations')
       .reply(401, {id: 'unauthorized', message: 'original error message'})
 
-    await cmd.heroku.login({method: 'interactive'})
+      await cmd.heroku.login({method: 'interactive'})
       .catch(error => {
-      expect(error.message).to.contain('original error message')
-      expect(error.message).to.contain('Error ID: unauthorized')
+        expect(error.message).to.contain('original error message')
+        expect(error.message).to.contain('Error ID: unauthorized')
+      })
     })
-  })
 
   test
     .it('defaults to 30 days login', async ctx => {
-    const cmd = new Command([], ctx.config)
-    api
+      const cmd = new Command([], ctx.config)
+      api
       .post('/oauth/authorizations',
       {scope: ['global'], description: /^Heroku CLI login from .*/, expires_in: 60 * 60 * 24 * 30})
       .reply(401, {id: 'unauthorized', message: 'not authorized'})
 
-    await cmd.heroku.login({method: 'interactive'})
+      await cmd.heroku.login({method: 'interactive'})
       .catch(error => {
-      expect(error.message).to.contain('Error ID: unauthorized')
+        expect(error.message).to.contain('Error ID: unauthorized')
+      })
     })
-  })
 
   test
     .it('allows shorter logins', async ctx => {
-    const cmd = new Command([], ctx.config)
-    api
+      const cmd = new Command([], ctx.config)
+      api
       .post('/oauth/authorizations',
       {scope: ['global'], description: /^Heroku CLI login from .*/, expires_in: 12_345})
       .reply(401, {id: 'unauthorized', message: 'not authorized'})
 
-    await cmd.heroku.login({method: 'interactive', expiresIn: 12_345})
+      await cmd.heroku.login({method: 'interactive', expiresIn: 12_345})
       .catch(error => {
-      expect(error.message).to.contain('Error ID: unauthorized')
+        expect(error.message).to.contain('Error ID: unauthorized')
+      })
     })
-  })
 
   test
     .it('does not allow logins longer than 30 days', async ctx => {
-    const cmd = new Command([], ctx.config)
+      const cmd = new Command([], ctx.config)
 
-    await cmd.heroku.login({method: 'interactive', expiresIn: 60 * 60 * 24 * 31})
+      await cmd.heroku.login({method: 'interactive', expiresIn: 60 * 60 * 24 * 31})
       .catch(error => {
-      expect(error.message).to.contain('Cannot set an expiration longer than thirty days')
+        expect(error.message).to.contain('Cannot set an expiration longer than thirty days')
+      })
     })
-  })
 })

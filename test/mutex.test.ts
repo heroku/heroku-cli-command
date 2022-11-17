@@ -57,42 +57,42 @@ describe('mutex', () => {
       }),
     ])
       .then(() => {
-      throw new Error('x')
-    })
+        throw new Error('x')
+      })
       .catch(error => {
-      expect(error.message).to.deep.equal('bar')
-      expect(output).to.deep.equal(['foo', 'bar', 'biz'])
-    })
+        expect(error.message).to.deep.equal('bar')
+        expect(output).to.deep.equal(['foo', 'bar', 'biz'])
+      })
   })
 
   it('should run promises after draining the queue', done => {
     const mutex = new Mutex()
     mutex
       .synchronize(() => {
-      return new Promise(resolve => {
-        output.push('foo')
-        resolve('foo')
+        return new Promise(resolve => {
+          output.push('foo')
+          resolve('foo')
+        })
       })
-    })
       .then(results => {
-      setImmediate(() => {
-        expect('foo').to.deep.equal(results)
-        expect(output).to.deep.equal(['foo'])
+        setImmediate(() => {
+          expect('foo').to.deep.equal(results)
+          expect(output).to.deep.equal(['foo'])
 
-        return mutex
+          return mutex
           .synchronize(() => {
-          return new Promise(resolve => {
-            output.push('bar')
-            resolve('bar')
+            return new Promise(resolve => {
+              output.push('bar')
+              resolve('bar')
+            })
+          })
+          .then(results => {
+            expect('bar').to.deep.equal(results)
+            expect(output).to.deep.equal(['foo', 'bar'])
+            done()
           })
         })
-          .then(results => {
-          expect('bar').to.deep.equal(results)
-          expect(output).to.deep.equal(['foo', 'bar'])
-          done()
-        })
       })
-    })
       .catch(done)
   })
 })

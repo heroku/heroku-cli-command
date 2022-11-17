@@ -1,7 +1,5 @@
 import {Flags} from '@oclif/core'
 
-import {TeamCompletion} from '../completions'
-
 export const team = Flags.custom({
   char: 't',
   description: 'team to use',

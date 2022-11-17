@@ -2,7 +2,7 @@ import {Interfaces} from '@oclif/core'
 import {CLIError, warn} from '@oclif/core/lib/errors'
 import {HTTP, HTTPError, HTTPRequestOptions} from 'http-call'
 import Netrc from 'netrc-parser'
-import * as url from 'node:url'
+import * as url from 'url'
 
 import deps from './deps'
 import {Login} from './login'

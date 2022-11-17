@@ -3,8 +3,8 @@ import * as Heroku from '@heroku-cli/schema'
 import {CliUx, Interfaces} from '@oclif/core'
 import HTTP from 'http-call'
 import Netrc from 'netrc-parser'
-import * as os from 'node:os'
 import open = require('open')
+import * as os from 'os'
 
 const {ux} = CliUx
 
@@ -70,20 +70,20 @@ export class Login {
 
       let auth
       switch (input) {
-      case 'b':
-      case 'browser':
-        auth = await this.browser(opts.browser)
-        break
-      case 'i':
-      case 'interactive':
-        auth = await this.interactive(previousEntry && previousEntry.login, opts.expiresIn)
-        break
-      case 's':
-      case 'sso':
-        auth = await this.sso()
-        break
-      default:
-        return this.login(opts)
+        case 'b':
+        case 'browser':
+          auth = await this.browser(opts.browser)
+          break
+        case 'i':
+        case 'interactive':
+          auth = await this.interactive(previousEntry && previousEntry.login, opts.expiresIn)
+          break
+        case 's':
+        case 'sso':
+          auth = await this.sso()
+          break
+        default:
+          return this.login(opts)
       }
 
       await this.saveToken(auth)
@@ -103,12 +103,12 @@ export class Login {
       .catch(error => {
         if (!error.http) throw error
         if (error.http.statusCode === 404 && error.http.body && error.http.body.id === 'not_found' && error.http.body.resource === 'session') {
-        return
-      }
+          return
+        }
 
         if (error.http.statusCode === 401 && error.http.body && error.http.body.id === 'unauthorized') {
-        return
-      }
+          return
+        }
 
         throw error
       }))
@@ -132,8 +132,8 @@ export class Login {
       .catch(error => {
         if (!error.http) throw error
         if (error.http.statusCode === 401 && error.http.body && error.http.body.id === 'unauthorized') {
-        return []
-      }
+          return []
+        }
 
         throw error
       }))

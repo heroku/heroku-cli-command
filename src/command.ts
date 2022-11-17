@@ -1,5 +1,5 @@
 import {Command as Base} from '@oclif/core'
-import {deprecate} from 'node:util'
+import {deprecate} from 'util'
 
 import pjson from '../package.json'
 

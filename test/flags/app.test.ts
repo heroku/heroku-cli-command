@@ -40,17 +40,17 @@ describe('required', () => {
 
   fancy
     .it('gets app from --remote flag', async () => {
-    withRemotes([
+      withRemotes([
       {name: 'staging', url: 'https://git.heroku.com/myapp-staging.git'},
       {name: 'production', url: 'https://git.heroku.com/myapp-production.git'},
-    ])
-    await class extends Command {
-      async run() {
-        const {flags} = await this.parse(Command)
-        expect(flags.app).to.equal('myapp-staging')
-      }
-    }.run(['--remote', 'staging'])
-  })
+      ])
+      await class extends Command {
+        async run() {
+          const {flags} = await this.parse(Command)
+          expect(flags.app).to.equal('myapp-staging')
+        }
+      }.run(['--remote', 'staging'])
+    })
 
   it('errors if --remote not found', async () => {
     withRemotes([
@@ -155,21 +155,14 @@ describe('optional', () => {
 })
 
 describe('completion', () => {
-  class Command extends Base {
-    static flags = {app: flags.app({})}
-    async run() {}
-  }
-
   it('cacheDuration defaults to 1 day', () => {
-    const completion = AppCompletion
-    const duration = completion.cacheDuration
+    const duration = AppCompletion.cacheDuration
     expect(duration).to.equal(86_400)
   })
 
   it('options returns all the apps', async () => {
-    const completion = AppCompletion
     api.get('/apps').reply(200, [{id: 1, name: 'foo'}, {id: 2, name: 'bar'}])
-    const options = await completion.options({config: await Config.load()})
+    const options = await AppCompletion.options({config: await Config.load()})
     expect(options).to.deep.equal(['bar', 'foo'])
   })
 })
