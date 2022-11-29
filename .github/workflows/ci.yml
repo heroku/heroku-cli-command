@@ -5,10 +5,7 @@ on:
 
 jobs:
   test:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
       - name: Use Node.js LTS versions
