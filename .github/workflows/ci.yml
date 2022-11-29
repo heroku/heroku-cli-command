@@ -5,14 +5,16 @@ on:
 
 jobs:
   test:
-    runs-on: windows-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v3
       - name: Use Node.js LTS versions
         uses: actions/setup-node@v3
         with:
-          node-version: lts/*
-          yarn: cache
+          node-version: 12.x
       - run: yarn --frozen-lockfile --network-timeout 1000000
         env:
           CI: true
