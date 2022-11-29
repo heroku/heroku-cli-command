@@ -11,7 +11,7 @@ jobs:
         os: [windows-latest, ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v3
-      - name: Use Node.js LTS versions
+      - name: Use Node.js 17
         uses: actions/setup-node@v3
         with:
           node-version: 17.x
