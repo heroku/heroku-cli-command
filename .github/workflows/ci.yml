@@ -14,7 +14,7 @@ jobs:
       - name: Use Node.js LTS versions
         uses: actions/setup-node@v3
         with:
-          node-version: 12.x
+          node-version: 17.x
       - run: yarn --frozen-lockfile --network-timeout 1000000
         env:
           CI: true
