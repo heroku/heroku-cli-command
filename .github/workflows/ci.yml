@@ -1,24 +1,23 @@
-name: Windows Node.js
+name: Node CI Suite
 
 on:
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+  push
 
 jobs:
-  build:
-    runs-on: windows-latest
+  test:
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        node-version: [10.x, 12.x]
+        os: [windows-latest, ubuntu-latest, macos-latest]
+        node-version: [lts/gallium, lts/fermium, lts/erbium, lts/dubnium]
     steps:
-      - uses: actions/checkout@v2
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v1
+      - uses: actions/checkout@v3
+      - name: Use Node.js LTS versions (v10-v16)
+        uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
-      - run: yarn install
+          cache: yarn
+      - run: yarn --frozen-lockfile --network-timeout 1000000
         env:
           CI: true
       - run: yarn test
