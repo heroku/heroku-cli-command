@@ -103,7 +103,7 @@ export const ProcessTypeCompletion: Interfaces.Completion = {
           const m = s.match(/^([\w-]+)/)
           return m ? m[0] : false
         })
-        .filter((t: any) => t) as string[]
+        .filter((t: string | boolean) => t) as string[]
     } catch (error) {
       if (error instanceof CLIError && error.code !== 'ENOENT') throw error
     }
