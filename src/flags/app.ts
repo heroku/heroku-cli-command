@@ -1,8 +1,6 @@
 import {Flags} from '@oclif/core'
 import {CLIError, error} from '@oclif/core/lib/errors'
-import {CompletableOptionFlag} from '@oclif/core/lib/interfaces/parser'
 
-import {AppCompletion, RemoteCompletion} from '../completions'
 import {configRemote, getGitRemotes, IGitRemotes} from '../git'
 
 class MultipleRemotesError extends CLIError {
@@ -20,7 +18,7 @@ class MultipleRemotesError extends CLIError {
   }
 }
 
-const appWithoutCompletion = Flags.custom({
+export const app = Flags.custom({
   char: 'a',
   description: 'app to run command against',
   default: async ({options, flags}) => {
@@ -37,13 +35,7 @@ const appWithoutCompletion = Flags.custom({
   },
 })
 
-// this approach is used to avoid a breaking change and TS overrides. `completion` will not show as available in the
-// interface, but it didn't in the past.
-export const app = (flagArgs: Partial<CompletableOptionFlag<string>> = {}) => appWithoutCompletion({...flagArgs, completion: AppCompletion})
-
-const remoteWithoutCompletion = Flags.custom({
+export const remote = Flags.custom({
   char: 'r',
   description: 'git remote of app to use',
 })
-
-export const remote = (flagArgs: Partial<CompletableOptionFlag<string>> = {}) => remoteWithoutCompletion({...flagArgs, completion: RemoteCompletion})

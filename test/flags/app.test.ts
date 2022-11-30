@@ -1,4 +1,3 @@
-import {Config} from '@oclif/core'
 import {expect, fancy} from 'fancy-test'
 import nock from 'nock'
 
@@ -150,28 +149,5 @@ describe('optional', () => {
         expect(flags.app).to.be.undefined
       }
     }.run([])
-  })
-})
-
-describe('completion', () => {
-  class Command extends Base {
-    // options passed to flags.app below are to confirm typing and nothing else
-    static flags = {app: flags.app({required: true, multiple: true})}
-    async run() {}
-  }
-
-  it('cacheDuration defaults to 1 day', () => {
-    // `flags.app.completion` does not show in the custom flag interface, but was part of prior implementation.
-    // @ts-ignore-next-line
-    const duration = Command.flags.app.completion.cacheDuration
-    expect(duration).to.equal(86_400)
-  })
-
-  it('options returns all the apps', async () => {
-    // @ts-ignore
-    const completion = Command.flags.app.completion
-    api.get('/apps').reply(200, [{id: 1, name: 'foo'}, {id: 2, name: 'bar'}])
-    const options = await completion.options({config: await Config.load()})
-    expect(options).to.deep.equal(['bar', 'foo'])
   })
 })
