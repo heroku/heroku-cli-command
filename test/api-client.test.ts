@@ -1,4 +1,3 @@
-// tslint:disable no-http-string
 import {CliUx, Config} from '@oclif/core'
 import base, {expect} from 'fancy-test'
 import nock from 'nock'
@@ -101,8 +100,10 @@ describe('api_client', () => {
   describe('with HEROKU_HOST', () => {
     test
       .it('makes an HTTP request with HEROKU_HOST', async ctx => {
-        process.env.HEROKU_HOST = 'http://localhost:5000'
-        api = nock('http://localhost:5000')
+        // tslint:disable-next-line:no-http-string
+        const localHostURI = 'http://localhost:5000'
+        process.env.HEROKU_HOST = localHostURI
+        api = nock(localHostURI)
         api.get('/apps').reply(200, [{name: 'myapp'}])
 
         const cmd = new Command([], ctx.config)

@@ -161,7 +161,8 @@ describe('completion', () => {
   }
 
   it('cacheDuration defaults to 1 day', () => {
-    // @ts-ignore
+    // `flags.app.completion` does not show in the custom flag interface, but was part of prior implementation.
+    // @ts-ignore-next-line
     const duration = Command.flags.app.completion.cacheDuration
     expect(duration).to.equal(86_400)
   })

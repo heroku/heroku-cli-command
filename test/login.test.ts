@@ -68,7 +68,7 @@ describe('login with interactive', () => {
       const cmd = new Command([], ctx.config)
       api
         .post('/oauth/authorizations',
-      {scope: ['global'], description: /^Heroku CLI login from .*/, expires_in: 12_345})
+      {scope: ['global'], description: /^Heroku CLI login from .*/, expires_in: 12345})
         .reply(401, {id: 'unauthorized', message: 'not authorized'})
 
       await cmd.heroku.login({method: 'interactive', expiresIn: 12_345})
