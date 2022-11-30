@@ -9,7 +9,7 @@ jobs:
     strategy:
       matrix:
         os: [windows-latest, ubuntu-latest, macos-latest]
-        node-version: [lts/gallium, lts/fermium, lts/erbium, lts/dubnium]
+        node-version: [lts/gallium, lts/fermium]
     steps:
       - uses: actions/checkout@v3
       - name: Use Node.js LTS versions (v10-v16)
