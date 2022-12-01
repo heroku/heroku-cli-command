@@ -10,4 +10,3 @@ export const team = Flags.custom({
     if (org) return org
   },
 })
-
