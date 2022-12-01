@@ -1,9 +1,6 @@
 import {Flags} from '@oclif/core'
-import {CompletableOptionFlag} from '@oclif/core/lib/interfaces/parser'
 
-import {TeamCompletion} from '../completions'
-
-const teamWithoutCompletion = Flags.custom({
+export const team = Flags.custom({
   char: 't',
   description: 'team to use',
   default: async ({flags}) => {
@@ -14,4 +11,3 @@ const teamWithoutCompletion = Flags.custom({
   },
 })
 
-export const team = (flagArgs: Partial<CompletableOptionFlag<string>> = {}) => teamWithoutCompletion({...flagArgs, completion: TeamCompletion})
