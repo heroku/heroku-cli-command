@@ -1,14 +1,15 @@
-import {Command} from '@oclif/command'
-import {cli} from 'cli-ux'
+import {CliUx, Command} from '@oclif/core'
 import {expect, fancy} from 'fancy-test'
 
 import * as flags from '../../src/flags'
+
+const cli = CliUx.ux
 
 describe('required', () => {
   class TeamCommand extends Command {
     static flags = {team: flags.team({required: true})}
     async run() {
-      const {flags} = this.parse(this.constructor as any)
+      const {flags} = await this.parse(this.constructor as any)
       cli.log(flags.team)
     }
   }
@@ -24,8 +25,13 @@ describe('required', () => {
     .it('errors with no team', async (_, done) => {
       try {
         await TeamCommand.run([])
-      } catch (err) {
-        expect(err.message).to.contain('Missing required flag:\n -t, --team')
+      } catch (error) {
+        if (error instanceof Error) {
+          expect(error.message).to.contain('Missing required flag team')
+        } else {
+          throw new TypeError('Unexpected error')
+        }
+
         done()
       }
     })
@@ -35,7 +41,7 @@ describe('optional', () => {
   class TeamCommand extends Command {
     static flags = {team: flags.team()}
     async run() {
-      const {flags} = this.parse(this.constructor as any)
+      const {flags} = await this.parse(this.constructor as any)
       cli.log(flags.team)
     }
   }
@@ -61,7 +67,7 @@ describe('optional', () => {
       class TeamCommand extends Command {
         static flags = {team: flags.team()}
         async run() {
-          const {flags} = this.parse(this.constructor as any)
+          const {flags} = await this.parse(this.constructor as any)
           cli.log(flags.team)
         }
       }
@@ -77,7 +83,7 @@ describe('optional', () => {
       class TeamCommand extends Command {
         static flags = {team: flags.team()}
         async run() {
-          const {flags} = this.parse(this.constructor as any)
+          const {flags} = await this.parse(this.constructor as any)
           cli.log(flags.team)
         }
       }
@@ -100,10 +106,11 @@ describe('with flag/env variable priorities', () => {
   class TeamCommand extends Command {
     static flags = {
       team: flags.team(),
-      org: flags.team({char: 'o', hidden: true})
+      org: flags.team({char: 'o', hidden: true}),
     }
+
     async run() {
-      const {flags} = this.parse(this.constructor as any)
+      const {flags} = await this.parse(this.constructor as any)
       cli.log(flags.team)
     }
   }
@@ -150,5 +157,4 @@ describe('with flag/env variable priorities', () => {
         expect(ctx.stdout).to.equal('org-env\n')
       })
   })
-
 })

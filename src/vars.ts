@@ -4,14 +4,17 @@ export class Vars {
   get host(): string {
     return this.envHost || 'heroku.com'
   }
+
   get apiUrl(): string {
     return this.host.startsWith('http') ? this.host : `https://api.${this.host}`
   }
+
   get apiHost(): string {
     if (this.host.startsWith('http')) {
       const u = url.parse(this.host)
       if (u.host) return u.host
     }
+
     return `api.${this.host}`
   }
 
@@ -29,14 +32,17 @@ export class Vars {
       const u = url.parse(this.host)
       if (u.host) return u.host
     }
+
     return this.host
   }
+
   get httpGitHost(): string {
     if (this.envGitHost) return this.envGitHost
     if (this.host.startsWith('http')) {
       const u = url.parse(this.host)
       if (u.host) return u.host
     }
+
     return `git.${this.host}`
   }
 

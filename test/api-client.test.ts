@@ -1,13 +1,13 @@
-import * as Config from '@oclif/config'
-import cli from 'cli-ux'
+import {CliUx, Config} from '@oclif/core'
 import base, {expect} from 'fancy-test'
 import nock from 'nock'
+import {resolve} from 'path'
 import * as sinon from 'sinon'
 
 import {Command as CommandBase} from '../src/command'
 import {RequestId, requestIdHeader} from '../src/request-id'
 
-// tslint:disable no-http-string
+const cli = CliUx.ux
 
 class Command extends CommandBase {
   async run() {}
@@ -16,11 +16,11 @@ class Command extends CommandBase {
 const netrc = require('netrc-parser').default
 netrc.loadSync = function (this: typeof netrc) {
   netrc.machines = {
-    'api.heroku.com': {password: 'mypass'}
+    'api.heroku.com': {password: 'mypass'},
   }
 }
 
-let env = process.env
+const env = process.env
 let api: nock.Scope
 beforeEach(() => {
   process.env = {}
@@ -32,7 +32,7 @@ afterEach(() => {
 })
 
 const test = base
-.add('config', () => Config.load())
+.add('config', new Config({root: resolve(__dirname, '../package.json')}))
 
 describe('api_client', () => {
   test
@@ -45,7 +45,7 @@ describe('api_client', () => {
       const cmd = new Command([], ctx.config)
       const {body} = await cmd.heroku.get('/apps')
       expect(body).to.deep.equal([{name: 'myapp'}])
-    // expect(netrc.loadSync).toBeCalled()
+      // expect(netrc.loadSync).toBeCalled()
     })
 
   test
@@ -80,7 +80,7 @@ describe('api_client', () => {
       .it('errors out before attempting a login when HEROKU_API_KEY is set, but invalid', async ctx => {
         process.env.HEROKU_API_KEY = 'blah'
         api = nock('https://api.heroku.com', {
-          reqheaders: {Authorization: 'Bearer blah'}
+          reqheaders: {Authorization: 'Bearer blah'},
         })
         api.get('/account').reply(401, {id: 'unauthorized'})
 
@@ -88,7 +88,11 @@ describe('api_client', () => {
         try {
           await cmd.heroku.get('/account')
         } catch (error) {
-          expect(error.message).to.equal('The token provided to HEROKU_API_KEY is invalid. Please double-check that you have the correct token, or run `heroku login` without HEROKU_API_KEY set.')
+          if (error instanceof Error) {
+            expect(error.message).to.equal('The token provided to HEROKU_API_KEY is invalid. Please double-check that you have the correct token, or run `heroku login` without HEROKU_API_KEY set.')
+          } else {
+            throw new TypeError('Unexpected error')
+          }
         }
       })
   })
@@ -96,8 +100,10 @@ describe('api_client', () => {
   describe('with HEROKU_HOST', () => {
     test
       .it('makes an HTTP request with HEROKU_HOST', async ctx => {
-        process.env.HEROKU_HOST = 'http://localhost:5000'
-        api = nock('http://localhost:5000')
+        // tslint:disable-next-line:no-http-string
+        const localHostURI = 'http://localhost:5000'
+        process.env.HEROKU_HOST = localHostURI
+        api = nock(localHostURI)
         api.get('/apps').reply(200, [{name: 'myapp'}])
 
         const cmd = new Command([], ctx.config)
@@ -110,12 +116,12 @@ describe('api_client', () => {
     .it('2fa no preauth', async ctx => {
       api = nock('https://api.heroku.com')
       api.get('/apps').reply(403, {id: 'two_factor'})
-      let _api = api as any
+      const _api = api as any
       _api.get('/apps').matchHeader('heroku-two-factor-code', '123456').reply(200, [{name: 'myapp'}])
 
       const cmd = new Command([], ctx.config)
       Object.defineProperty(cli, 'prompt', {
-        get: () => () => Promise.resolve('123456')
+        get: () => () => Promise.resolve('123456'),
       })
       const {body} = await cmd.heroku.get('/apps')
       expect(body).to.deep.equal([{name: 'myapp'}])
@@ -125,7 +131,7 @@ describe('api_client', () => {
     .it('2fa preauth', async ctx => {
       api = nock('https://api.heroku.com')
       api.get('/apps/myapp').reply(403, {id: 'two_factor', app: {name: 'myapp'}})
-      let _api = api as any
+      const _api = api as any
       _api.put('/apps/myapp/pre-authorizations').matchHeader('heroku-two-factor-code', '123456').reply(200, {})
       api.get('/apps/myapp').reply(200, {name: 'myapp'})
       api.get('/apps/anotherapp').reply(200, {name: 'anotherapp'})
@@ -134,7 +140,7 @@ describe('api_client', () => {
 
       const cmd = new Command([], ctx.config)
       Object.defineProperty(cli, 'prompt', {
-        get: () => () => Promise.resolve('123456')
+        get: () => () => Promise.resolve('123456'),
       })
       const info = cmd.heroku.get('/apps/myapp')
       const anotherapp = cmd.heroku.get('/apps/anotherapp')

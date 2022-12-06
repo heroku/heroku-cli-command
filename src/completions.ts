@@ -1,5 +1,5 @@
-import {flags} from '@oclif/command'
-import * as Config from '@oclif/config'
+import {Interfaces} from '@oclif/core'
+import {CLIError} from '@oclif/core/lib/errors'
 import * as path from 'path'
 
 import deps from './deps'
@@ -7,44 +7,44 @@ import {configRemote, getGitRemotes} from './git'
 
 export const oneDay = 60 * 60 * 24
 
-export const herokuGet = async (resource: string, ctx: { config: Config.IConfig }): Promise<string[]> => {
+export const herokuGet = async (resource: string, ctx: {config: Interfaces.Config}): Promise<string[]> => {
   const heroku = new deps.APIClient(ctx.config)
   let {body: resources} = await heroku.get<any>(`/${resource}`)
   if (typeof resources === 'string') resources = JSON.parse(resources)
   return resources.map((a: any) => a.name).sort()
 }
 
-export const AppCompletion: flags.ICompletion = {
+export const AppCompletion: Interfaces.Completion = {
   cacheDuration: oneDay,
   options: async ctx => {
-    let apps = await herokuGet('apps', ctx)
+    const apps = await herokuGet('apps', ctx)
     return apps
   },
 }
 
-export const AppAddonCompletion: flags.ICompletion = {
+export const AppAddonCompletion: Interfaces.Completion = {
   cacheDuration: oneDay,
   cacheKey: async ctx => {
     return ctx.flags && ctx.flags.app ? `${ctx.flags.app}_addons` : ''
   },
   options: async ctx => {
-    let addons = ctx.flags && ctx.flags.app ? await herokuGet(`apps/${ctx.flags.app}/addons`, ctx) : []
+    const addons = ctx.flags && ctx.flags.app ? await herokuGet(`apps/${ctx.flags.app}/addons`, ctx) : []
     return addons
   },
 }
 
-export const AppDynoCompletion: flags.ICompletion = {
+export const AppDynoCompletion: Interfaces.Completion = {
   cacheDuration: oneDay,
   cacheKey: async ctx => {
     return ctx.flags && ctx.flags.app ? `${ctx.flags.app}_dynos` : ''
   },
   options: async ctx => {
-    let dynos = ctx.flags && ctx.flags.app ? await herokuGet(`apps/${ctx.flags.app}/dynos`, ctx) : []
+    const dynos = ctx.flags && ctx.flags.app ? await herokuGet(`apps/${ctx.flags.app}/dynos`, ctx) : []
     return dynos
   },
 }
 
-export const BuildpackCompletion: flags.ICompletion = {
+export const BuildpackCompletion: Interfaces.Completion = {
   skipCache: true,
 
   options: async () => {
@@ -62,73 +62,74 @@ export const BuildpackCompletion: flags.ICompletion = {
   },
 }
 
-export const DynoSizeCompletion: flags.ICompletion = {
+export const DynoSizeCompletion: Interfaces.Completion = {
   cacheDuration: oneDay * 90,
   options: async ctx => {
-    let sizes = await herokuGet('dyno-sizes', ctx)
+    const sizes = await herokuGet('dyno-sizes', ctx)
     return sizes
   },
 }
 
-export const FileCompletion: flags.ICompletion = {
+export const FileCompletion: Interfaces.Completion = {
   skipCache: true,
 
   options: async () => {
-    let files = await deps.file.readdir(process.cwd())
+    const files = await deps.file.readdir(process.cwd())
     return files
   },
 }
 
-export const PipelineCompletion: flags.ICompletion = {
+export const PipelineCompletion: Interfaces.Completion = {
   cacheDuration: oneDay,
   options: async ctx => {
-    let pipelines = await herokuGet('pipelines', ctx)
+    const pipelines = await herokuGet('pipelines', ctx)
     return pipelines
   },
 }
 
-export const ProcessTypeCompletion: flags.ICompletion = {
+export const ProcessTypeCompletion: Interfaces.Completion = {
   skipCache: true,
 
   options: async () => {
     let types: string[] = []
-    let procfile = path.join(process.cwd(), 'Procfile')
+    const procfile = path.join(process.cwd(), 'Procfile')
     try {
-      let buff = await deps.file.readFile(procfile)
+      const buff = await deps.file.readFile(procfile)
       types = buff
         .toString()
         .split('\n')
-        .map(s => {
+        .map((s: string) => {
           if (!s) return false
-          let m = s.match(/^([A-Za-z0-9_-]+)/)
+          const m = s.match(/^([\w-]+)/)
           return m ? m[0] : false
         })
-        .filter(t => t) as string[]
-    } catch (err) {
-      if (err.code !== 'ENOENT') throw err
+        .filter((t: string | boolean) => t) as string[]
+    } catch (error) {
+      if (error instanceof CLIError && error.code !== 'ENOENT') throw error
     }
+
     return types
   },
 }
 
-export const RegionCompletion: flags.ICompletion = {
+export const RegionCompletion: Interfaces.Completion = {
   cacheDuration: oneDay * 7,
   options: async ctx => {
-    let regions = await herokuGet('regions', ctx)
+    const regions = await herokuGet('regions', ctx)
     return regions
   },
 }
 
-export const RemoteCompletion: flags.ICompletion = {
+export const RemoteCompletion: Interfaces.Completion = {
   skipCache: true,
 
   options: async () => {
-    let remotes = getGitRemotes(configRemote())
+    const remotes = getGitRemotes(configRemote())
     return remotes.map(r => r.remote)
   },
 }
 
-export const RoleCompletion: flags.ICompletion = {
+export const RoleCompletion: Interfaces.Completion = {
   skipCache: true,
 
   options: async () => {
@@ -136,7 +137,7 @@ export const RoleCompletion: flags.ICompletion = {
   },
 }
 
-export const ScopeCompletion: flags.ICompletion = {
+export const ScopeCompletion: Interfaces.Completion = {
   skipCache: true,
 
   options: async () => {
@@ -144,23 +145,23 @@ export const ScopeCompletion: flags.ICompletion = {
   },
 }
 
-export const SpaceCompletion: flags.ICompletion = {
+export const SpaceCompletion: Interfaces.Completion = {
   cacheDuration: oneDay,
   options: async ctx => {
-    let spaces = await herokuGet('spaces', ctx)
+    const spaces = await herokuGet('spaces', ctx)
     return spaces
   },
 }
 
-export const StackCompletion: flags.ICompletion = {
+export const StackCompletion: Interfaces.Completion = {
   cacheDuration: oneDay,
   options: async ctx => {
-    let stacks = await herokuGet('stacks', ctx)
+    const stacks = await herokuGet('stacks', ctx)
     return stacks
   },
 }
 
-export const StageCompletion: flags.ICompletion = {
+export const StageCompletion: Interfaces.Completion = {
   skipCache: true,
 
   options: async () => {
@@ -168,10 +169,10 @@ export const StageCompletion: flags.ICompletion = {
   },
 }
 
-export const TeamCompletion: flags.ICompletion = {
+export const TeamCompletion: Interfaces.Completion = {
   cacheDuration: oneDay,
   options: async ctx => {
-    let teams = await herokuGet('teams', ctx)
+    const teams = await herokuGet('teams', ctx)
     return teams
   },
 }

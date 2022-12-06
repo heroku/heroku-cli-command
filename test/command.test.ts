@@ -1,15 +1,15 @@
-import * as Config from '@oclif/config'
+import {Config} from '@oclif/core'
 import base, {expect} from 'fancy-test'
+import {resolve} from 'path'
 
 import {Command} from '../src/command'
 import * as flags from '../src/flags'
 
 const test = base
-.add('config', () => Config.load())
+.add('config', new Config({root: resolve(__dirname, '../package.json')}))
 
 class MyCommand extends Command {
-  async run() {
-  }
+  async run() {}
 }
 
 describe('command', () => {
@@ -20,7 +20,7 @@ describe('command', () => {
       }
 
       async run() {
-        const {flags} = this.parse(AppCommand)
+        const {flags} = await this.parse(AppCommand)
         expect(flags.app).to.equal('myapp')
       }
     }.run(['--app=myapp'])
@@ -28,7 +28,7 @@ describe('command', () => {
 
   test
     .it('has heroku clients', async ctx => {
-      let cmd = new MyCommand([], ctx.config)
+      const cmd = new MyCommand([], ctx.config)
       expect(cmd.heroku).to.be.ok
       expect(cmd.legacyHerokuClient).to.be.ok
     })

@@ -1,4 +1,4 @@
-import {Command} from '@oclif/command'
+import {Command} from '@oclif/core'
 import {expect, fancy} from 'fancy-test'
 
 import * as flags from '../../src/flags'
@@ -8,7 +8,7 @@ describe('required', () => {
     static flags = {pipeline: flags.pipeline({required: true})}
 
     async run() {
-      const {flags} = this.parse(this.constructor as any)
+      const {flags} = await this.parse(this.constructor as any)
       this.log(flags.pipeline)
     }
   }
@@ -25,8 +25,13 @@ describe('required', () => {
     .it('errors with no pipeline', async (_, done) => {
       try {
         await PipelineCommand.run([])
-      } catch (err) {
-        expect(err.message).to.contain('Missing required flag:\n -p, --pipeline PIPELINE')
+      } catch (error) {
+        if (error instanceof Error) {
+          expect(error.message).to.contain('Missing required flag pipeline')
+        } else {
+          throw new TypeError('Unexpected error')
+        }
+
         done()
       }
     })
@@ -38,7 +43,7 @@ describe('optional', () => {
     pipeline?: string
 
     async run() {
-      const {flags} = this.parse(this.constructor as any)
+      const {flags} = await this.parse(this.constructor as any)
       this.log(flags.pipeline)
     }
   }

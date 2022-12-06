@@ -8,4 +8,4 @@ class LoginCommand extends Command {
 }
 
 LoginCommand.run([])
-.catch(require('@oclif/errors/handle'))
+  .catch(require('@oclif/errors/handle'))

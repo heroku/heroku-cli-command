@@ -1,4 +1,3 @@
-import * as Config from '@oclif/config'
 import {expect, fancy} from 'fancy-test'
 import nock from 'nock'
 
@@ -7,8 +6,8 @@ import * as flags from '../../src/flags'
 import {Git} from '../../src/git'
 
 let api: nock.Scope
-let origRemotes = Object.getOwnPropertyDescriptor(Git.prototype, 'remotes')
-let withRemotes = (remotes: any) => {
+const origRemotes = Object.getOwnPropertyDescriptor(Git.prototype, 'remotes')
+const withRemotes = (remotes: any) => {
   Object.defineProperty(Git.prototype, 'remotes', {get: () => remotes})
 }
 
@@ -31,7 +30,7 @@ describe('required', () => {
   it('has an app', async () => {
     await class extends Command {
       async run() {
-        const {flags} = this.parse(Command)
+        const {flags} = await this.parse(Command)
         expect(flags.app).to.equal('myapp')
       }
     }.run(['--app', 'myapp'])
@@ -45,7 +44,7 @@ describe('required', () => {
       ])
       await class extends Command {
         async run() {
-          const {flags} = this.parse(Command)
+          const {flags} = await this.parse(Command)
           expect(flags.app).to.equal('myapp-staging')
         }
       }.run(['--remote', 'staging'])
@@ -58,7 +57,9 @@ describe('required', () => {
     ])
     await class extends Command {
       async run() {
-        expect(() => this.parse(Command)).to.throw(/remote foo not found in git remotes/)
+        await this.parse(Command).catch((error: Error) => {
+          expect(error.message).to.equal('remote foo not found in git remotes')
+        })
       }
     }.run(['--remote', 'foo'])
   })
@@ -66,7 +67,9 @@ describe('required', () => {
   it('errors with no app', async () => {
     await class extends Command {
       async run() {
-        expect(() => this.parse(Command)).to.throw(/Missing required flag:\n -a, --app/)
+        await this.parse(Command).catch((error: Error) => {
+          expect(error.message).to.contain('Missing required flag app')
+        })
       }
     }.run([])
   })
@@ -78,7 +81,9 @@ describe('required', () => {
     ])
     await class extends Command {
       async run() {
-        expect(() => this.parse(Command)).to.throw(/Multiple apps in git remotes/)
+        await this.parse(Command).catch((error: Error) => {
+          expect(error.message).to.contain('Multiple apps in git remotes')
+        })
       }
     }.run([])
   })
@@ -90,11 +95,11 @@ describe('required', () => {
     ])
     await class Command extends Base {
       static flags = {
-        app: flags.app()
+        app: flags.app(),
       } as any
 
       async run() {
-        const {flags} = this.parse(Command)
+        const {flags} = await this.parse(Command)
         expect(flags.app).to.be.undefined
       }
     }.run([])
@@ -104,11 +109,11 @@ describe('required', () => {
     withRemotes([{name: 'heroku', url: 'https://git.heroku.com/myapp.git'}])
     await class Command extends Base {
       static flags = {
-        app: flags.app()
+        app: flags.app(),
       } as any
 
       async run() {
-        const {flags} = this.parse(Command)
+        const {flags} = await this.parse(Command)
         expect(flags.app).to.equal('myapp')
       }
     }.run([])
@@ -117,15 +122,17 @@ describe('required', () => {
 
 describe('optional', () => {
   it('works when git errors out', async () => {
-    Object.defineProperty(Git.prototype, 'remotes', {get: () => { throw new Error('whoa!') }})
+    Object.defineProperty(Git.prototype, 'remotes', {get: () => {
+      throw new Error('whoa!')
+    }})
 
     await class Command extends Base {
       static flags = {
-        app: flags.app()
+        app: flags.app(),
       } as any
 
       async run() {
-        const {flags} = this.parse(Command)
+        const {flags} = await this.parse(Command)
         expect(flags.app).to.be.undefined
       }
     }.run([])
@@ -134,33 +141,13 @@ describe('optional', () => {
   it('does not error when app is not specified', async () => {
     await class Command extends Base {
       static flags = {
-        app: flags.app()
+        app: flags.app(),
       } as any
 
       async run() {
-        const {flags} = this.parse(Command)
+        const {flags} = await this.parse(Command)
         expect(flags.app).to.be.undefined
       }
     }.run([])
-  })
-})
-
-describe('completion', () => {
-  class Command extends Base {
-    static flags = {app: flags.app({})}
-    async run() {}
-  }
-
-  it('cacheDuration defaults to 1 day', () => {
-    const completion = Command.flags.app.completion!
-    const duration = completion.cacheDuration
-    expect(duration).to.equal(86400)
-  })
-
-  it('options returns all the apps', async () => {
-    const completion = Command.flags.app.completion!
-    api.get('/apps').reply(200, [{id: 1, name: 'foo'}, {id: 2, name: 'bar'}])
-    const options = await completion.options({config: await Config.load()})
-    expect(options).to.deep.equal(['bar', 'foo'])
   })
 })

@@ -10,7 +10,7 @@ beforeEach(() => {
 
 describe('mutex', () => {
   it('should run promises in order', () => {
-    let mutex = new Mutex()
+    const mutex = new Mutex()
     return Promise.all([
       mutex.synchronize(() => {
         return new Promise(resolve => {
@@ -35,7 +35,7 @@ describe('mutex', () => {
   })
 
   it('should propegate errors', () => {
-    let mutex = new Mutex()
+    const mutex = new Mutex()
     return Promise.all([
       mutex.synchronize(() => {
         return new Promise(resolve => {
@@ -59,14 +59,14 @@ describe('mutex', () => {
       .then(() => {
         throw new Error('x')
       })
-      .catch(err => {
-        expect(err.message).to.deep.equal('bar')
+      .catch(error => {
+        expect(error.message).to.deep.equal('bar')
         expect(output).to.deep.equal(['foo', 'bar', 'biz'])
       })
   })
 
   it('should run promises after draining the queue', done => {
-    let mutex = new Mutex()
+    const mutex = new Mutex()
     mutex
       .synchronize(() => {
         return new Promise(resolve => {
