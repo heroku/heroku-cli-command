@@ -118,6 +118,7 @@ describe('api_client', () => {
       _api.get('/apps').matchHeader('heroku-two-factor-code', '123456').reply(200, [{name: 'myapp'}])
 
       const cmd = new Command([], ctx.config)
+      // todo: this should be stubbed, but other tests rely on it and break if it is done correctly
       Object.defineProperty(ux, 'prompt', {
         get: () => () => Promise.resolve('123456'),
       })
