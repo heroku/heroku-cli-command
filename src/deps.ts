@@ -1,5 +1,5 @@
 // remote
-import core = require('@oclif/core')
+import oclif = require('@oclif/core')
 import HTTP = require('http-call')
 import netrc = require('netrc-parser')
 
@@ -10,10 +10,12 @@ import git = require('./git')
 import mutex = require('./mutex')
 import yubikey = require('./yubikey')
 
+const {ux} = oclif
+
 export const deps = {
   // remote
-  get cli(): typeof core.CliUx.ux {
-    return fetch('@oclif/core').CliUx.ux
+  get cli(): typeof ux {
+    return fetch('@oclif/core').ux
   },
   get HTTP(): typeof HTTP {
     return fetch('http-call')

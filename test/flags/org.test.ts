@@ -1,16 +1,14 @@
-import {CliUx, Command} from '@oclif/core'
+import {Command, ux} from '@oclif/core'
 import {expect, fancy} from 'fancy-test'
 
 import * as flags from '../../src/flags'
-
-const cli = CliUx.ux
 
 describe('required', () => {
   class OrgCommand extends Command {
     static flags = {org: flags.org({required: true})}
     async run() {
       const {flags} = await this.parse(this.constructor as any)
-      cli.log(flags.org)
+      ux.log(flags.org)
     }
   }
 
@@ -42,7 +40,7 @@ describe('optional', () => {
     static flags = {org: flags.org()}
     async run() {
       const {flags} = await this.parse(this.constructor as any)
-      cli.log(flags.org)
+      ux.log(flags.org)
     }
   }
 
@@ -68,7 +66,7 @@ describe('optional', () => {
         static flags = {org: flags.org()}
         async run() {
           const {flags} = await this.parse(this.constructor as any)
-          cli.log(flags.org)
+          ux.log(flags.org)
         }
       }
 

@@ -1,12 +1,10 @@
 import color from '@heroku-cli/color'
 import * as Heroku from '@heroku-cli/schema'
-import {CliUx, Interfaces} from '@oclif/core'
+import {Interfaces, ux} from '@oclif/core'
 import HTTP from 'http-call'
 import Netrc from 'netrc-parser'
 import open = require('open')
 import * as os from 'os'
-
-const {ux} = CliUx
 
 import {APIClient, HerokuAPIError} from './api-client'
 import {vars} from './vars'
