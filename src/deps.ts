@@ -13,7 +13,7 @@ import yubikey = require('./yubikey')
 export const deps = {
   // remote
   get cli(): typeof ux {
-    return fetch('@oclif/core').CliUx.ux
+    return fetch('@oclif/core').ux
   },
   get HTTP(): typeof HTTP {
     return fetch('http-call')
