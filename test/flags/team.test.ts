@@ -1,16 +1,14 @@
-import {CliUx, Command} from '@oclif/core'
+import {Command, ux} from '@oclif/core'
 import {expect, fancy} from 'fancy-test'
 
 import * as flags from '../../src/flags'
-
-const cli = CliUx.ux
 
 describe('required', () => {
   class TeamCommand extends Command {
     static flags = {team: flags.team({required: true})}
     async run() {
       const {flags} = await this.parse(this.constructor as any)
-      cli.log(flags.team)
+      ux.log(flags.team)
     }
   }
 
@@ -42,7 +40,7 @@ describe('optional', () => {
     static flags = {team: flags.team()}
     async run() {
       const {flags} = await this.parse(this.constructor as any)
-      cli.log(flags.team)
+      ux.log(flags.team)
     }
   }
 
@@ -68,7 +66,7 @@ describe('optional', () => {
         static flags = {team: flags.team()}
         async run() {
           const {flags} = await this.parse(this.constructor as any)
-          cli.log(flags.team)
+          ux.log(flags.team)
         }
       }
 
@@ -84,7 +82,7 @@ describe('optional', () => {
         static flags = {team: flags.team()}
         async run() {
           const {flags} = await this.parse(this.constructor as any)
-          cli.log(flags.team)
+          ux.log(flags.team)
         }
       }
 
@@ -111,7 +109,7 @@ describe('with flag/env variable priorities', () => {
 
     async run() {
       const {flags} = await this.parse(this.constructor as any)
-      cli.log(flags.team)
+      ux.log(flags.team)
     }
   }
 

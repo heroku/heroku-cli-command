@@ -1,4 +1,4 @@
-import {CliUx, Config} from '@oclif/core'
+import {Config, ux} from '@oclif/core'
 import base, {expect} from 'fancy-test'
 import nock from 'nock'
 import {resolve} from 'path'
@@ -6,8 +6,6 @@ import * as sinon from 'sinon'
 
 import {Command as CommandBase} from '../src/command'
 import {RequestId, requestIdHeader} from '../src/request-id'
-
-const cli = CliUx.ux
 
 class Command extends CommandBase {
   async run() {}
@@ -120,7 +118,7 @@ describe('api_client', () => {
       _api.get('/apps').matchHeader('heroku-two-factor-code', '123456').reply(200, [{name: 'myapp'}])
 
       const cmd = new Command([], ctx.config)
-      Object.defineProperty(cli, 'prompt', {
+      Object.defineProperty(ux, 'prompt', {
         get: () => () => Promise.resolve('123456'),
       })
       const {body} = await cmd.heroku.get('/apps')
@@ -139,7 +137,7 @@ describe('api_client', () => {
       api.get('/apps/myapp/dynos').reply(200, {web: 1})
 
       const cmd = new Command([], ctx.config)
-      Object.defineProperty(cli, 'prompt', {
+      Object.defineProperty(ux, 'prompt', {
         get: () => () => Promise.resolve('123456'),
       })
       const info = cmd.heroku.get('/apps/myapp')
