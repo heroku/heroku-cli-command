@@ -1,5 +1,5 @@
 // remote
-import {ux} from '@oclif/core'
+import oclif = require('@oclif/core')
 import HTTP = require('http-call')
 import netrc = require('netrc-parser')
 
@@ -9,6 +9,8 @@ import flags = require('./flags')
 import git = require('./git')
 import mutex = require('./mutex')
 import yubikey = require('./yubikey')
+
+const {ux} = oclif
 
 export const deps = {
   // remote
