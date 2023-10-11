@@ -5,14 +5,14 @@ import * as path from 'path'
 import deps from './deps'
 import {configRemote, getGitRemotes} from './git'
 
-type CompletionContext = {
+export type CompletionContext = {
   args?: { [name: string]: string };
   flags?: { [name: string]: string };
   argv?: string[];
   config: Interfaces.Config;
 }
 
-type Completion = {
+export type Completion = {
   skipCache?: boolean;
   cacheDuration?: number;
   cacheKey?(ctx: CompletionContext): Promise<string>;

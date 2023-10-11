@@ -1,5 +1,5 @@
 import { Interfaces } from '@oclif/core';
-declare type CompletionContext = {
+export declare type CompletionContext = {
     args?: {
         [name: string]: string;
     };
@@ -9,7 +9,7 @@ declare type CompletionContext = {
     argv?: string[];
     config: Interfaces.Config;
 };
-declare type Completion = {
+export declare type Completion = {
     skipCache?: boolean;
     cacheDuration?: number;
     cacheKey?(ctx: CompletionContext): Promise<string>;
@@ -35,4 +35,3 @@ export declare const SpaceCompletion: Completion;
 export declare const StackCompletion: Completion;
 export declare const StageCompletion: Completion;
 export declare const TeamCompletion: Completion;
-export {};
