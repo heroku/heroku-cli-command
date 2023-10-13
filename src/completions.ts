@@ -5,7 +5,8 @@ import * as path from 'path'
 import deps from './deps'
 import {configRemote, getGitRemotes} from './git'
 
-// These types were removed in @oclif/core v3. Copied from v2: https://github.com/oclif/core/blob/2.15.0/src/interfaces/parser.ts#L345-L357
+// These completion types were removed in @oclif/core v3. Copied from v2:
+// https://github.com/oclif/core/blob/2.15.0/src/interfaces/parser.ts#L345-L357
 export type CompletionContext = {
   args?: { [name: string]: string };
   flags?: { [name: string]: string };
