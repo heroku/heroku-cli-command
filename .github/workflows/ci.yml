@@ -9,10 +9,10 @@ jobs:
     strategy:
       matrix:
         os: [windows-latest, ubuntu-latest, macos-latest]
-        node-version: [lts/*]
+        node-version: [lts, lts/-1]
     steps:
       - uses: actions/checkout@v3
-      - name: Use Node.js LTS versions (v10-v16)
+      - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
