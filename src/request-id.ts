@@ -1,6 +1,6 @@
 import * as uuid from 'uuid'
 
-export const requestIdHeader = 'Request-Id'
+export const requestIdHeader = 'request-id'
 
 // tslint:disable-next-line: no-unnecessary-class
 export class RequestId {
