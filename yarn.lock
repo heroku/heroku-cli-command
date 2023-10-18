@@ -121,10 +121,10 @@
     widest-line "^3.1.0"
     wrap-ansi "^7.0.0"
 
-"@oclif/core@^3.1.0":
-  version "3.2.1"
-  resolved "https://registry.yarnpkg.com/@oclif/core/-/core-3.2.1.tgz#94de6b9abdf97b00c95f3790bd60019d184b58af"
-  integrity sha512-QY9csFjADbRa4RH7wcKSvIowaGI+Kc5oFCODYrKy9nj3x/RPGXG9KJ2848+9ZWJKUxv3KPHBX9CULHwvrwpVdg==
+"@oclif/core@^3.3.3-dev.0":
+  version "3.3.3-dev.0"
+  resolved "https://registry.yarnpkg.com/@oclif/core/-/core-3.3.3-dev.0.tgz#35660f056e9bf4c4ab33956791dde4df948ce8ee"
+  integrity sha512-YqTSSnbl3IgAaVcBWazmMAHXfoXeDhcWCMdU5Fhvx2/8nqLThW6G2I6tI56WwG9kwNr65SQWGGEetRLI8EEScQ==
   dependencies:
     ansi-escapes "^4.3.2"
     ansi-styles "^4.3.0"
