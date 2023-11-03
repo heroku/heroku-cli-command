@@ -1,12 +1,10 @@
-@heroku-cli/command
+Heroku CLI Command
 ===================
 
 Base class for Heroku CLI commands. Built off of [oclif](https://oclif.io).
 
 [![Version](https://img.shields.io/npm/v/@heroku-cli/command.svg)](https://npmjs.org/package/@heroku-cli/command)
-[![CircleCI](https://circleci.com/gh/heroku/heroku-cli-command/tree/master.svg?style=shield)](https://circleci.com/gh/heroku/heroku-cli-command/tree/master)
-[![Appveyor CI](https://ci.appveyor.com/api/projects/status/github/heroku/heroku-cli-command?branch=master&svg=true)](https://ci.appveyor.com/project/heroku/heroku-cli-command/branch/master)
-[![Greenkeeper](https://badges.greenkeeper.io/heroku/heroku-cli-command.svg)](https://greenkeeper.io/)
+![GitHub Actions CI](https://github.com/heroku/heroku-cli-command/actions/workflows/ci.yml/badge.svg)
 [![Known Vulnerabilities](https://snyk.io/test/npm/@heroku-cli/command/badge.svg)](https://snyk.io/test/npm/@heroku-cli/command)
 [![Downloads/week](https://img.shields.io/npm/dw/@heroku-cli/command.svg)](https://npmjs.org/package/@heroku-cli/command)
 [![License](https://img.shields.io/npm/l/@heroku-cli/command.svg)](https://github.com/heroku/heroku-cli-command/blob/master/package.json)
