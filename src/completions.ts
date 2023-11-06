@@ -1,10 +1,25 @@
 import {Interfaces} from '@oclif/core'
 import {CLIError} from '@oclif/core/lib/errors'
-import {Completion} from '@oclif/core/lib/interfaces/parser'
 import * as path from 'path'
 
 import deps from './deps'
 import {configRemote, getGitRemotes} from './git'
+
+// These completion types were removed in @oclif/core v3. Copied from v2:
+// https://github.com/oclif/core/blob/2.15.0/src/interfaces/parser.ts#L345-L357
+export type CompletionContext = {
+  args?: { [name: string]: string };
+  flags?: { [name: string]: string };
+  argv?: string[];
+  config: Interfaces.Config;
+}
+
+export type Completion = {
+  skipCache?: boolean;
+  cacheDuration?: number;
+  cacheKey?(ctx: CompletionContext): Promise<string>;
+  options(ctx: CompletionContext): Promise<string[]>;
+}
 
 export const oneDay = 60 * 60 * 24
 
