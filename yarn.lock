@@ -87,37 +87,6 @@
     "@nodelib/fs.scandir" "2.1.5"
     fastq "^1.6.0"
 
-"@oclif/core@3.3.3-dev.0":
-  version "3.3.3-dev.0"
-  resolved "https://registry.yarnpkg.com/@oclif/core/-/core-3.3.3-dev.0.tgz#35660f056e9bf4c4ab33956791dde4df948ce8ee"
-  integrity sha512-YqTSSnbl3IgAaVcBWazmMAHXfoXeDhcWCMdU5Fhvx2/8nqLThW6G2I6tI56WwG9kwNr65SQWGGEetRLI8EEScQ==
-  dependencies:
-    ansi-escapes "^4.3.2"
-    ansi-styles "^4.3.0"
-    cardinal "^2.1.1"
-    chalk "^4.1.2"
-    clean-stack "^3.0.1"
-    cli-progress "^3.12.0"
-    debug "^4.3.4"
-    ejs "^3.1.9"
-    get-package-type "^0.1.0"
-    globby "^11.1.0"
-    hyperlinker "^1.0.0"
-    indent-string "^4.0.0"
-    is-wsl "^2.2.0"
-    js-yaml "^3.14.1"
-    natural-orderby "^2.0.3"
-    object-treeify "^1.1.33"
-    password-prompt "^1.1.2"
-    slice-ansi "^4.0.0"
-    string-width "^4.2.3"
-    strip-ansi "^6.0.1"
-    supports-color "^8.1.1"
-    supports-hyperlinks "^2.2.0"
-    widest-line "^3.1.0"
-    wordwrap "^1.0.0"
-    wrap-ansi "^7.0.0"
-
 "@oclif/core@^1.1.1":
   version "1.20.4"
   resolved "https://registry.yarnpkg.com/@oclif/core/-/core-1.20.4.tgz#7378b52e1f1b502e383ffb07f95dffc9fd8588ff"
@@ -150,6 +119,38 @@
     supports-hyperlinks "^2.2.0"
     tslib "^2.4.1"
     widest-line "^3.1.0"
+    wrap-ansi "^7.0.0"
+
+"@oclif/core@^3.3.0":
+  version "3.10.7"
+  resolved "https://registry.yarnpkg.com/@oclif/core/-/core-3.10.7.tgz#8e82375542717bd2b6f5f73477e436a8f916b3b6"
+  integrity sha512-LaFszuYfJJpQP/hYrrwRZOA7qCAJFVPcyo4qsZiRTMyrB3CrFtWkpSoYaaWVsoCwIcYgGLXCNc2pIFZUBgWBnQ==
+  dependencies:
+    ansi-escapes "^4.3.2"
+    ansi-styles "^4.3.0"
+    cardinal "^2.1.1"
+    chalk "^4.1.2"
+    clean-stack "^3.0.1"
+    cli-progress "^3.12.0"
+    debug "^4.3.4"
+    ejs "^3.1.9"
+    get-package-type "^0.1.0"
+    globby "^11.1.0"
+    hyperlinker "^1.0.0"
+    indent-string "^4.0.0"
+    is-wsl "^2.2.0"
+    js-yaml "^3.14.1"
+    natural-orderby "^2.0.3"
+    object-treeify "^1.1.33"
+    password-prompt "^1.1.2"
+    slice-ansi "^4.0.0"
+    string-width "^4.2.3"
+    strip-ansi "^6.0.1"
+    supports-color "^8.1.1"
+    supports-hyperlinks "^2.2.0"
+    tsconfck "^3.0.0"
+    widest-line "^3.1.0"
+    wordwrap "^1.0.0"
     wrap-ansi "^7.0.0"
 
 "@oclif/linewrap@^1.0.0":
@@ -1910,6 +1911,11 @@ ts-node@^8.1.0:
     make-error "^1.1.1"
     source-map-support "^0.5.6"
     yn "3.1.1"
+
+tsconfck@^3.0.0:
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/tsconfck/-/tsconfck-3.0.0.tgz#b469f1ced12973bbec3209a55ed8de3bb04223c9"
+  integrity sha512-w3wnsIrJNi7avf4Zb0VjOoodoO0woEqGgZGQm+LHH9przdUI+XDKsWAXwxHA1DaRTjeuZNcregSzr7RaA8zG9A==
 
 tslib@1.9.0:
   version "1.9.0"
