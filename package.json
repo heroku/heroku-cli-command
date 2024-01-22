@@ -31,7 +31,7 @@
     "@types/supports-color": "^5.3.0",
     "@types/uuid": "^8.3.0",
     "chai": "^4.2.0",
-    "fancy-test": "^1.4.3",
+    "fancy-test": "^3.0.9",
     "mocha": "^6.1.4",
     "nock": "^10.0.6",
     "proxyquire": "^2.1.0",
