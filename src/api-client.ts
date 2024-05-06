@@ -117,6 +117,7 @@ export class APIClient {
 
         retries--
         try {
+          console.log('WE ARE HERE!')
           const response = await super.request<T>(url, opts)
           this.trackRequestIds<T>(response)
           return response
