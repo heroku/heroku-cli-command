@@ -17,6 +17,7 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: yarn
+          architecture: x64
       - run: yarn --frozen-lockfile --network-timeout 1000000
         env:
           CI: true
