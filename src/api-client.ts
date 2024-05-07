@@ -145,7 +145,7 @@ export class APIClient {
         try {
           let response
           let delinquencyResponse
-          // console.log('WE ARE HERE!')
+          console.log('WE ARE HERE!')
           const delinquencyInfo = this.delinquencyChecker(url)
 
           if (delinquencyInfo.needsAdditionalCheck) {
