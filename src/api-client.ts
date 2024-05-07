@@ -143,8 +143,41 @@ export class APIClient {
 
         retries--
         try {
-          console.log('WE ARE HERE!')
-          const response = await super.request<T>(url, opts)
+          let response
+          let delinquencyResponse
+          // console.log('WE ARE HERE!')
+          const delinquencyInfo = this.delinquencyChecker(url)
+
+          if (delinquencyInfo.needsAdditionalCheck) {
+            if (delinquencyInfo.teamId) {
+              const teamURL = `/teams/${delinquencyInfo.teamId}/delinquency`
+              const [originalRequest, teamDelinquency] = await Promise.all([
+                super.request<T>(url, opts),
+                super.request<T>(teamURL, opts)
+              ])
+              response = originalRequest
+              delinquencyResponse = teamDelinquency
+            } else {
+              const accountURL = `/account/delinquency`
+              const [originalRequest, accountDelinquency] = await Promise.all([
+                super.request<T>(url, opts),
+                super.request<T>(accountURL, opts)
+              ])
+              response = originalRequest
+              delinquencyResponse = accountDelinquency
+            }
+          } else {
+            response = await super.request<T>(url, opts)
+          }
+
+          if (delinquencyResponse && delinquencyInfo.teamId) {
+            warn('This team is delinquent and will be suspended in ${delinquencyResponse.scheduled_suspension_time}')
+          }
+
+          if (delinquencyResponse && !delinquencyInfo.teamId) {
+            warn('This account is delinquent and will be suspended in ${delinquencyResponse.scheduled_suspension_time}')
+          }
+
           this.trackRequestIds<T>(response)
           return response
         } catch (error) {
