@@ -107,6 +107,32 @@ export class APIClient {
         }
       }
 
+      static delinquencyChecker(url: string) {
+        let teamId = []
+        let needsAdditionalRequest = false
+        let delinquencyInfo = {needsAdditionalCheck: false, teamId: ''}
+        const qualifiedPatterns = /\/(account|teams)/
+        const validIDs = /[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/g
+
+        // check url for /accounts or /teams
+        needsAdditionalRequest = qualifiedPatterns.test(url)
+
+        // parse for teamId
+        teamId = url.match(validIDs) || []
+
+        // check if account or teams endpoints have been used
+        if (needsAdditionalRequest) {
+          delinquencyInfo.needsAdditionalCheck = true
+        }
+
+        // check if teamId exists
+        if (teamId) {
+          delinquencyInfo.teamId = teamId[0]
+        }
+
+        return delinquencyInfo
+      }
+
       static async request<T>(url: string, opts: APIClient.Options = {}, retries = 3): Promise<APIHTTPClient<T>> {
         opts.headers = opts.headers || {}
         opts.headers[requestIdHeader] = RequestId.create() && RequestId.headerValue
