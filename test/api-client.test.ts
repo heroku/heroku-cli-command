@@ -30,7 +30,7 @@ afterEach(() => {
 })
 
 const test = base
-.add('config', new Config({root: resolve(__dirname, '../package.json')}))
+  .add('config', new Config({root: resolve(__dirname, '../package.json')}))
 
 describe('api_client', () => {
   test

@@ -18,7 +18,7 @@ beforeEach(() => {
 })
 
 const test = base
-.add('config', new Config({root: resolve(__dirname, '../package.json')}))
+  .add('config', new Config({root: resolve(__dirname, '../package.json')}))
 
 describe('login with interactive', () => {
   test
@@ -54,7 +54,7 @@ describe('login with interactive', () => {
       const cmd = new Command([], ctx.config)
       api
         .post('/oauth/authorizations',
-      {scope: ['global'], description: /^Heroku CLI login from .*/, expires_in: 60 * 60 * 24 * 30})
+          {scope: ['global'], description: /^Heroku CLI login from .*/, expires_in: 60 * 60 * 24 * 30})
         .reply(401, {id: 'unauthorized', message: 'not authorized'})
 
       await cmd.heroku.login({method: 'interactive'})
@@ -68,7 +68,7 @@ describe('login with interactive', () => {
       const cmd = new Command([], ctx.config)
       api
         .post('/oauth/authorizations',
-      {scope: ['global'], description: /^Heroku CLI login from .*/, expires_in: 12345})
+          {scope: ['global'], description: /^Heroku CLI login from .*/, expires_in: 12345})
         .reply(401, {id: 'unauthorized', message: 'not authorized'})
 
       await cmd.heroku.login({method: 'interactive', expiresIn: 12_345})

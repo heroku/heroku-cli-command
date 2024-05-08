@@ -2,7 +2,6 @@ import * as uuid from 'uuid'
 
 export const requestIdHeader = 'Request-Id'
 
-// tslint:disable-next-line: no-unnecessary-class
 export class RequestId {
   static ids: string[] = []
 

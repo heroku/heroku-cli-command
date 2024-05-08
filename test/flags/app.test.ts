@@ -39,8 +39,8 @@ describe('required', () => {
   fancy
     .it('gets app from --remote flag', async () => {
       withRemotes([
-      {name: 'staging', url: 'https://git.heroku.com/myapp-staging.git'},
-      {name: 'production', url: 'https://git.heroku.com/myapp-production.git'},
+        {name: 'staging', url: 'https://git.heroku.com/myapp-staging.git'},
+        {name: 'production', url: 'https://git.heroku.com/myapp-production.git'},
       ])
       await class extends Command {
         async run() {
