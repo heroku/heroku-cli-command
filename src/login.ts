@@ -122,10 +122,10 @@ export class Login {
         const d = await this.defaultToken()
         if (d === token) return
         return Promise.all(
-        authorizations
-          .filter(a => a.access_token && a.access_token.token === this.heroku.auth)
-          .map(a => HTTP.delete(`${vars.apiUrl}/oauth/authorizations/${a.id}`, headers(token))),
-      )
+          authorizations
+            .filter(a => a.access_token && a.access_token.token === this.heroku.auth)
+            .map(a => HTTP.delete(`${vars.apiUrl}/oauth/authorizations/${a.id}`, headers(token))),
+        )
       })
       .catch(error => {
         if (!error.http) throw error

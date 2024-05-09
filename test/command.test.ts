@@ -6,7 +6,7 @@ import {Command} from '../src/command'
 import * as flags from '../src/flags'
 
 const test = base
-.add('config', new Config({root: resolve(__dirname, '../package.json')}))
+  .add('config', new Config({root: resolve(__dirname, '../package.json')}))
 
 class MyCommand extends Command {
   async run() {}
