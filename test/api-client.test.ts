@@ -98,7 +98,6 @@ describe('api_client', () => {
   describe('with HEROKU_HOST', () => {
     test
       .it('makes an HTTP request with HEROKU_HOST', async ctx => {
-        // tslint:disable-next-line:no-http-string
         const localHostURI = 'http://localhost:5000'
         process.env.HEROKU_HOST = localHostURI
         api = nock(localHostURI)
