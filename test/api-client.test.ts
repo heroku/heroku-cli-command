@@ -1,3 +1,4 @@
+import {stderr} from 'stdout-stderr'
 import {Config, ux} from '@oclif/core'
 import base, {expect} from 'fancy-test'
 import nock from 'nock'
@@ -106,6 +107,253 @@ describe('api_client', () => {
         const cmd = new Command([], ctx.config)
         const {body} = await cmd.heroku.get('/apps')
         expect(body).to.deep.equal([{name: 'myapp'}])
+      })
+  })
+
+  describe('request for Account Info endpoint', () => {
+    test
+      .it('sends requests to Platform API and Particleboard', async ctx => {
+        api = nock('https://api.heroku.com', {
+          reqheaders: {authorization: 'Bearer mypass'},
+        })
+        api.get('/account').reply(200, [{id: 'myid'}])
+        const particleboard = nock('https://particleboard.heroku.com', {
+          reqheaders: {authorization: 'Bearer mypass'},
+        })
+        particleboard.get('/account').reply(200, {id: 'acct_id'})
+
+        const cmd = new Command([], ctx.config)
+        const {body} = await cmd.heroku.get('/account')
+        expect(body).to.deep.equal([{id: 'myid'}])
+        particleboard.done()
+      })
+
+    test
+      .it('doesn‘t fail or show delinquency warnings if Particleboard request fails', async ctx => {
+        api = nock('https://api.heroku.com', {
+          reqheaders: {authorization: 'Bearer mypass'},
+        })
+        api.get('/account').reply(200, [{id: 'myid'}])
+        const particleboard = nock('https://particleboard.heroku.com', {
+          reqheaders: {authorization: 'Bearer mypass'},
+        })
+        particleboard.get('/account').reply(401, {id: 'unauthorized', message: 'Unauthorized'})
+
+        stderr.start()
+        const cmd = new Command([], ctx.config)
+        const {body} = await cmd.heroku.get('/account')
+
+        expect(body).to.deep.equal([{id: 'myid'}])
+        expect(stderr.output).to.eq('')
+        stderr.stop()
+        particleboard.done()
+      })
+
+    test
+      .it('doesn‘t show delinquency warnings if account isn‘t delinquent', async ctx => {
+        api = nock('https://api.heroku.com', {
+          reqheaders: {authorization: 'Bearer mypass'},
+        })
+        api.get('/account').reply(200, [{id: 'myid'}])
+        const particleboard = nock('https://particleboard.heroku.com', {
+          reqheaders: {authorization: 'Bearer mypass'},
+        })
+        particleboard.get('/account').reply(200, {
+          scheduled_suspension_time: null,
+          scheduled_deletion_time: null,
+        })
+
+        stderr.start()
+        const cmd = new Command([], ctx.config)
+        await cmd.heroku.get('/account')
+
+        expect(stderr.output).to.eq('')
+        stderr.stop()
+        particleboard.done()
+      })
+
+    test
+      .it('shows a delinquency warning with suspension and deletion dates if account is delinquent', async ctx => {
+        api = nock('https://api.heroku.com', {
+          reqheaders: {authorization: 'Bearer mypass'},
+        })
+        api.get('/account').reply(200, [{id: 'myid'}])
+        const suspensionTime = new Date('2024-06-01T12:00:00.000Z')
+        const deletionTime = new Date('2024-06-15T23:59:59.999Z')
+        const particleboard = nock('https://particleboard.heroku.com', {
+          reqheaders: {authorization: 'Bearer mypass'},
+        })
+        particleboard.get('/account').reply(200, {
+          scheduled_suspension_time: suspensionTime.toISOString(),
+          scheduled_deletion_time: deletionTime.toISOString(),
+        })
+
+        stderr.start()
+        const cmd = new Command([], ctx.config)
+        await cmd.heroku.get('/account')
+
+        expect(stderr.output).to.include(`This account is delinquent with payment and we‘ll suspend it on ${suspensionTime}`)
+        expect(stderr.output).to.include(`This account is delinquent with payment and we‘ll delete it on ${deletionTime}`)
+        stderr.stop()
+        particleboard.done()
+      })
+
+    test
+      .it('it doesn‘t send a Particleboard request or show duplicated delinquency warnings with multiple matching requests when delinquent', async ctx => {
+        api = nock('https://api.heroku.com', {
+          reqheaders: {authorization: 'Bearer mypass'},
+        })
+        api.get('/account').reply(200, [{id: 'myid'}])
+        api.get('/account').reply(200, [{id: 'myid'}])
+        const suspensionTime = new Date('2024-06-01T12:00:00.000Z')
+        const deletionTime = new Date('2024-06-15T23:59:59.999Z')
+        const particleboard = nock('https://particleboard.heroku.com', {
+          reqheaders: {authorization: 'Bearer mypass'},
+        })
+        particleboard
+          .get('/account').reply(200, {
+            scheduled_suspension_time: suspensionTime.toISOString(),
+            scheduled_deletion_time: deletionTime.toISOString(),
+          })
+
+        stderr.print = true
+        stderr.start()
+        const cmd = new Command([], ctx.config)
+        await cmd.heroku.get('/account')
+        expect(stderr.output).to.include(`This account is delinquent with payment and we‘ll suspend it on ${suspensionTime}`)
+        expect(stderr.output).to.include(`This account is delinquent with payment and we‘ll delete it on ${deletionTime}`)
+        stderr.stop()
+
+        stderr.start()
+        await cmd.heroku.get('/account')
+        expect(stderr.output).to.eq('')
+        expect(stderr.output).to.eq('')
+        stderr.stop()
+        particleboard.done()
+      })
+  })
+
+  describe('team namespaced requests', () => {
+    test
+      .it('sends requests to Platform API and Particleboard', async ctx => {
+        api = nock('https://api.heroku.com', {
+          reqheaders: {authorization: 'Bearer mypass'},
+        })
+        api.get('/teams/my_team/members').reply(200, [{id: 'member_id'}])
+        const particleboard = nock('https://particleboard.heroku.com', {
+          reqheaders: {authorization: 'Bearer mypass'},
+        })
+        particleboard.get('/teams/my_team').reply(200, {id: 'my_team_id', name: 'my_team'})
+
+        const cmd = new Command([], ctx.config)
+        const {body} = await cmd.heroku.get('/teams/my_team/members')
+
+        expect(body).to.deep.equal([{id: 'member_id'}])
+        particleboard.done()
+      })
+
+    test
+      .it('doesn‘t fail or show delinquency warnings if Particleboard request fails', async ctx => {
+        api = nock('https://api.heroku.com', {
+          reqheaders: {authorization: 'Bearer mypass'},
+        })
+        api.get('/teams/my_team/members').reply(200, [{id: 'member_id'}])
+        const particleboard = nock('https://particleboard.heroku.com', {
+          reqheaders: {authorization: 'Bearer mypass'},
+        })
+        particleboard.get('/teams/my_team').reply(404, {id: 'not_found', message: 'Team not found', resource: 'team'})
+
+        stderr.start()
+        const cmd = new Command([], ctx.config)
+        const {body} = await cmd.heroku.get('/teams/my_team/members')
+
+        expect(body).to.deep.equal([{id: 'member_id'}])
+        expect(stderr.output).to.eq('')
+        stderr.stop()
+        particleboard.done()
+      })
+
+    test
+      .it('doesn‘t show delinquency warnings if team isn‘t delinquent', async ctx => {
+        api = nock('https://api.heroku.com', {
+          reqheaders: {authorization: 'Bearer mypass'},
+        })
+        api.get('/teams/my_team/members').reply(200, [{id: 'member_id'}])
+        const particleboard = nock('https://particleboard.heroku.com', {
+          reqheaders: {authorization: 'Bearer mypass'},
+        })
+        particleboard.get('/teams/my_team').reply(200, {
+          scheduled_suspension_time: null,
+          scheduled_deletion_time: null,
+        })
+
+        stderr.start()
+        const cmd = new Command([], ctx.config)
+        await cmd.heroku.get('/teams/my_team/members')
+
+        expect(stderr.output).to.eq('')
+        stderr.stop()
+        particleboard.done()
+      })
+
+    test
+      .it('shows a delinquency warning with suspension and deletion dates if team is delinquent', async ctx => {
+        api = nock('https://api.heroku.com', {
+          reqheaders: {authorization: 'Bearer mypass'},
+        })
+        api.get('/teams/my_team/members').reply(200, [{id: 'member_id'}])
+        const suspensionTime = new Date('2024-06-01T12:00:00.000Z')
+        const deletionTime = new Date('2024-06-15T23:59:59.999Z')
+        const particleboard = nock('https://particleboard.heroku.com', {
+          reqheaders: {authorization: 'Bearer mypass'},
+        })
+        particleboard.get('/teams/my_team').reply(200, {
+          scheduled_suspension_time: suspensionTime.toISOString(),
+          scheduled_deletion_time: deletionTime.toISOString(),
+        })
+
+        stderr.start()
+        const cmd = new Command([], ctx.config)
+        await cmd.heroku.get('/teams/my_team/members')
+
+        expect(stderr.output).to.include(`This team is delinquent with payment and we‘ll suspend it on ${suspensionTime}`)
+        expect(stderr.output).to.include(`This team is delinquent with payment and we‘ll delete it on ${deletionTime}`)
+        stderr.stop()
+        particleboard.done()
+      })
+
+    test
+      .it('it doesn‘t send a Particleboard request or show duplicated delinquency warnings with multiple matching requests when delinquent', async ctx => {
+        api = nock('https://api.heroku.com', {
+          reqheaders: {authorization: 'Bearer mypass'},
+        })
+        api.get('/teams/my_team/members').reply(200, [{id: 'member_id'}])
+        api.get('/teams/my_team/members').reply(200, [{id: 'member_id'}])
+        const suspensionTime = new Date('2024-06-01T12:00:00.000Z')
+        const deletionTime = new Date('2024-06-15T23:59:59.999Z')
+        const particleboard = nock('https://particleboard.heroku.com', {
+          reqheaders: {authorization: 'Bearer mypass'},
+        })
+        particleboard
+          .get('/teams/my_team').reply(200, {
+            scheduled_suspension_time: suspensionTime.toISOString(),
+            scheduled_deletion_time: deletionTime.toISOString(),
+          })
+
+        stderr.print = true
+        stderr.start()
+        const cmd = new Command([], ctx.config)
+        await cmd.heroku.get('/teams/my_team/members')
+        expect(stderr.output).to.include(`This team is delinquent with payment and we‘ll suspend it on ${suspensionTime}`)
+        expect(stderr.output).to.include(`This team is delinquent with payment and we‘ll delete it on ${deletionTime}`)
+        stderr.stop()
+
+        stderr.start()
+        await cmd.heroku.get('/teams/my_team/members')
+        expect(stderr.output).to.eq('')
+        expect(stderr.output).to.eq('')
+        stderr.stop()
+        particleboard.done()
       })
   })
 

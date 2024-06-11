@@ -9,6 +9,7 @@ import {Login} from './login'
 import {Mutex} from './mutex'
 import {RequestId, requestIdHeader} from './request-id'
 import {vars} from './vars'
+import {ParticleboardClient, IDelinquencyInfo} from './particleboard-client'
 
 export namespace APIClient {
   export interface Options extends HTTPRequestOptions {
@@ -27,6 +28,13 @@ export interface IHerokuAPIErrorOptions {
   id?: string
   message?: string
   url?: string
+}
+
+interface IDelinquencyConfig {
+  fetch_delinquency: boolean
+  warning_shown: boolean
+  resource_type?: 'account' | 'team'
+  fetch_url?: string
 }
 
 export class HerokuAPIError extends CLIError {
@@ -55,9 +63,11 @@ export class APIClient {
   private readonly _login = new Login(this.config, this)
   private _twoFactorMutex: Mutex<string> | undefined
   private _auth?: string
+  private _particleboard!: ParticleboardClient
 
   constructor(protected config: Interfaces.Config, public options: IOptions = {}) {
     this.config = config
+
     if (options.required === undefined) options.required = true
     options.preauth = options.preauth !== false
     this.options = options
@@ -75,6 +85,7 @@ export class APIClient {
         ...envHeaders,
       },
     }
+    const delinquencyConfig: IDelinquencyConfig = {fetch_delinquency: false, warning_shown: false}
     this.http = class APIHTTPClient<T> extends deps.HTTP.HTTP.create(opts)<T> {
       static async twoFactorRetry(
         err: HTTPError,
@@ -107,17 +118,79 @@ export class APIClient {
         }
       }
 
+      static configDelinquency(url: string, opts: APIClient.Options): void {
+        if (opts.method?.toUpperCase() !== 'GET' || (opts.hostname && opts.hostname !== apiUrl.hostname)) {
+          delinquencyConfig.fetch_delinquency = false
+          return
+        }
+
+        if (/^\/account$/i.test(url)) {
+          delinquencyConfig.fetch_url = '/account'
+          delinquencyConfig.fetch_delinquency = true
+          delinquencyConfig.resource_type = 'account'
+          return
+        }
+
+        const match = url.match(/^\/teams\/([^#/?]+)/i)
+        if (match) {
+          delinquencyConfig.fetch_url = `/teams/${match[1]}`
+          delinquencyConfig.fetch_delinquency = true
+          delinquencyConfig.resource_type = 'team'
+          return
+        }
+
+        delinquencyConfig.fetch_delinquency = false
+      }
+
+      // eslint-disable-next-line complexity
       static async request<T>(url: string, opts: APIClient.Options = {}, retries = 3): Promise<APIHTTPClient<T>> {
         opts.headers = opts.headers || {}
         opts.headers[requestIdHeader] = RequestId.create() && RequestId.headerValue
 
-        if (!Object.keys(opts.headers).find(h => h.toLowerCase() === 'authorization')) {
+        if (!Object.keys(opts.headers).some(h => h.toLowerCase() === 'authorization')) {
           opts.headers.authorization = `Bearer ${self.auth}`
         }
 
+        this.configDelinquency(url, opts)
+
         retries--
         try {
-          const response = await super.request<T>(url, opts)
+          let response: HTTP<T>
+          let particleboardResponse: HTTP<IDelinquencyInfo> | undefined
+          const particleboardClient: ParticleboardClient = self.particleboard
+
+          if (delinquencyConfig.fetch_delinquency && !delinquencyConfig.warning_shown) {
+            self._particleboard.auth = self.auth
+            const settledResponses = await Promise.allSettled([
+              super.request<T>(url, opts),
+              particleboardClient.get<IDelinquencyInfo>(delinquencyConfig.fetch_url as string),
+            ])
+
+            // Platform API request
+            if (settledResponses[0].status === 'fulfilled')
+              response = settledResponses[0].value
+            else
+              throw settledResponses[0].reason
+
+            // Particleboard request (ignore errors)
+            if (settledResponses[1].status === 'fulfilled') {
+              particleboardResponse = settledResponses[1].value
+            }
+          } else {
+            response = await super.request<T>(url, opts)
+          }
+
+          const delinquencyInfo: IDelinquencyInfo = particleboardResponse?.body || {}
+          if (delinquencyInfo.scheduled_suspension_time) {
+            warn(`This ${delinquencyConfig.resource_type} is delinquent with payment and we‘ll suspend it on ${new Date(delinquencyInfo.scheduled_suspension_time)}.`)
+            delinquencyConfig.warning_shown = true
+          }
+
+          if (delinquencyInfo.scheduled_deletion_time) {
+            warn(`This ${delinquencyConfig.resource_type} is delinquent with payment and we‘ll delete it on ${new Date(delinquencyInfo.scheduled_deletion_time)}.`)
+            delinquencyConfig.warning_shown = true
+          }
+
           this.trackRequestIds<T>(response)
           return response
         } catch (error) {
@@ -143,6 +216,12 @@ export class APIClient {
         }
       }
     }
+  }
+
+  get particleboard(): ParticleboardClient {
+    if (this._particleboard) return this._particleboard
+    this._particleboard = new deps.ParticleboardClient(this.config)
+    return this._particleboard
   }
 
   get twoFactorMutex(): Mutex<string> {
