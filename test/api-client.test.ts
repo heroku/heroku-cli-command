@@ -192,7 +192,7 @@ describe('api_client', () => {
         const cmd = new Command([], ctx.config)
         await cmd.heroku.get('/account')
 
-        const stderrOutput = stderr.output.replace(/ *› */g, '').replace(/ *\n */g, ' ')
+        const stderrOutput = stderr.output.replace(/ *[»›] */g, '').replace(/ *\n */g, ' ')
         expect(stderrOutput).to.include(`This account is delinquent with payment and we‘ll suspend it on ${suspensionTime}`)
         expect(stderrOutput).to.include(`This account is delinquent with payment and we‘ll delete it on ${deletionTime}`)
         stderr.stop()
@@ -222,7 +222,7 @@ describe('api_client', () => {
         const cmd = new Command([], ctx.config)
         await cmd.heroku.get('/account')
 
-        const stderrOutput = stderr.output.replace(/ *› */g, '').replace(/ *\n */g, ' ')
+        const stderrOutput = stderr.output.replace(/ *[»›] */g, '').replace(/ *\n */g, ' ')
         expect(stderrOutput).to.include(`This account is delinquent with payment and we‘ll suspend it on ${suspensionTime}`)
         expect(stderrOutput).to.include(`This account is delinquent with payment and we‘ll delete it on ${deletionTime}`)
         stderr.stop()
@@ -319,7 +319,7 @@ describe('api_client', () => {
         const cmd = new Command([], ctx.config)
         await cmd.heroku.get('/teams/my_team/members')
 
-        const stderrOutput = stderr.output.replace(/ *› */g, '').replace(/ *\n */g, ' ')
+        const stderrOutput = stderr.output.replace(/ *[»›] */g, '').replace(/ *\n */g, ' ')
         expect(stderrOutput).to.include(`This team is delinquent with payment and we‘ll suspend it on ${suspensionTime}`)
         expect(stderrOutput).to.include(`This team is delinquent with payment and we‘ll delete it on ${deletionTime}`)
         stderr.stop()
@@ -349,7 +349,7 @@ describe('api_client', () => {
         const cmd = new Command([], ctx.config)
         await cmd.heroku.get('/teams/my_team/members')
 
-        const stderrOutput = stderr.output.replace(/ *› */g, '').replace(/ *\n */g, ' ')
+        const stderrOutput = stderr.output.replace(/ *[»›] */g, '').replace(/ *\n */g, ' ')
         expect(stderrOutput).to.include(`This team is delinquent with payment and we‘ll suspend it on ${suspensionTime}`)
         expect(stderrOutput).to.include(`This team is delinquent with payment and we‘ll delete it on ${deletionTime}`)
         stderr.stop()
