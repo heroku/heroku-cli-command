@@ -135,7 +135,31 @@ export class APIClient {
         delinquencyConfig.fetch_delinquency = false
       }
 
-      // eslint-disable-next-line complexity
+      static notifyDelinquency(delinquencyInfo: IDelinquencyInfo): void {
+        const suspension = delinquencyInfo.scheduled_suspension_time ? Date.parse(delinquencyInfo.scheduled_suspension_time).valueOf() : undefined
+        const deletion = delinquencyInfo.scheduled_deletion_time ? Date.parse(delinquencyInfo.scheduled_deletion_time).valueOf() : undefined
+
+        if (!suspension && !deletion) return
+
+        const resource = delinquencyConfig.resource_type
+
+        if (suspension) {
+          const now = Date.now()
+
+          if (suspension > now) {
+            warn(`This ${resource} is delinquent with payment and we‘ll suspend it on ${new Date(suspension)}.`)
+            delinquencyConfig.warning_shown = true
+            return
+          }
+
+          if (deletion)
+            warn(`This ${resource} is delinquent with payment and we suspended it on ${new Date(suspension)}. If the ${resource} is still delinquent, we'll delete it on ${new Date(deletion)}.`)
+        } else if (deletion)
+          warn(`This ${resource} is delinquent with payment and we‘ll delete it on ${new Date(deletion)}.`)
+
+        delinquencyConfig.warning_shown = true
+      }
+
       static async request<T>(url: string, opts: APIClient.Options = {}, retries = 3): Promise<APIHTTPClient<T>> {
         opts.headers = opts.headers || {}
         opts.headers[requestIdHeader] = RequestId.create() && RequestId.headerValue
@@ -174,15 +198,7 @@ export class APIClient {
           }
 
           const delinquencyInfo: IDelinquencyInfo = particleboardResponse?.body || {}
-          if (delinquencyInfo.scheduled_suspension_time) {
-            warn(`This ${delinquencyConfig.resource_type} is delinquent with payment and we‘ll suspend it on ${new Date(delinquencyInfo.scheduled_suspension_time)}.`)
-            delinquencyConfig.warning_shown = true
-          }
-
-          if (delinquencyInfo.scheduled_deletion_time) {
-            warn(`This ${delinquencyConfig.resource_type} is delinquent with payment and we‘ll delete it on ${new Date(delinquencyInfo.scheduled_deletion_time)}.`)
-            delinquencyConfig.warning_shown = true
-          }
+          this.notifyDelinquency(delinquencyInfo)
 
           this.trackRequestIds<T>(response)
           return response

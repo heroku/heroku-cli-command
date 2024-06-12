@@ -173,13 +173,14 @@ describe('api_client', () => {
       })
 
     test
-      .it('shows a delinquency warning with suspension and deletion dates if account is delinquent', async ctx => {
+      .it('shows a delinquency warning with suspension date if account is delinquent and suspension is in the future', async ctx => {
         api = nock('https://api.heroku.com', {
           reqheaders: {authorization: 'Bearer mypass'},
         })
         api.get('/account').reply(200, [{id: 'myid'}])
-        const suspensionTime = new Date('2024-06-01T12:00:00.000Z')
-        const deletionTime = new Date('2024-06-15T23:59:59.999Z')
+        const now = Date.now()
+        const suspensionTime = new Date(now + (10 * 60 * 60 * 24 * 1000)) // 10 days in the future
+        const deletionTime = new Date(now + (30 * 60 * 60 * 24 * 1000)) // 30 days in the future
         const particleboard = nock('https://particleboard.heroku.com', {
           reqheaders: {authorization: 'Bearer mypass'},
         })
@@ -194,7 +195,33 @@ describe('api_client', () => {
 
         const stderrOutput = stderr.output.replace(/ *[»›] */g, '').replace(/ *\n */g, ' ')
         expect(stderrOutput).to.include(`This account is delinquent with payment and we‘ll suspend it on ${suspensionTime}`)
-        expect(stderrOutput).to.include(`This account is delinquent with payment and we‘ll delete it on ${deletionTime}`)
+        stderr.stop()
+        particleboard.done()
+      })
+
+    test
+      .it('shows a delinquency warning with deletion date if account is delinquent and suspension is in the past', async ctx => {
+        api = nock('https://api.heroku.com', {
+          reqheaders: {authorization: 'Bearer mypass'},
+        })
+        api.get('/account').reply(200, [{id: 'myid'}])
+        const now = Date.now()
+        const suspensionTime = new Date(now - (60 * 60 * 24 * 1000)) // 1 day in the past
+        const deletionTime = new Date(now + (20 * 60 * 60 * 24 * 1000)) // 20 days in the future
+        const particleboard = nock('https://particleboard.heroku.com', {
+          reqheaders: {authorization: 'Bearer mypass'},
+        })
+        particleboard.get('/account').reply(200, {
+          scheduled_suspension_time: suspensionTime.toISOString(),
+          scheduled_deletion_time: deletionTime.toISOString(),
+        })
+
+        stderr.start()
+        const cmd = new Command([], ctx.config)
+        await cmd.heroku.get('/account')
+
+        const stderrOutput = stderr.output.replace(/ *[»›] */g, '').replace(/ *\n */g, ' ')
+        expect(stderrOutput).to.include(`This account is delinquent with payment and we suspended it on ${suspensionTime}. If the account is still delinquent, we'll delete it on ${deletionTime}`)
         stderr.stop()
         particleboard.done()
       })
@@ -206,8 +233,9 @@ describe('api_client', () => {
         })
         api.get('/account').reply(200, [{id: 'myid'}])
         api.get('/account').reply(200, [{id: 'myid'}])
-        const suspensionTime = new Date('2024-06-01T12:00:00.000Z')
-        const deletionTime = new Date('2024-06-15T23:59:59.999Z')
+        const now = Date.now()
+        const suspensionTime = new Date(now + (10 * 60 * 60 * 24 * 1000)) // 10 days in the future
+        const deletionTime = new Date(now + (30 * 60 * 60 * 24 * 1000)) // 30 days in the future
         const particleboard = nock('https://particleboard.heroku.com', {
           reqheaders: {authorization: 'Bearer mypass'},
         })
@@ -217,19 +245,16 @@ describe('api_client', () => {
             scheduled_deletion_time: deletionTime.toISOString(),
           })
 
-        stderr.print = true
         stderr.start()
         const cmd = new Command([], ctx.config)
         await cmd.heroku.get('/account')
 
         const stderrOutput = stderr.output.replace(/ *[»›] */g, '').replace(/ *\n */g, ' ')
         expect(stderrOutput).to.include(`This account is delinquent with payment and we‘ll suspend it on ${suspensionTime}`)
-        expect(stderrOutput).to.include(`This account is delinquent with payment and we‘ll delete it on ${deletionTime}`)
         stderr.stop()
 
         stderr.start()
         await cmd.heroku.get('/account')
-        expect(stderr.output).to.eq('')
         expect(stderr.output).to.eq('')
         stderr.stop()
         particleboard.done()
@@ -300,13 +325,14 @@ describe('api_client', () => {
       })
 
     test
-      .it('shows a delinquency warning with suspension and deletion dates if team is delinquent', async ctx => {
+      .it('shows a delinquency warning with suspension date if team is delinquent and suspension is in the future', async ctx => {
         api = nock('https://api.heroku.com', {
           reqheaders: {authorization: 'Bearer mypass'},
         })
         api.get('/teams/my_team/members').reply(200, [{id: 'member_id'}])
-        const suspensionTime = new Date('2024-06-01T12:00:00.000Z')
-        const deletionTime = new Date('2024-06-15T23:59:59.999Z')
+        const now = Date.now()
+        const suspensionTime = new Date(now + (10 * 60 * 60 * 24 * 1000)) // 10 days in the future
+        const deletionTime = new Date(now + (30 * 60 * 60 * 24 * 1000)) // 30 days in the future
         const particleboard = nock('https://particleboard.heroku.com', {
           reqheaders: {authorization: 'Bearer mypass'},
         })
@@ -321,7 +347,33 @@ describe('api_client', () => {
 
         const stderrOutput = stderr.output.replace(/ *[»›] */g, '').replace(/ *\n */g, ' ')
         expect(stderrOutput).to.include(`This team is delinquent with payment and we‘ll suspend it on ${suspensionTime}`)
-        expect(stderrOutput).to.include(`This team is delinquent with payment and we‘ll delete it on ${deletionTime}`)
+        stderr.stop()
+        particleboard.done()
+      })
+
+    test
+      .it('shows a delinquency warning with deletion date if team is delinquent and suspension is in the past', async ctx => {
+        api = nock('https://api.heroku.com', {
+          reqheaders: {authorization: 'Bearer mypass'},
+        })
+        api.get('/teams/my_team/members').reply(200, [{id: 'member_id'}])
+        const now = Date.now()
+        const suspensionTime = new Date(now - (60 * 60 * 24 * 1000)) // 1 day in the past
+        const deletionTime = new Date(now + (20 * 60 * 60 * 24 * 1000)) // 20 days in the future
+        const particleboard = nock('https://particleboard.heroku.com', {
+          reqheaders: {authorization: 'Bearer mypass'},
+        })
+        particleboard.get('/teams/my_team').reply(200, {
+          scheduled_suspension_time: suspensionTime.toISOString(),
+          scheduled_deletion_time: deletionTime.toISOString(),
+        })
+
+        stderr.start()
+        const cmd = new Command([], ctx.config)
+        await cmd.heroku.get('/teams/my_team/members')
+
+        const stderrOutput = stderr.output.replace(/ *[»›] */g, '').replace(/ *\n */g, ' ')
+        expect(stderrOutput).to.include(`This team is delinquent with payment and we suspended it on ${suspensionTime}. If the team is still delinquent, we'll delete it on ${deletionTime}`)
         stderr.stop()
         particleboard.done()
       })
@@ -333,8 +385,9 @@ describe('api_client', () => {
         })
         api.get('/teams/my_team/members').reply(200, [{id: 'member_id'}])
         api.get('/teams/my_team/members').reply(200, [{id: 'member_id'}])
-        const suspensionTime = new Date('2024-06-01T12:00:00.000Z')
-        const deletionTime = new Date('2024-06-15T23:59:59.999Z')
+        const now = Date.now()
+        const suspensionTime = new Date(now + (10 * 60 * 60 * 24 * 1000)) // 10 days in the future
+        const deletionTime = new Date(now + (30 * 60 * 60 * 24 * 1000)) // 30 days in the future
         const particleboard = nock('https://particleboard.heroku.com', {
           reqheaders: {authorization: 'Bearer mypass'},
         })
@@ -344,20 +397,17 @@ describe('api_client', () => {
             scheduled_deletion_time: deletionTime.toISOString(),
           })
 
-        stderr.print = true
         stderr.start()
         const cmd = new Command([], ctx.config)
         await cmd.heroku.get('/teams/my_team/members')
 
         const stderrOutput = stderr.output.replace(/ *[»›] */g, '').replace(/ *\n */g, ' ')
         expect(stderrOutput).to.include(`This team is delinquent with payment and we‘ll suspend it on ${suspensionTime}`)
-        expect(stderrOutput).to.include(`This team is delinquent with payment and we‘ll delete it on ${deletionTime}`)
         stderr.stop()
 
         stderr.start()
         await cmd.heroku.get('/teams/my_team/members')
 
-        expect(stderr.output).to.eq('')
         expect(stderr.output).to.eq('')
         stderr.stop()
         particleboard.done()
