@@ -3,7 +3,7 @@ import * as Heroku from '@heroku-cli/schema'
 import {CliUx, Interfaces} from '@oclif/core'
 import HTTP from 'http-call'
 import Netrc from 'netrc-parser'
-import open = require('open')
+import open from 'open'
 import * as os from 'os'
 
 const {ux} = CliUx
@@ -154,7 +154,7 @@ export class Login {
     }
 
     // ux.warn(`If browser does not open, visit ${color.greenBright(url)}`)
-    const cp = await open(url, {app: browser, wait: false})
+    const cp = await open(url, {wait: false, ...(browser ? {app: {name: browser}} : {})})
     cp.on('error', err => {
       ux.warn(err)
       showUrl()

@@ -25,6 +25,7 @@ describe('vars', () => {
     expect(vars.gitHost).to.equal('heroku.com')
     expect(vars.httpGitHost).to.equal('git.heroku.com')
     expect(vars.gitPrefixes).to.deep.equal(['git@heroku.com:', 'ssh://git@heroku.com/', 'https://git.heroku.com/'])
+    expect(vars.particleboardUrl).to.equal('https://particleboard.heroku.com')
   })
 
   it('respects HEROKU_HOST', () => {
@@ -35,6 +36,7 @@ describe('vars', () => {
     expect(vars.host).to.equal('customhost')
     expect(vars.httpGitHost).to.equal('git.customhost')
     expect(vars.gitPrefixes).to.deep.equal(['git@customhost:', 'ssh://git@customhost/', 'https://git.customhost/'])
+    expect(vars.particleboardUrl).to.equal('https://particleboard.heroku.com')
   })
 
   it('respects HEROKU_HOST as url', () => {
@@ -45,5 +47,16 @@ describe('vars', () => {
     expect(vars.gitHost).to.equal('customhost')
     expect(vars.httpGitHost).to.equal('customhost')
     expect(vars.gitPrefixes).to.deep.equal(['git@customhost:', 'ssh://git@customhost/', 'https://customhost/'])
+    expect(vars.particleboardUrl).to.equal('https://particleboard.heroku.com')
+  })
+
+  it('respects HEROKU_PARTICLEBOARD_URL', () => {
+    process.env.HEROKU_PARTICLEBOARD_URL = 'https://customhost'
+    expect(vars.particleboardUrl).to.equal('https://customhost')
+  })
+
+  it('respects HEROKU_CLOUD', () => {
+    process.env.HEROKU_CLOUD = 'staging'
+    expect(vars.particleboardUrl).to.equal('https://particleboard-staging-cloud.herokuapp.com')
   })
 })
