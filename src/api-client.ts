@@ -9,7 +9,7 @@ import {Login} from './login'
 import {Mutex} from './mutex'
 import {RequestId, requestIdHeader} from './request-id'
 import {vars} from './vars'
-import {ParticleboardClient, IDelinquencyInfo} from './particleboard-client'
+import {ParticleboardClient, IDelinquencyInfo, IDelinquencyConfig} from './particleboard-client'
 
 export namespace APIClient {
   export interface Options extends HTTPRequestOptions {
@@ -28,13 +28,6 @@ export interface IHerokuAPIErrorOptions {
   id?: string
   message?: string
   url?: string
-}
-
-interface IDelinquencyConfig {
-  fetch_delinquency: boolean
-  warning_shown: boolean
-  resource_type?: 'account' | 'team'
-  fetch_url?: string
 }
 
 export class HerokuAPIError extends CLIError {
