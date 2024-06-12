@@ -8,6 +8,7 @@ import file = require('./file')
 import flags = require('./flags')
 import git = require('./git')
 import mutex = require('./mutex')
+import particleboardClient = require('./particleboard-client')
 import yubikey = require('./yubikey')
 
 const {ux} = oclif
@@ -33,6 +34,9 @@ export const deps = {
   },
   get APIClient(): typeof apiClient.APIClient {
     return fetch('./api-client').APIClient
+  },
+  get ParticleboardClient(): typeof particleboardClient.ParticleboardClient {
+    return fetch('./particleboard-client').ParticleboardClient
   },
   get file(): typeof file {
     return fetch('./file')
