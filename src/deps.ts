@@ -4,6 +4,7 @@ import HTTP = require('http-call')
 import netrc = require('netrc-parser')
 
 import apiClient = require('./api-client')
+import particleboardClient = require('./particleboard-client')
 import file = require('./file')
 import flags = require('./flags')
 import git = require('./git')
@@ -33,6 +34,9 @@ export const deps = {
   },
   get APIClient(): typeof apiClient.APIClient {
     return fetch('./api-client').APIClient
+  },
+  get ParticleboardClient(): typeof particleboardClient.ParticleboardClient {
+    return fetch('./particleboard-client').ParticleboardClient
   },
   get file(): typeof file {
     return fetch('./file')
