@@ -59,6 +59,7 @@ export abstract class Command extends Base {
         const nonExistentFlagsWithValues = {...parsed}
 
         if (nonExistentFlags && nonExistentFlags.length > 0) {
+          this.warn(`Using [${nonExistentFlags}] without a '--' (end of options) preceeding them is deprecated. Please use '--' preceeding the flag(s) meant to be passed-though.`)
           for (const flag of nonExistentFlags) {
             const key = flag.replace('--', '')
             delete parsed[key]
