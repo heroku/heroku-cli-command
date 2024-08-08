@@ -58,9 +58,11 @@ export abstract class Command extends Base {
         const parsed = parser(this.argv)
         const nonExistentFlagsWithValues = {...parsed}
 
-        for (const flag of nonExistentFlags) {
-          const key = flag.replace('--', '')
-          delete parsed[key]
+        if (nonExistentFlags && nonExistentFlags.length > 0) {
+          for (const flag of nonExistentFlags) {
+            const key = flag.replace('--', '')
+            delete parsed[key]
+          }
         }
 
         for (const key in parsed) {
