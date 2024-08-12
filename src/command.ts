@@ -77,29 +77,21 @@ export abstract class Command extends Base {
         result.nonExistentFlags = unparser(nonExistentFlagsWithValues as unparser.Arguments)
 
         for (let index = 0; index < result.nonExistentFlags.length; index++) {
-          console.log('INDEX', index)
           const positionalValue = result.nonExistentFlags[index]
           const doubleHyphenRegex = /^--/
           const positionalValueIsFlag = doubleHyphenRegex.test(positionalValue)
-          // result.argv.push(positionalFlag)
           if (positionalValueIsFlag) {
-            // positionalValue = positionalValue.replace('--', '')
             const nextElement = result.nonExistentFlags[index + 1] ? result.nonExistentFlags[index + 1] : ''
             const nextElementIsFlag = doubleHyphenRegex.test(nextElement)
-            console.log('nextElement', nextElement)
-            console.log('nextElementIsFlag', nextElementIsFlag)
             // eslint-disable-next-line max-depth
             if (nextElement && !nextElementIsFlag) {
               result.argv.push(`${positionalValue}=${nextElement}`)
             } else if (!nextElement || nextElementIsFlag) {
               result.argv.push(`${positionalValue}=${true}`)
             }
-            // result.flags.positionalValue = 'test'
-            // result.argv.push(positionalValue)
           }
         }
 
-        console.log('RESULT', result)
         return result
       }
     }
