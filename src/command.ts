@@ -59,7 +59,7 @@ export abstract class Command extends Base {
         const nonExistentFlagsWithValues = {...parsed}
 
         if (nonExistentFlags && nonExistentFlags.length > 0) {
-          this.warn(`Using [${nonExistentFlags}] without a '--' (end of options) preceeding them is deprecated. Please use '--' preceeding the flag(s) meant to be passed-though.`)
+          this.warn(`You’re using a deprecated syntax with the [${nonExistentFlags}] flag.\nAdd a '--' (end of options) separator before the flags you’re passing through.`)
           for (const flag of nonExistentFlags) {
             const key = flag.replace('--', '')
             delete parsed[key]
@@ -75,6 +75,23 @@ export abstract class Command extends Base {
         this.argv = unparser(parsed as unparser.Arguments)
         const result = await super.parse(options, argv)
         result.nonExistentFlags = unparser(nonExistentFlagsWithValues as unparser.Arguments)
+
+        for (let index = 0; index < result.nonExistentFlags.length; index++) {
+          const positionalValue = result.nonExistentFlags[index]
+          const doubleHyphenRegex = /^--/
+          const positionalValueIsFlag = doubleHyphenRegex.test(positionalValue)
+          if (positionalValueIsFlag) {
+            const nextElement = result.nonExistentFlags[index + 1] ? result.nonExistentFlags[index + 1] : ''
+            const nextElementIsFlag = doubleHyphenRegex.test(nextElement)
+            // eslint-disable-next-line max-depth
+            if (nextElement && !nextElementIsFlag) {
+              result.argv.push(`${positionalValue}=${nextElement}`)
+            } else if (!nextElement || nextElementIsFlag) {
+              result.argv.push(`${positionalValue}=${true}`)
+            }
+          }
+        }
+
         return result
       }
     }
