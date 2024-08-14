@@ -3,7 +3,7 @@ import {deprecate} from 'util'
 
 const pjson = require('../package.json')
 
-import {APIClient} from './api-client'
+import {APIClient, IOptions} from './api-client'
 import deps from './deps'
 
 const deprecatedCLI = deprecate(() => {
@@ -17,7 +17,11 @@ export abstract class Command extends Base {
 
   get heroku(): APIClient {
     if (this._heroku) return this._heroku
-    this._heroku = new deps.APIClient(this.config)
+    const options: IOptions = {
+      debug: process.env.HEROKU_DEBUG === '1' || process.env.HEROKU_DEBUG?.toUpperCase() === 'TRUE',
+      debugHeaders: process.env.HEROKU_DEBUG_HEADERS === '1' || process.env.HEROKU_DEBUG_HEADERS?.toUpperCase() === 'TRUE',
+    }
+    this._heroku = new deps.APIClient(this.config, options)
     return this._heroku
   }
 

@@ -4,7 +4,6 @@ import base, {expect} from 'fancy-test'
 import nock from 'nock'
 import {resolve} from 'path'
 import * as sinon from 'sinon'
-
 import {Command as CommandBase} from '../src/command'
 import {RequestId, requestIdHeader} from '../src/request-id'
 
@@ -20,20 +19,22 @@ netrc.loadSync = function (this: typeof netrc) {
 }
 
 const env = process.env
+const debug = require('debug')
 let api: nock.Scope
-beforeEach(() => {
-  process.env = {}
-  api = nock('https://api.heroku.com')
-})
-afterEach(() => {
-  process.env = env
-  api.done()
-})
-
-const test = base
-  .add('config', new Config({root: resolve(__dirname, '../package.json')}))
+const test = base.add('config', new Config({root: resolve(__dirname, '../package.json')}))
 
 describe('api_client', () => {
+  beforeEach(function () {
+    process.env = {}
+    debug.disable('*')
+    api = nock('https://api.heroku.com')
+  })
+
+  afterEach(function () {
+    process.env = env
+    api.done()
+  })
+
   test
     .it('makes an HTTP request', async ctx => {
       api = nock('https://api.heroku.com', {
@@ -44,7 +45,6 @@ describe('api_client', () => {
       const cmd = new Command([], ctx.config)
       const {body} = await cmd.heroku.get('/apps')
       expect(body).to.deep.equal([{name: 'myapp'}])
-      // expect(netrc.loadSync).toBeCalled()
     })
 
   test
@@ -221,7 +221,7 @@ describe('api_client', () => {
         await cmd.heroku.get('/account')
 
         const stderrOutput = stderr.output.replace(/ *[»›] */g, '').replace(/ *\n */g, ' ')
-        expect(stderrOutput).to.include(`This account is delinquent with payment and we suspended it on ${suspensionTime}. If the account is still delinquent, we'll delete it on ${deletionTime}`)
+        expect(stderrOutput).to.include(`This account is delinquent with payment and we suspended it on ${suspensionTime}. If the account is still delinquent, we‘ll delete it on ${deletionTime}`)
         stderr.stop()
         particleboard.done()
       })
@@ -373,7 +373,7 @@ describe('api_client', () => {
         await cmd.heroku.get('/teams/my_team/members')
 
         const stderrOutput = stderr.output.replace(/ *[»›] */g, '').replace(/ *\n */g, ' ')
-        expect(stderrOutput).to.include(`This team is delinquent with payment and we suspended it on ${suspensionTime}. If the team is still delinquent, we'll delete it on ${deletionTime}`)
+        expect(stderrOutput).to.include(`This team is delinquent with payment and we suspended it on ${suspensionTime}. If the team is still delinquent, we‘ll delete it on ${deletionTime}`)
         stderr.stop()
         particleboard.done()
       })
@@ -454,6 +454,135 @@ describe('api_client', () => {
       expect((await _config).body).to.deep.equal({foo: 'bar'})
       expect((await dynos).body).to.deep.equal({web: 1})
     })
+
+  context('with HEROKU_DEBUG = "1"', function () {
+    context('without HEROKU_DEBUG_HEADERS = "1"', function () {
+      test
+        .it('enables only HTTP debug info', async ctx => {
+          process.env = {
+            HEROKU_DEBUG: '1',
+          }
+          api = nock('https://api.heroku.com', {
+            reqheaders: {authorization: 'Bearer mypass'},
+          })
+          api.get('/apps').reply(200, [{name: 'myapp'}])
+
+          const cmd = new Command([], ctx.config)
+          stderr.start()
+          await cmd.heroku.get('/apps')
+          stderr.stop()
+
+          expect(cmd.heroku.options.debug).to.eq(true)
+          expect(cmd.heroku.options.debugHeaders).to.eq(false)
+          expect(stderr.output).to.contain('http → GET https://api.heroku.com/apps')
+          expect(stderr.output).not.to.contain("http   accept: 'application/vnd.heroku+json; version=3")
+        })
+    })
+
+    context('with HEROKU_DEBUG_HEADERS = "1"', function () {
+      test
+        .it('enables additional HTTP headers debug info', async ctx => {
+          process.env = {
+            HEROKU_DEBUG: '1',
+            HEROKU_DEBUG_HEADERS: '1',
+          }
+          api = nock('https://api.heroku.com', {
+            reqheaders: {authorization: 'Bearer mypass'},
+          })
+          api.get('/apps').reply(200, [{name: 'myapp'}])
+
+          const cmd = new Command([], ctx.config)
+          stderr.start()
+          await cmd.heroku.get('/apps')
+          stderr.stop()
+
+          expect(cmd.heroku.options.debug).to.eq(true)
+          expect(cmd.heroku.options.debugHeaders).to.eq(true)
+          expect(stderr.output).to.contain('http → GET https://api.heroku.com/apps')
+          expect(stderr.output).to.contain("http   accept: 'application/vnd.heroku+json; version=3")
+        })
+    })
+  })
+
+  context('without HEROKU_DEBUG = "1"', function () {
+    context('with HEROKU_DEBUG_HEADERS = "1"', function () {
+      test
+        .it('doesn‘t enable any HTTP debug info', async ctx => {
+          process.env = {
+            HEROKU_DEBUG_HEADERS: '1',
+          }
+          api = nock('https://api.heroku.com', {
+            reqheaders: {authorization: 'Bearer mypass'},
+          })
+          api.get('/apps').reply(200, [{name: 'myapp'}])
+
+          const cmd = new Command([], ctx.config)
+          stderr.start()
+          await cmd.heroku.get('/apps')
+          stderr.stop()
+
+          expect(cmd.heroku.options.debug).to.eq(false)
+          expect(cmd.heroku.options.debugHeaders).to.eq(true)
+          expect(stderr.output).not.to.contain('http → GET https://api.heroku.com/apps')
+          expect(stderr.output).not.to.contain("http   accept: 'application/vnd.heroku+json; version=3")
+        })
+    })
+
+    context('without HEROKU_DEBUG_HEADERS = "1"', function () {
+      test
+        .it('doesn‘t enable any HTTP debug info', async ctx => {
+          api = nock('https://api.heroku.com', {
+            reqheaders: {authorization: 'Bearer mypass'},
+          })
+          api.get('/apps').reply(200, [{name: 'myapp'}])
+
+          const cmd = new Command([], ctx.config)
+          stderr.start()
+          await cmd.heroku.get('/apps')
+          stderr.stop()
+
+          expect(cmd.heroku.options.debug).to.eq(false)
+          expect(cmd.heroku.options.debugHeaders).to.eq(false)
+          expect(stderr.output).not.to.contain('http → GET https://api.heroku.com/apps')
+          expect(stderr.output).not.to.contain("http   accept: 'application/vnd.heroku+json; version=3")
+        })
+    })
+  })
+
+  context('with X-Heroku-Warning header set on response', function () {
+    test
+      .it('shows warnings', async ctx => {
+        api = nock('https://api.heroku.com', {
+          reqheaders: {authorization: 'Bearer mypass'},
+        })
+        api.get('/apps').reply(200, [], {'X-Heroku-Warning': ['warning message 1', 'warning message 2']})
+
+        const cmd = new Command([], ctx.config)
+        stderr.start()
+        await cmd.heroku.get('/apps')
+        stderr.stop()
+
+        expect(stderr.output).to.contain('warning message 1')
+        expect(stderr.output).to.contain('warning message 2')
+      })
+  })
+
+  context('with Warning-Message header set on response', function () {
+    test
+      .it('shows warnings', async ctx => {
+        api = nock('https://api.heroku.com', {
+          reqheaders: {authorization: 'Bearer mypass'},
+        })
+        api.get('/apps').reply(200, [], {'Warning-Message': 'warning message 1'})
+
+        const cmd = new Command([], ctx.config)
+        stderr.start()
+        await cmd.heroku.get('/apps')
+        stderr.stop()
+
+        expect(stderr.output).to.contain('warning message 1')
+      })
+  })
 
   context('request ids', function () {
     let generateStub: any
