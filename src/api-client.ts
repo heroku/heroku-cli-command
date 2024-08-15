@@ -120,9 +120,9 @@ export class APIClient {
       static showWarnings<T>(response: HTTP<T>) {
         const warnings = response.headers['x-heroku-warning'] || response.headers['warning-message']
         if (Array.isArray(warnings))
-          warnings.forEach(warning => warn(warning))
+          warnings.forEach(warning => warn(`${warning}\n`))
         else if (typeof warnings === 'string')
-          warn(warnings)
+          warn(`${warnings}\n`)
       }
 
       static configDelinquency(url: string, opts: APIClient.Options): void {
