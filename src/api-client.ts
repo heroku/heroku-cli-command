@@ -11,6 +11,8 @@ import {RequestId, requestIdHeader} from './request-id'
 import {vars} from './vars'
 import {ParticleboardClient, IDelinquencyInfo, IDelinquencyConfig} from './particleboard-client'
 
+const debug = require('debug')
+
 export namespace APIClient {
   export interface Options extends HTTPRequestOptions {
     retryAuth?: boolean
@@ -20,6 +22,8 @@ export namespace APIClient {
 export interface IOptions {
   required?: boolean
   preauth?: boolean
+  debug?: boolean
+  debugHeaders?: boolean
 }
 
 export interface IHerokuAPIErrorOptions {
@@ -63,6 +67,8 @@ export class APIClient {
 
     if (options.required === undefined) options.required = true
     options.preauth = options.preauth !== false
+    if (options.debug) debug.enable('http')
+    if (options.debug && options.debugHeaders) debug.enable('http,http:headers')
     this.options = options
     const apiUrl = url.URL ? new url.URL(vars.apiUrl) : url.parse(vars.apiUrl)
     const envHeaders = JSON.parse(process.env.HEROKU_HEADERS || '{}')
@@ -111,6 +117,14 @@ export class APIClient {
         }
       }
 
+      static showWarnings<T>(response: HTTP<T>) {
+        const warnings = response.headers['x-heroku-warning'] || response.headers['warning-message']
+        if (Array.isArray(warnings))
+          warnings.forEach(warning => warn(`${warning}\n`))
+        else if (typeof warnings === 'string')
+          warn(`${warnings}\n`)
+      }
+
       static configDelinquency(url: string, opts: APIClient.Options): void {
         if (opts.method?.toUpperCase() !== 'GET' || (opts.hostname && opts.hostname !== apiUrl.hostname)) {
           delinquencyConfig.fetch_delinquency = false
@@ -153,7 +167,7 @@ export class APIClient {
           }
 
           if (deletion)
-            warn(`This ${resource} is delinquent with payment and we suspended it on ${new Date(suspension)}. If the ${resource} is still delinquent, we'll delete it on ${new Date(deletion)}.`)
+            warn(`This ${resource} is delinquent with payment and we suspended it on ${new Date(suspension)}. If the ${resource} is still delinquent, we‘ll delete it on ${new Date(deletion)}.`)
         } else if (deletion)
           warn(`This ${resource} is delinquent with payment and we‘ll delete it on ${new Date(deletion)}.`)
 
@@ -201,6 +215,7 @@ export class APIClient {
           this.notifyDelinquency(delinquencyInfo)
 
           this.trackRequestIds<T>(response)
+          this.showWarnings<T>(response)
           return response
         } catch (error) {
           if (!(error instanceof deps.HTTP.HTTPError)) throw error
