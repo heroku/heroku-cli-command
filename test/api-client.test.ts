@@ -474,8 +474,8 @@ describe('api_client', () => {
 
           expect(cmd.heroku.options.debug).to.eq(true)
           expect(cmd.heroku.options.debugHeaders).to.eq(false)
-          expect(stderr.output).to.contain('http → GET https://api.heroku.com/apps')
-          expect(stderr.output).not.to.contain("http   accept: 'application/vnd.heroku+json; version=3")
+          expect(stderr.output).to.contain('GET https://api.heroku.com/apps')
+          expect(stderr.output).not.to.contain("accept: 'application/vnd.heroku+json; version=3")
         })
     })
 
@@ -498,8 +498,8 @@ describe('api_client', () => {
 
           expect(cmd.heroku.options.debug).to.eq(true)
           expect(cmd.heroku.options.debugHeaders).to.eq(true)
-          expect(stderr.output).to.contain('http → GET https://api.heroku.com/apps')
-          expect(stderr.output).to.contain("http   accept: 'application/vnd.heroku+json; version=3")
+          expect(stderr.output).to.contain('GET https://api.heroku.com/apps')
+          expect(stderr.output).to.contain("accept: 'application/vnd.heroku+json; version=3")
         })
     })
   })
@@ -523,8 +523,8 @@ describe('api_client', () => {
 
           expect(cmd.heroku.options.debug).to.eq(false)
           expect(cmd.heroku.options.debugHeaders).to.eq(true)
-          expect(stderr.output).not.to.contain('http → GET https://api.heroku.com/apps')
-          expect(stderr.output).not.to.contain("http   accept: 'application/vnd.heroku+json; version=3")
+          expect(stderr.output).not.to.contain('GET https://api.heroku.com/apps')
+          expect(stderr.output).not.to.contain("accept: 'application/vnd.heroku+json; version=3")
         })
     })
 
@@ -543,8 +543,8 @@ describe('api_client', () => {
 
           expect(cmd.heroku.options.debug).to.eq(false)
           expect(cmd.heroku.options.debugHeaders).to.eq(false)
-          expect(stderr.output).not.to.contain('http → GET https://api.heroku.com/apps')
-          expect(stderr.output).not.to.contain("http   accept: 'application/vnd.heroku+json; version=3")
+          expect(stderr.output).not.to.contain('GET https://api.heroku.com/apps')
+          expect(stderr.output).not.to.contain("accept: 'application/vnd.heroku+json; version=3")
         })
     })
   })
