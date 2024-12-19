@@ -1,5 +1,5 @@
 import {Interfaces} from '@oclif/core'
-import {HTTP, HTTPRequestOptions} from 'http-call'
+import {HTTP, HTTPRequestOptions} from '@heroku/http-call'
 import * as url from 'url'
 
 import deps from './deps'

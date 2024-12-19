@@ -1,7 +1,7 @@
 import color from '@heroku-cli/color'
 import * as Heroku from '@heroku-cli/schema'
 import {Interfaces, ux} from '@oclif/core'
-import HTTP from 'http-call'
+import HTTP from '@heroku/http-call'
 import Netrc from 'netrc-parser'
 import open from 'open'
 import * as os from 'os'
