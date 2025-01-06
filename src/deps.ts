@@ -1,6 +1,6 @@
 // remote
 import oclif = require('@oclif/core')
-import HTTP = require('http-call')
+import HTTP = require('@heroku/http-call')
 import netrc = require('netrc-parser')
 
 import apiClient = require('./api-client')
