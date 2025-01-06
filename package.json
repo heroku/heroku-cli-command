@@ -1,12 +1,12 @@
 {
   "name": "@heroku-cli/command",
   "description": "base class for Heroku CLI commands",
-  "version": "11.3.2",
+  "version": "11.4.0",
   "author": "Heroku",
   "bugs": "https://github.com/heroku/heroku-cli-command/issues",
   "dependencies": {
-    "@heroku/http-call": "^5.4.0",
     "@heroku-cli/color": "^2.0.1",
+    "@heroku/http-call": "^5.4.0",
     "@oclif/core": "^2.16.0",
     "cli-ux": "^6.0.9",
     "debug": "^4.4.0",
