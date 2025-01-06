@@ -19,7 +19,7 @@ export const deps = {
     return fetch('@oclif/core').ux
   },
   get HTTP(): typeof HTTP {
-    return fetch('http-call')
+    return fetch('@heroku/http-call')
   },
   get netrc(): typeof netrc.default {
     return fetch('netrc-parser').default
