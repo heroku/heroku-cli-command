@@ -174,9 +174,21 @@ export class APIClient {
         delinquencyConfig.warning_shown = true
       }
 
+      // eslint-disable-next-line complexity
       static async request<T>(url: string, opts: APIClient.Options = {}, retries = 3): Promise<APIHTTPClient<T>> {
         opts.headers = opts.headers || {}
-        opts.headers[requestIdHeader] = RequestId.create() && RequestId.headerValue
+        const currentRequestId = RequestId.create() && RequestId.headerValue
+
+        // Accumulation of requestIds in the header
+        // causes a header overflow error. These have been
+        // observed to be larger than 8k (Node default max)
+        // in long running poll operations such as pg:wait
+        if (Buffer.from(currentRequestId).byteLength > 1024 * 8) {
+          RequestId.empty()
+          opts.headers[requestIdHeader] = RequestId.create()
+        } else {
+          opts.headers[requestIdHeader] = currentRequestId
+        }
 
         if (!Object.keys(opts.headers).some(h => h.toLowerCase() === 'authorization')) {
           opts.headers.authorization = `Bearer ${self.auth}`
