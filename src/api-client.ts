@@ -176,7 +176,20 @@ export class APIClient {
 
       static async request<T>(url: string, opts: APIClient.Options = {}, retries = 3): Promise<APIHTTPClient<T>> {
         opts.headers = opts.headers || {}
-        opts.headers[requestIdHeader] = RequestId.create() && RequestId.headerValue
+        const currentRequestId = RequestId.create() && RequestId.headerValue
+
+        // Accumulation of requestIds in the header
+        // causes a header overflow error. Headers have been
+        // observed to be larger than 8k (Node default max)
+        // in long running poll operations such as pg:wait
+        // We limit the Request-Id header to 7k to allow some
+        // room fo other headers.
+        if (Buffer.from(currentRequestId).byteLength > 1024 * 7) {
+          RequestId.empty()
+          opts.headers[requestIdHeader] = RequestId.create()
+        } else {
+          opts.headers[requestIdHeader] = currentRequestId
+        }
 
         if (!Object.keys(opts.headers).some(h => h.toLowerCase() === 'authorization')) {
           opts.headers.authorization = `Bearer ${self.auth}`

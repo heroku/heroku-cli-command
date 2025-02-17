@@ -635,5 +635,32 @@ describe('api_client', () => {
 
         expect(secondRequest.getHeader(requestIdHeader)).to.deep.equal('second-random-uuid,first-existing-request-id,second-existing-request-id,random-uuid')
       })
+
+    test
+      .it('resets request id when it exceeds 7KB', async ctx => {
+        const cmd = new Command([], ctx.config)
+        // Create a large request ID that exceeds 7KB
+        const largeRequestId = 'x'.repeat(1024 * 8)
+        Reflect.set(RequestId, 'ids', [largeRequestId])
+
+        generateStub.returns('new-uuid-after-reset')
+        api = nock('https://api.heroku.com').get('/apps').reply(200, [{name: 'myapp'}])
+
+        const {request} = await cmd.heroku.get('/apps')
+        expect(request.getHeader(requestIdHeader)).to.deep.equal(['new-uuid-after-reset'])
+      })
+
+    test
+      .it('keeps existing request id when under 7KB', async ctx => {
+        const cmd = new Command([], ctx.config)
+        // Create a request ID that's under 7KB
+        const normalRequestId = 'normal-request-id'
+        Reflect.set(RequestId, 'ids', [normalRequestId])
+
+        api = nock('https://api.heroku.com').get('/apps').reply(200, [{name: 'myapp'}])
+
+        const {request} = await cmd.heroku.get('/apps')
+        expect(request.getHeader(requestIdHeader)).to.deep.equal(',normal-request-id')
+      })
   })
 })
