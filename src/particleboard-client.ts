@@ -39,7 +39,8 @@ export class ParticleboardClient {
     }
     this.http = class ParticleboardHTTPClient<T> extends deps.HTTP.HTTP.create(particleboardOpts)<T> {
       static trackRequestIds<T>(response: HTTP<T>) {
-        const responseRequestIdHeader = response.headers[requestIdHeader]
+        const responseRequestIdHeader = response.headers[requestIdHeader] || response.headers[requestIdHeader.toLocaleLowerCase()]
+
         if (responseRequestIdHeader) {
           const requestIds = Array.isArray(responseRequestIdHeader) ? responseRequestIdHeader : responseRequestIdHeader.split(',')
           RequestId.track(...requestIds)

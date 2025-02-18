@@ -625,7 +625,10 @@ describe('api_client', () => {
       .it('tracks response request ids for subsequent request ids', async ctx => {
         const cmd = new Command([], ctx.config)
         const existingRequestIds = ['first-existing-request-id', 'second-existing-request-id'].join(',')
-        api = nock('https://api.heroku.com').get('/apps').twice().reply(() => [200, JSON.stringify({name: 'myapp'}), {[requestIdHeader]: existingRequestIds}])
+        api = nock('https://api.heroku.com')
+          .get('/apps')
+          .twice()
+          .reply(() => [200, JSON.stringify({name: 'myapp'}), {[requestIdHeader]: existingRequestIds}])
 
         generateStub.returns('random-uuid')
         await cmd.heroku.get('/apps')
