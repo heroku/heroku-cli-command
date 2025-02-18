@@ -80,7 +80,7 @@
     "lint": "tsc -p test --noEmit && eslint . --ext .ts",
     "posttest": "yarn run lint",
     "prepublishOnly": "yarn run build",
-    "test": "mocha \"test/**/*.test.ts\""
+    "test": "mocha --forbid-only \"test/**/*.test.ts\""
   },
   "types": "./lib/index.d.ts"
 }
