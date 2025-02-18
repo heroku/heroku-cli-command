@@ -21,7 +21,7 @@
   "devDependencies": {
     "@heroku-cli/schema": "^1.0.25",
     "@types/ansi-styles": "^3.2.1",
-    "@types/chai": "^4.3.16",
+    "@types/chai": "^5.0.1",
     "@types/fs-extra": "^9.0.13",
     "@types/mocha": "^10.0.6",
     "@types/node": "20.14.8",
@@ -33,7 +33,7 @@
     "@types/yargs-unparser": "^2.0.3",
     "@typescript-eslint/eslint-plugin": "6.21.0",
     "@typescript-eslint/parser": "6.21.0",
-    "chai": "^4.4.1",
+    "chai": "^5.2.0",
     "eslint": "^7.32.0",
     "eslint-config-oclif": "^4.0.0",
     "eslint-config-oclif-typescript": "^1.0.3",
