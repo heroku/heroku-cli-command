@@ -800,10 +800,12 @@
   resolved "https://registry.npmjs.org/@types/sinonjs__fake-timers/-/sinonjs__fake-timers-6.0.1.tgz"
   integrity sha512-yYezQwGWty8ziyYLdZjwxyMb0CZR49h8JALHGrxjQHWlqGgc8kLdHEgWrgL0uZ29DMvEVBDnHU2Wg36zKSIUtA==
 
-"@types/supports-color@^5.3.0":
-  version "5.3.0"
-  resolved "https://registry.npmjs.org/@types/supports-color/-/supports-color-5.3.0.tgz"
-  integrity sha512-WxwTXnHTIsk7srax1icjLgX+6w1MUAJbhyCpRP/45paEElsPDQUJZDgr1UpKuL2S3Tb+ZyX9MjWwmcSD4bUoOQ==
+"@types/supports-color@^10.0.0":
+  version "10.0.0"
+  resolved "https://registry.yarnpkg.com/@types/supports-color/-/supports-color-10.0.0.tgz#dc1f3aa42646db9663f446184082d4da8ee28672"
+  integrity sha512-Kpp/hhA8/pcxqBBKmOCIgvwCOJAI5y6TWTHhhqnB6KmuYlKtixKgN/Z7VzhShdgONe2jYREnTQbsrb3E0nt/OQ==
+  dependencies:
+    supports-color "*"
 
 "@types/uuid@^8.3.0":
   version "8.3.0"
@@ -4875,6 +4877,11 @@ stubborn-fs@^1.2.5:
   version "1.2.5"
   resolved "https://registry.yarnpkg.com/stubborn-fs/-/stubborn-fs-1.2.5.tgz#e5e244223166921ddf66ed5e062b6b3bf285bfd2"
   integrity sha512-H2N9c26eXjzL/S/K+i/RHHcFanE74dptvvjM8iwzwbVcWY/zjBbgRqF3K0DY4+OD+uTTASTBvDoxPDaPN02D7g==
+
+supports-color@*:
+  version "10.0.0"
+  resolved "https://registry.yarnpkg.com/supports-color/-/supports-color-10.0.0.tgz#32000d5e49f1ae70b2645d47701004644a1d7b90"
+  integrity sha512-HRVVSbCCMbj7/kdWF9Q+bbckjBHLtHMEoJWlkmYzzdwhYMkjkOwubLM6t7NbWKjgKamGDrWL1++KrjUO1t9oAQ==
 
 supports-color@^2.0.0:
   version "2.0.0"
