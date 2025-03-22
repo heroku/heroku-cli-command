@@ -1,7 +1,6 @@
 import {Interfaces} from '@oclif/core'
 import {CLIError, warn} from '@oclif/core/lib/errors'
 import {HTTP, HTTPError, HTTPRequestOptions} from '@heroku/http-call'
-import Netrc from 'netrc-parser'
 import * as url from 'url'
 
 import deps from './deps'
@@ -11,7 +10,11 @@ import {RequestId, requestIdHeader} from './request-id'
 import {vars} from './vars'
 import {ParticleboardClient, IDelinquencyInfo, IDelinquencyConfig} from './particleboard-client'
 
-const debug = require('debug')
+import debug from 'debug'
+import {removeToken, retrieveToken} from './token-storage'
+
+// intentional side effect
+import '../scripts/cleanup-netrc.cjs'
 
 export namespace APIClient {
   export interface Options extends HTTPRequestOptions {
@@ -192,7 +195,7 @@ export class APIClient {
         }
 
         if (!Object.keys(opts.headers).some(h => h.toLowerCase() === 'authorization')) {
-          opts.headers.authorization = `Bearer ${self.auth}`
+          opts.headers.authorization = `Bearer ${await self.auth}`
         }
 
         this.configDelinquency(url, opts)
@@ -204,7 +207,7 @@ export class APIClient {
           const particleboardClient: ParticleboardClient = self.particleboard
 
           if (delinquencyConfig.fetch_delinquency && !delinquencyConfig.warning_shown) {
-            self._particleboard.auth = self.auth
+            self._particleboard.auth = await self.auth
             const settledResponses = await Promise.allSettled([
               super.request<T>(url, opts),
               particleboardClient.get<IDelinquencyInfo>(delinquencyConfig.fetch_url as string),
@@ -240,7 +243,7 @@ export class APIClient {
 
               if (!self.authPromise) self.authPromise = self.login()
               await self.authPromise
-              opts.headers.authorization = `Bearer ${self.auth}`
+              opts.headers.authorization = `Bearer ${await self.auth}`
               return this.request<T>(url, opts, retries)
             }
 
@@ -273,9 +276,13 @@ export class APIClient {
     if (!this._auth) {
       if (process.env.HEROKU_API_TOKEN && !process.env.HEROKU_API_KEY) deps.cli.warn('HEROKU_API_TOKEN is set but you probably meant HEROKU_API_KEY')
       this._auth = process.env.HEROKU_API_KEY
-      if (!this._auth) {
-        deps.netrc.loadSync()
-        this._auth = deps.netrc.machines[vars.apiHost] && deps.netrc.machines[vars.apiHost].password
+    }
+
+    if (!this._auth) {
+      try {
+        this._auth = retrieveToken()
+      } catch {
+        // noop
       }
     }
 
@@ -346,9 +353,7 @@ export class APIClient {
       if (error instanceof CLIError) warn(error)
     }
 
-    delete Netrc.machines['api.heroku.com']
-    delete Netrc.machines['git.heroku.com']
-    await Netrc.save()
+    removeToken()
   }
 
   get defaults(): typeof HTTP.defaults {

@@ -11,13 +11,6 @@ class Command extends CommandBase {
   async run() {}
 }
 
-const netrc = require('netrc-parser').default
-netrc.loadSync = function (this: typeof netrc) {
-  netrc.machines = {
-    'api.heroku.com': {password: 'mypass'},
-  }
-}
-
 const env = process.env
 const debug = require('debug')
 let api: nock.Scope
@@ -25,7 +18,7 @@ const test = base.add('config', new Config({root: resolve(__dirname, '../package
 
 describe('api_client', () => {
   beforeEach(function () {
-    process.env = {}
+    process.env = {HEROKU_API_KEY: 'mypass'}
     debug.disable('*')
     api = nock('https://api.heroku.com')
   })
@@ -37,6 +30,7 @@ describe('api_client', () => {
 
   test
     .it('makes an HTTP request', async ctx => {
+      process.env = {HEROKU_API_KEY: 'mypass'}
       api = nock('https://api.heroku.com', {
         reqheaders: {authorization: 'Bearer mypass'},
       })
@@ -113,6 +107,7 @@ describe('api_client', () => {
   describe('request for Account Info endpoint', () => {
     test
       .it('sends requests to Platform API and Particleboard', async ctx => {
+        process.env = {HEROKU_API_KEY: 'mypass'}
         api = nock('https://api.heroku.com', {
           reqheaders: {authorization: 'Bearer mypass'},
         })
@@ -130,6 +125,7 @@ describe('api_client', () => {
 
     test
       .it('doesn‘t fail or show delinquency warnings if Particleboard request fails', async ctx => {
+        process.env = {HEROKU_API_KEY: 'mypass'}
         api = nock('https://api.heroku.com', {
           reqheaders: {authorization: 'Bearer mypass'},
         })
@@ -151,6 +147,7 @@ describe('api_client', () => {
 
     test
       .it('doesn‘t show delinquency warnings if account isn‘t delinquent', async ctx => {
+        process.env = {HEROKU_API_KEY: 'mypass'}
         api = nock('https://api.heroku.com', {
           reqheaders: {authorization: 'Bearer mypass'},
         })
@@ -174,6 +171,7 @@ describe('api_client', () => {
 
     test
       .it('shows a delinquency warning with suspension date if account is delinquent and suspension is in the future', async ctx => {
+        process.env = {HEROKU_API_KEY: 'mypass'}
         api = nock('https://api.heroku.com', {
           reqheaders: {authorization: 'Bearer mypass'},
         })
@@ -201,6 +199,7 @@ describe('api_client', () => {
 
     test
       .it('shows a delinquency warning with deletion date if account is delinquent and suspension is in the past', async ctx => {
+        process.env = {HEROKU_API_KEY: 'mypass'}
         api = nock('https://api.heroku.com', {
           reqheaders: {authorization: 'Bearer mypass'},
         })
@@ -228,6 +227,7 @@ describe('api_client', () => {
 
     test
       .it('it doesn‘t send a Particleboard request or show duplicated delinquency warnings with multiple matching requests when delinquent', async ctx => {
+        process.env = {HEROKU_API_KEY: 'mypass'}
         api = nock('https://api.heroku.com', {
           reqheaders: {authorization: 'Bearer mypass'},
         })
@@ -264,6 +264,7 @@ describe('api_client', () => {
   describe('team namespaced requests', () => {
     test
       .it('sends requests to Platform API and Particleboard', async ctx => {
+        process.env = {HEROKU_API_KEY: 'mypass'}
         api = nock('https://api.heroku.com', {
           reqheaders: {authorization: 'Bearer mypass'},
         })
@@ -282,6 +283,7 @@ describe('api_client', () => {
 
     test
       .it('doesn‘t fail or show delinquency warnings if Particleboard request fails', async ctx => {
+        process.env = {HEROKU_API_KEY: 'mypass'}
         api = nock('https://api.heroku.com', {
           reqheaders: {authorization: 'Bearer mypass'},
         })
@@ -303,6 +305,7 @@ describe('api_client', () => {
 
     test
       .it('doesn‘t show delinquency warnings if team isn‘t delinquent', async ctx => {
+        process.env = {HEROKU_API_KEY: 'mypass'}
         api = nock('https://api.heroku.com', {
           reqheaders: {authorization: 'Bearer mypass'},
         })
@@ -326,6 +329,7 @@ describe('api_client', () => {
 
     test
       .it('shows a delinquency warning with suspension date if team is delinquent and suspension is in the future', async ctx => {
+        process.env = {HEROKU_API_KEY: 'mypass'}
         api = nock('https://api.heroku.com', {
           reqheaders: {authorization: 'Bearer mypass'},
         })
@@ -353,6 +357,7 @@ describe('api_client', () => {
 
     test
       .it('shows a delinquency warning with deletion date if team is delinquent and suspension is in the past', async ctx => {
+        process.env = {HEROKU_API_KEY: 'mypass'}
         api = nock('https://api.heroku.com', {
           reqheaders: {authorization: 'Bearer mypass'},
         })
@@ -380,6 +385,7 @@ describe('api_client', () => {
 
     test
       .it('it doesn‘t send a Particleboard request or show duplicated delinquency warnings with multiple matching requests when delinquent', async ctx => {
+        process.env = {HEROKU_API_KEY: 'mypass'}
         api = nock('https://api.heroku.com', {
           reqheaders: {authorization: 'Bearer mypass'},
         })
@@ -461,6 +467,7 @@ describe('api_client', () => {
         .it('enables only HTTP debug info', async ctx => {
           process.env = {
             HEROKU_DEBUG: '1',
+            HEROKU_API_KEY: 'mypass',
           }
           api = nock('https://api.heroku.com', {
             reqheaders: {authorization: 'Bearer mypass'},
@@ -485,6 +492,7 @@ describe('api_client', () => {
           process.env = {
             HEROKU_DEBUG: '1',
             HEROKU_DEBUG_HEADERS: '1',
+            HEROKU_API_KEY: 'mypass',
           }
           api = nock('https://api.heroku.com', {
             reqheaders: {authorization: 'Bearer mypass'},
@@ -510,6 +518,7 @@ describe('api_client', () => {
         .it('doesn‘t enable any HTTP debug info', async ctx => {
           process.env = {
             HEROKU_DEBUG_HEADERS: '1',
+            HEROKU_API_KEY: 'mypass',
           }
           api = nock('https://api.heroku.com', {
             reqheaders: {authorization: 'Bearer mypass'},
@@ -531,6 +540,7 @@ describe('api_client', () => {
     context('without HEROKU_DEBUG_HEADERS = "1"', function () {
       test
         .it('doesn‘t enable any HTTP debug info', async ctx => {
+          process.env = {HEROKU_API_KEY: 'mypass'}
           api = nock('https://api.heroku.com', {
             reqheaders: {authorization: 'Bearer mypass'},
           })

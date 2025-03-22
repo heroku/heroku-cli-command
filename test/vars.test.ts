@@ -10,12 +10,6 @@ afterEach(() => {
   process.env = env
 })
 
-// jest.mock('netrc-parser', () => {
-//   return class {
-//     machines = {'api.heroku.com': {password: 'mypass'}}
-//   }
-// })
-
 describe('vars', () => {
   it('sets vars by default', () => {
     expect(vars.host).to.equal('heroku.com')
