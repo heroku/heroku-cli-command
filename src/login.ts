@@ -2,14 +2,19 @@ import color from '@heroku-cli/color'
 import * as Heroku from '@heroku-cli/schema'
 import {Interfaces, ux} from '@oclif/core'
 import HTTP from '@heroku/http-call'
-import Netrc from 'netrc-parser'
+
 import open from 'open'
 import * as os from 'os'
+import crypto from 'crypto'
 
 import {APIClient, HerokuAPIError} from './api-client'
 import {vars} from './vars'
 
-const debug = require('debug')('heroku-cli-command')
+import debugFunc from 'debug'
+import {ClientConfig, ConfigEntry, getConfigContents, writeConfigContents} from './file-encryption'
+import {retrieveToken, storeToken} from './token-storage'
+const debug = debugFunc('heroku-cli-command')
+
 const hostname = os.hostname()
 const thirtyDays = 60 * 60 * 24 * 30
 
@@ -21,7 +26,7 @@ export namespace Login {
   }
 }
 
-interface NetrcEntry {
+interface AuthResult {
   login: string
   password: string
 }
@@ -44,8 +49,6 @@ export class Login {
       if (process.env.HEROKU_API_KEY) ux.error('Cannot log in with HEROKU_API_KEY set')
       if (opts.expiresIn && opts.expiresIn > thirtyDays) ux.error('Cannot set an expiration longer than thirty days')
 
-      await Netrc.load()
-      const previousEntry = Netrc.machines['api.heroku.com']
       let input: string | undefined = opts.method
       if (!input) {
         if (opts.expiresIn) {
@@ -59,8 +62,12 @@ export class Login {
         }
       }
 
+      let previousEntry: ConfigEntry | undefined
       try {
-        if (previousEntry && previousEntry.password) await this.logout(previousEntry.password)
+        const token = retrieveToken()
+        const clientConfig = await getConfigContents(token)
+        previousEntry = clientConfig['api.heroku.com']
+        if (previousEntry?.token) await this.logout(previousEntry.token)
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
         ux.warn(message)
@@ -74,7 +81,7 @@ export class Login {
         break
       case 'i':
       case 'interactive':
-        auth = await this.interactive(previousEntry && previousEntry.login, opts.expiresIn)
+        auth = await this.interactive(previousEntry?.username, opts.expiresIn)
         break
       case 's':
       case 'sso':
@@ -92,7 +99,8 @@ export class Login {
     }
   }
 
-  async logout(token = this.heroku.auth) {
+  async logout(token?: string): Promise<void> {
+    if (!token) token = this.heroku.auth
     if (!token) return debug('no credentials to logout')
     const requests: Promise<any>[] = []
     // for SSO logins we delete the session since those do not show up in
@@ -120,7 +128,7 @@ export class Login {
       // dashboard as API Key and they may be using it for something else and we
       // would unwittingly break an integration that they are depending on
         const d = await this.defaultToken()
-        if (d === token) return
+        if (crypto.timingSafeEqual(Buffer.from(token), Buffer.from(d!))) return
         return Promise.all(
           authorizations
             .filter(a => a.access_token && a.access_token.token === this.heroku.auth)
@@ -139,7 +147,7 @@ export class Login {
     await Promise.all(requests)
   }
 
-  private async browser(browser?: string): Promise<NetrcEntry> {
+  private async browser(browser?: string): Promise<AuthResult> {
     const {body: urls} = await HTTP.post<{browser_url: string, cli_url: string, token: string}>(`${this.loginHost}/auth`, {
       body: {description: `Heroku CLI login from ${hostname}`},
     })
@@ -186,7 +194,7 @@ export class Login {
     }
   }
 
-  private async interactive(login?: string, expiresIn?: number): Promise<NetrcEntry> {
+  private async interactive(login?: string, expiresIn?: number): Promise<AuthResult> {
     process.stderr.write('heroku: Enter your login credentials\n')
     login = await ux.prompt('Email', {default: login})
     const password = await ux.prompt('Password', {type: 'hide'})
@@ -212,7 +220,7 @@ export class Login {
     return auth
   }
 
-  private async createOAuthToken(username: string, password: string, opts: {expiresIn?: number, secondFactor?: string} = {}): Promise<NetrcEntry> {
+  private async createOAuthToken(username: string, password: string, opts: {expiresIn?: number, secondFactor?: string} = {}): Promise<AuthResult> {
     function basicAuth(username: string, password: string) {
       let auth = [username, password].join(':')
       auth = Buffer.from(auth).toString('base64')
@@ -237,30 +245,32 @@ export class Login {
     return {password: auth.access_token!.token!, login: auth.user!.email!}
   }
 
-  private async saveToken(entry: NetrcEntry) {
-    const hosts = [vars.apiHost, vars.httpGitHost]
-    hosts.forEach(host => {
-      if (!Netrc.machines[host]) Netrc.machines[host] = {}
-      Netrc.machines[host].login = entry.login
-      Netrc.machines[host].password = entry.password
-      delete Netrc.machines[host].method
-      delete Netrc.machines[host].org
-    })
-
-    if (Netrc.machines._tokens) {
-      (Netrc.machines._tokens as any).forEach((token: any) => {
-        if (hosts.includes(token.host)) {
-          token.internalWhitespace = '\n  '
-        }
-      })
+  private async saveToken(entry: AuthResult) {
+    let config: ClientConfig
+    try {
+      config = await getConfigContents(entry.password)
+    } catch {
+      config = {} as ClientConfig
     }
 
-    await Netrc.save()
+    const hosts = [vars.apiHost, vars.httpGitHost]
+    hosts.forEach(host => {
+      if (!config[host]) config[host] = {} as ConfigEntry
+      config[host].username = entry.login
+      config[host].token = entry.password
+    })
+    try {
+      await writeConfigContents(config, entry.password)
+      await storeToken(entry.password)
+    } catch (error: any) {
+      ux.warn(error)
+    }
   }
 
   private async defaultToken(): Promise<string | undefined> {
+    const auth = this.heroku.auth
     try {
-      const {body: authorization} = await HTTP.get<Heroku.OAuthAuthorization>(`${vars.apiUrl}/oauth/authorizations/~`, headers(this.heroku.auth!))
+      const {body: authorization} = await HTTP.get<Heroku.OAuthAuthorization>(`${vars.apiUrl}/oauth/authorizations/~`, headers(auth!))
       return authorization.access_token && authorization.access_token.token
     } catch (error: any) {
       if (!error.http) throw error
@@ -270,7 +280,7 @@ export class Login {
     }
   }
 
-  private async sso(): Promise<NetrcEntry> {
+  private async sso(): Promise<AuthResult> {
     let url = process.env.SSO_URL
     let org = process.env.HEROKU_ORGANIZATION
     if (!url) {
