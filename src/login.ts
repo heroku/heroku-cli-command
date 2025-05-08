@@ -5,6 +5,7 @@ import HTTP from '@heroku/http-call'
 import Netrc from 'netrc-parser'
 import open from 'open'
 import * as os from 'os'
+import inquirer from 'inquirer'
 
 import {APIClient, HerokuAPIError} from './api-client'
 import {vars} from './vars'
@@ -54,7 +55,18 @@ export class Login {
         } else if (process.env.HEROKU_LEGACY_SSO === '1') {
           input = 'sso'
         } else {
-          await ux.anykey(`heroku: Press any key to open up the browser to login or ${color.yellow('q')} to exit`)
+          await inquirer.prompt([{
+            type: 'input',
+            name: 'action',
+            message: `heroku: Press any key to open up the browser to login or ${color.yellow('q')} to exit`,
+            validate: (input: string) => {
+              if (input.toLowerCase() === 'q') {
+                throw new Error('Login cancelled by user')
+              }
+
+              return true
+            },
+          }])
           input = 'browser'
         }
       }
@@ -282,7 +294,7 @@ export class Login {
     debug(`opening browser to ${url}`)
     process.stderr.write(`Opening browser to:\n${url}\n`)
     process.stderr.write(color.gray(
-      'If the browser fails to open or you’re authenticating on a ' +
+      'If the browser fails to open or you\'re authenticating on a ' +
       'remote machine, please manually open the URL above in your ' +
       'browser.\n',
     ))

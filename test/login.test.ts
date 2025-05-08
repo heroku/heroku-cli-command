@@ -2,6 +2,8 @@ import {Config} from '@oclif/core'
 import base, {expect} from 'fancy-test'
 import nock from 'nock'
 import {resolve} from 'path'
+import * as sinon from 'sinon'
+import Netrc from 'netrc-parser'
 
 import {Command as CommandBase} from '../src/command'
 
@@ -15,6 +17,14 @@ beforeEach(() => {
   api.delete('/oauth/sessions/~').reply(200, {})
   api.get('/oauth/authorizations').reply(200, [])
   api.get('/oauth/authorizations/~').reply(200, {})
+
+  // Mock netrc-parser
+  sinon.stub(Netrc, 'load').resolves()
+  sinon.stub(Netrc, 'save').resolves()
+})
+
+afterEach(() => {
+  sinon.restore()
 })
 
 const test = base
