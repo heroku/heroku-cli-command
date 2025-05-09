@@ -159,7 +159,7 @@ export class Login {
       urlDisplayed = true
     }
 
-    // deps.ux.warn(`If browser does not open, visit ${color.greenBright(url)}`)
+    // ux.warn(`If browser does not open, visit ${color.greenBright(url)}`)
     const cp = await open(url, {wait: false, ...(browser ? {app: {name: browser}} : {})})
     cp.on('error', err => {
       ux.warn(err)

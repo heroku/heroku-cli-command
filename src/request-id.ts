@@ -1,4 +1,4 @@
-import * as uuid from 'uuid'
+import {randomUUID} from 'node:crypto'
 
 export const requestIdHeader = 'Request-Id'
 
@@ -28,6 +28,6 @@ export class RequestId {
   }
 
   static _generate() {
-    return uuid.v4()
+    return randomUUID()
   }
 }

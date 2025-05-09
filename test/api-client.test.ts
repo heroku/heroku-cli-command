@@ -418,8 +418,8 @@ describe('api_client', () => {
   test
     .it('2fa no preauth', async ctx => {
       const generateStub = sinon.stub(RequestId, '_generate')
-      generateStub.onFirstCall().returns('first-request-id')
-      generateStub.onSecondCall().returns('second-request-id')
+      generateStub.onFirstCall().returns('first-request-id-1234-5678')
+      generateStub.onSecondCall().returns('second-request-id-1234-5678')
       RequestId.empty()
 
       // First request - will trigger 2FA

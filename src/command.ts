@@ -12,7 +12,6 @@ import deps from './deps'
 export abstract class Command extends Base {
   base = `${pjson.name}@${pjson.version}`
   _heroku!: APIClient
-  _legacyHerokuClient: any
   allowArbitraryFlags: boolean = false;
 
   get heroku(): APIClient {
@@ -23,21 +22,6 @@ export abstract class Command extends Base {
     }
     this._heroku = new deps.APIClient(this.config, options)
     return this._heroku
-  }
-
-  get legacyHerokuClient(): any {
-    if (this._legacyHerokuClient) return this._legacyHerokuClient
-    const HerokuClient = require('heroku-client')
-    const options = {
-      debug: process.env.HEROKU_DEBUG === '1' || process.env.HEROKU_DEBUG?.toUpperCase() === 'TRUE',
-      host: `${this.heroku.defaults.protocol || 'https:'}//${this.heroku.defaults.host ||
-        'api.heroku.com'}`,
-      token: this.heroku.auth,
-      userAgent: (this.heroku.defaults as any).headers['user-agent'],
-    }
-
-    this._legacyHerokuClient = new HerokuClient(options)
-    return this._legacyHerokuClient
   }
 
   protected async parse<F extends FlagOutput, B extends FlagOutput, A extends ArgOutput>(options?: Input<F, B, A>, argv?: string[]): Promise<ParserOutput<F, B, A>> {
