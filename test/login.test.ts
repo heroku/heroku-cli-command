@@ -4,6 +4,7 @@ import nock from 'nock'
 import {resolve} from 'path'
 import * as sinon from 'sinon'
 import Netrc from 'netrc-parser'
+import inquirer from 'inquirer'
 
 import {Command as CommandBase} from '../src/command'
 
@@ -21,6 +22,25 @@ beforeEach(() => {
   // Mock netrc-parser
   sinon.stub(Netrc, 'load').resolves()
   sinon.stub(Netrc, 'save').resolves()
+
+  // Mock inquirer prompts
+  sinon.stub(inquirer, 'prompt').callsFake(async (questions: any) => {
+    if (Array.isArray(questions)) {
+      const answers: any = {}
+
+      for (const q of questions) {
+        if (q.name === 'email') answers.email = 'test@example.com'
+        if (q.name === 'password') answers.password = 'test-password'
+        if (q.name === 'secondFactor') answers.secondFactor = '123456'
+        if (q.name === 'action') answers.action = 'y'
+        if (q.name === 'orgName') answers.orgName = 'test-org'
+      }
+
+      return answers
+    }
+
+    return {}
+  })
 })
 
 afterEach(() => {

@@ -8,7 +8,7 @@ describe('required', () => {
     static flags = {team: flags.team({required: true})}
     async run() {
       const {flags} = await this.parse(this.constructor as any)
-      ux.log(flags.team)
+      ux.stdout(flags.team)
     }
   }
 
@@ -40,7 +40,7 @@ describe('optional', () => {
     static flags = {team: flags.team()}
     async run() {
       const {flags} = await this.parse(this.constructor as any)
-      ux.log(flags.team)
+      ux.stdout(flags.team)
     }
   }
 
@@ -66,7 +66,7 @@ describe('optional', () => {
         static flags = {team: flags.team()}
         async run() {
           const {flags} = await this.parse(this.constructor as any)
-          ux.log(flags.team)
+          ux.stdout(flags.team)
         }
       }
 
@@ -82,7 +82,7 @@ describe('optional', () => {
         static flags = {team: flags.team()}
         async run() {
           const {flags} = await this.parse(this.constructor as any)
-          ux.log(flags.team)
+          ux.stdout(flags.team)
         }
       }
 
@@ -109,7 +109,7 @@ describe('with flag/env variable priorities', () => {
 
     async run() {
       const {flags} = await this.parse(this.constructor as any)
-      ux.log(flags.team)
+      ux.stdout(flags.team)
     }
   }
 

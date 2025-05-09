@@ -5,7 +5,7 @@ import HTTP from '@heroku/http-call'
 import Netrc from 'netrc-parser'
 import open from 'open'
 import * as os from 'os'
-import inquirer from 'inquirer'
+import inquirer, {QuestionCollection} from 'inquirer'
 
 import {APIClient, HerokuAPIError} from './api-client'
 import {vars} from './vars'
@@ -55,7 +55,7 @@ export class Login {
         } else if (process.env.HEROKU_LEGACY_SSO === '1') {
           input = 'sso'
         } else {
-          await inquirer.prompt([{
+          const questions: QuestionCollection = [{
             type: 'input',
             name: 'action',
             message: `heroku: Press any key to open up the browser to login or ${color.yellow('q')} to exit`,
@@ -66,7 +66,8 @@ export class Login {
 
               return true
             },
-          }])
+          }]
+          await inquirer.prompt<{action: string}>(questions)
           input = 'browser'
         }
       }
@@ -156,14 +157,14 @@ export class Login {
       body: {description: `Heroku CLI login from ${hostname}`},
     })
     const url = `${this.loginHost}${urls.browser_url}`
-    process.stderr.write(`Opening browser to ${url}\n`)
+    ux.stderr(`Opening browser to ${url}\n`)
     let urlDisplayed = false
     const showUrl = () => {
       if (!urlDisplayed) ux.warn('Cannot open browser.')
       urlDisplayed = true
     }
 
-    // ux.warn(`If browser does not open, visit ${color.greenBright(url)}`)
+    // deps.ux.warn(`If browser does not open, visit ${color.greenBright(url)}`)
     const cp = await open(url, {wait: false, ...(browser ? {app: {name: browser}} : {})})
     cp.on('error', err => {
       ux.warn(err)
@@ -199,9 +200,22 @@ export class Login {
   }
 
   private async interactive(login?: string, expiresIn?: number): Promise<NetrcEntry> {
-    process.stderr.write('heroku: Enter your login credentials\n')
-    login = await ux.prompt('Email', {default: login})
-    const password = await ux.prompt('Password', {type: 'hide'})
+    ux.stderr('heroku: Enter your login credentials\n')
+    const emailQuestions: QuestionCollection = [{
+      type: 'input',
+      name: 'email',
+      message: 'Email',
+      default: login,
+    }]
+    const {email} = await inquirer.prompt<{email: string}>(emailQuestions)
+    login = email
+
+    const passwordQuestions: QuestionCollection = [{
+      type: 'password',
+      name: 'password',
+      message: 'Password',
+    }]
+    const {password} = await inquirer.prompt<{password: string}>(passwordQuestions)
 
     let auth
     try {
@@ -216,7 +230,12 @@ export class Login {
         throw error
       }
 
-      const secondFactor = await ux.prompt('Two-factor code', {type: 'mask'})
+      const secondFactorQuestions: QuestionCollection = [{
+        type: 'password',
+        name: 'secondFactor',
+        message: 'Two-factor code',
+      }]
+      const {secondFactor} = await inquirer.prompt<{secondFactor: string}>(secondFactorQuestions)
       auth = await this.createOAuthToken(login!, password, {expiresIn, secondFactor})
     }
 
@@ -286,25 +305,40 @@ export class Login {
     let url = process.env.SSO_URL
     let org = process.env.HEROKU_ORGANIZATION
     if (!url) {
-      org = await (org ? ux.prompt('Organization name', {default: org}) : ux.prompt('Organization name'))
+      const orgQuestions: QuestionCollection = [{
+        type: 'input',
+        name: 'orgName',
+        message: 'Organization name',
+        default: org,
+      }]
+      const {orgName} = await inquirer.prompt<{orgName: string}>(orgQuestions)
+      org = orgName
       url = `https://sso.heroku.com/saml/${encodeURIComponent(org!)}/init?cli=true`
     }
 
     // TODO: handle browser
     debug(`opening browser to ${url}`)
-    process.stderr.write(`Opening browser to:\n${url}\n`)
-    process.stderr.write(color.gray(
+    ux.stderr(`Opening browser to:\n${url}\n`)
+    ux.stderr(color.gray(
       'If the browser fails to open or you\'re authenticating on a ' +
       'remote machine, please manually open the URL above in your ' +
       'browser.\n',
     ))
     await open(url, {wait: false})
 
-    const password = await ux.prompt('Access token', {type: 'mask'})
+    const passwordQuestions: QuestionCollection = [{
+      type: 'password',
+      name: 'password',
+      message: 'Access token',
+    }]
+    const {password} = await inquirer.prompt<{password: string}>(passwordQuestions)
     ux.action.start('Validating token')
     this.heroku.auth = password
     const {body: account} = await HTTP.get<Heroku.Account>(`${vars.apiUrl}/account`, headers(password))
-
-    return {password, login: account.email!}
+    ux.action.stop()
+    return {
+      login: account.email!,
+      password,
+    }
   }
 }

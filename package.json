@@ -7,8 +7,7 @@
   "dependencies": {
     "@heroku-cli/color": "^2.0.1",
     "@heroku/http-call": "^5.4.0",
-    "@oclif/core": "^2.16.0",
-    "cli-ux": "^6.0.9",
+    "@oclif/core": "^4.3.0",
     "debug": "^4.4.0",
     "fs-extra": "^9.1.0",
     "heroku-client": "^3.1.0",

@@ -8,7 +8,7 @@ describe('required', () => {
     static flags = {org: flags.org({required: true})}
     async run() {
       const {flags} = await this.parse(this.constructor as any)
-      ux.log(flags.org)
+      ux.stdout(flags.org)
     }
   }
 
@@ -40,7 +40,7 @@ describe('optional', () => {
     static flags = {org: flags.org()}
     async run() {
       const {flags} = await this.parse(this.constructor as any)
-      ux.log(flags.org)
+      ux.stdout(flags.org)
     }
   }
 
@@ -66,7 +66,7 @@ describe('optional', () => {
         static flags = {org: flags.org()}
         async run() {
           const {flags} = await this.parse(this.constructor as any)
-          ux.log(flags.org)
+          ux.stdout(flags.org)
         }
       }
 

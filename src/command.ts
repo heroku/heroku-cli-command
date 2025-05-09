@@ -1,7 +1,6 @@
 import {Command as Base} from '@oclif/core'
 import {ArgOutput, FlagOutput, Input, ParserOutput} from '@oclif/core/lib/interfaces/parser'
 import {NonExistentFlagsError} from '@oclif/core/lib/parser/errors'
-import {deprecate} from 'util'
 import parser from 'yargs-parser'
 import unparser from 'yargs-unparser'
 
@@ -9,10 +8,6 @@ const pjson = require('../package.json')
 
 import {APIClient, IOptions} from './api-client'
 import deps from './deps'
-
-const deprecatedCLI = deprecate(() => {
-  return require('cli-ux').cli
-}, 'this.out and this.cli is deprecated. Please import "CliUx" from the @oclif/core module directly instead.')
 
 export abstract class Command extends Base {
   base = `${pjson.name}@${pjson.version}`
@@ -34,7 +29,7 @@ export abstract class Command extends Base {
     if (this._legacyHerokuClient) return this._legacyHerokuClient
     const HerokuClient = require('heroku-client')
     const options = {
-      debug: this.config.debug,
+      debug: process.env.HEROKU_DEBUG === '1' || process.env.HEROKU_DEBUG?.toUpperCase() === 'TRUE',
       host: `${this.heroku.defaults.protocol || 'https:'}//${this.heroku.defaults.host ||
         'api.heroku.com'}`,
       token: this.heroku.auth,
@@ -43,14 +38,6 @@ export abstract class Command extends Base {
 
     this._legacyHerokuClient = new HerokuClient(options)
     return this._legacyHerokuClient
-  }
-
-  get cli(): any {
-    return deprecatedCLI()
-  }
-
-  get out(): any {
-    return deprecatedCLI()
   }
 
   protected async parse<F extends FlagOutput, B extends FlagOutput, A extends ArgOutput>(options?: Input<F, B, A>, argv?: string[]): Promise<ParserOutput<F, B, A>> {
@@ -63,7 +50,7 @@ export abstract class Command extends Base {
         const nonExistentFlagsWithValues = {...parsed}
 
         if (nonExistentFlags && nonExistentFlags.length > 0) {
-          this.warn(`You’re using a deprecated syntax with the [${nonExistentFlags}] flag.\nAdd a '--' (end of options) separator before the flags you’re passing through.`)
+          this.warn(`You're using a deprecated syntax with the [${nonExistentFlags}] flag.\nAdd a '--' (end of options) separator before the flags you're passing through.`)
           for (const flag of nonExistentFlags) {
             const key = flag.replace('--', '')
             delete parsed[key]

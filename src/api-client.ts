@@ -1,8 +1,8 @@
-import {Interfaces} from '@oclif/core'
-import {CLIError, warn} from '@oclif/core/lib/errors'
+import {Interfaces, Errors} from '@oclif/core'
 import {HTTP, HTTPError, HTTPRequestOptions} from '@heroku/http-call'
 import Netrc from 'netrc-parser'
 import * as url from 'url'
+import inquirer from 'inquirer'
 
 import deps from './deps'
 import {Login} from './login'
@@ -34,7 +34,7 @@ export interface IHerokuAPIErrorOptions {
   url?: string
 }
 
-export class HerokuAPIError extends CLIError {
+export class HerokuAPIError extends Errors.CLIError {
   http: HTTPError
   body: IHerokuAPIErrorOptions
 
@@ -120,9 +120,9 @@ export class APIClient {
       static showWarnings<T>(response: HTTP<T>) {
         const warnings = response.headers['x-heroku-warning'] || response.headers['warning-message']
         if (Array.isArray(warnings))
-          warnings.forEach(warning => warn(`${warning}\n`))
+          warnings.forEach(warning => Errors.warn(`${warning}\n`))
         else if (typeof warnings === 'string')
-          warn(`${warnings}\n`)
+          Errors.warn(`${warnings}\n`)
       }
 
       static configDelinquency(url: string, opts: APIClient.Options): void {
@@ -161,15 +161,15 @@ export class APIClient {
           const now = Date.now()
 
           if (suspension > now) {
-            warn(`This ${resource} is delinquent with payment and we‘ll suspend it on ${new Date(suspension)}.`)
+            Errors.warn(`This ${resource} is delinquent with payment and we'll suspend it on ${new Date(suspension)}.`)
             delinquencyConfig.warning_shown = true
             return
           }
 
           if (deletion)
-            warn(`This ${resource} is delinquent with payment and we suspended it on ${new Date(suspension)}. If the ${resource} is still delinquent, we‘ll delete it on ${new Date(deletion)}.`)
+            Errors.warn(`This ${resource} is delinquent with payment and we suspended it on ${new Date(suspension)}. If the ${resource} is still delinquent, we'll delete it on ${new Date(deletion)}.`)
         } else if (deletion)
-          warn(`This ${resource} is delinquent with payment and we‘ll delete it on ${new Date(deletion)}.`)
+          Errors.warn(`This ${resource} is delinquent with payment and we'll delete it on ${new Date(deletion)}.`)
 
         delinquencyConfig.warning_shown = true
       }
@@ -291,7 +291,12 @@ export class APIClient {
     deps.yubikey.enable()
     return this.twoFactorMutex.synchronize(async () => {
       try {
-        const factor = await deps.cli.prompt('Two-factor code', {type: 'mask'})
+        const {factor} = await inquirer.prompt([{
+          type: 'password',
+          name: 'factor',
+          message: 'Two-factor code',
+          mask: '*',
+        }])
         deps.yubikey.disable()
         return factor
       } catch (error) {
@@ -343,7 +348,7 @@ export class APIClient {
     try {
       await this._login.logout()
     } catch (error) {
-      if (error instanceof CLIError) warn(error)
+      if (error instanceof Errors.CLIError) Errors.warn(error)
     }
 
     delete Netrc.machines['api.heroku.com']

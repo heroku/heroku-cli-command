@@ -1,9 +1,10 @@
 import {stderr} from 'stdout-stderr'
-import {Config, ux} from '@oclif/core'
+import {Config} from '@oclif/core'
 import base, {expect} from 'fancy-test'
 import nock from 'nock'
 import {resolve} from 'path'
 import * as sinon from 'sinon'
+
 import {Command as CommandBase} from '../src/command'
 import {RequestId, requestIdHeader} from '../src/request-id'
 
@@ -129,7 +130,7 @@ describe('api_client', () => {
       })
 
     test
-      .it('doesn‘t fail or show delinquency warnings if Particleboard request fails', async ctx => {
+      .it('doesn\'t fail or show delinquency warnings if Particleboard request fails', async ctx => {
         api = nock('https://api.heroku.com', {
           reqheaders: {authorization: 'Bearer mypass'},
         })
@@ -150,7 +151,7 @@ describe('api_client', () => {
       })
 
     test
-      .it('doesn‘t show delinquency warnings if account isn‘t delinquent', async ctx => {
+      .it('doesn\'t show delinquency warnings if account isn\'t delinquent', async ctx => {
         api = nock('https://api.heroku.com', {
           reqheaders: {authorization: 'Bearer mypass'},
         })
@@ -194,7 +195,7 @@ describe('api_client', () => {
         await cmd.heroku.get('/account')
 
         const stderrOutput = stderr.output.replace(/ *[»›] */g, '').replace(/ *\n */g, ' ')
-        expect(stderrOutput).to.include(`This account is delinquent with payment and we‘ll suspend it on ${suspensionTime}`)
+        expect(stderrOutput).to.include(`Warning: This account is delinquent with payment and we'll suspend it on ${suspensionTime}`)
         stderr.stop()
         particleboard.done()
       })
@@ -221,13 +222,13 @@ describe('api_client', () => {
         await cmd.heroku.get('/account')
 
         const stderrOutput = stderr.output.replace(/ *[»›] */g, '').replace(/ *\n */g, ' ')
-        expect(stderrOutput).to.include(`This account is delinquent with payment and we suspended it on ${suspensionTime}. If the account is still delinquent, we‘ll delete it on ${deletionTime}`)
+        expect(stderrOutput).to.include(`Warning: This account is delinquent with payment and we suspended it on ${suspensionTime}. If the account is still delinquent, we'll delete it on ${deletionTime}`)
         stderr.stop()
         particleboard.done()
       })
 
     test
-      .it('it doesn‘t send a Particleboard request or show duplicated delinquency warnings with multiple matching requests when delinquent', async ctx => {
+      .it('it doesn\'t send a Particleboard request or show duplicated delinquency warnings with multiple matching requests when delinquent', async ctx => {
         api = nock('https://api.heroku.com', {
           reqheaders: {authorization: 'Bearer mypass'},
         })
@@ -250,7 +251,7 @@ describe('api_client', () => {
         await cmd.heroku.get('/account')
 
         const stderrOutput = stderr.output.replace(/ *[»›] */g, '').replace(/ *\n */g, ' ')
-        expect(stderrOutput).to.include(`This account is delinquent with payment and we‘ll suspend it on ${suspensionTime}`)
+        expect(stderrOutput).to.include(`Warning: This account is delinquent with payment and we'll suspend it on ${suspensionTime}`)
         stderr.stop()
 
         stderr.start()
@@ -281,7 +282,7 @@ describe('api_client', () => {
       })
 
     test
-      .it('doesn‘t fail or show delinquency warnings if Particleboard request fails', async ctx => {
+      .it('doesn\'t fail or show delinquency warnings if Particleboard request fails', async ctx => {
         api = nock('https://api.heroku.com', {
           reqheaders: {authorization: 'Bearer mypass'},
         })
@@ -302,7 +303,7 @@ describe('api_client', () => {
       })
 
     test
-      .it('doesn‘t show delinquency warnings if team isn‘t delinquent', async ctx => {
+      .it('doesn\'t show delinquency warnings if team isn\'t delinquent', async ctx => {
         api = nock('https://api.heroku.com', {
           reqheaders: {authorization: 'Bearer mypass'},
         })
@@ -346,7 +347,7 @@ describe('api_client', () => {
         await cmd.heroku.get('/teams/my_team/members')
 
         const stderrOutput = stderr.output.replace(/ *[»›] */g, '').replace(/ *\n */g, ' ')
-        expect(stderrOutput).to.include(`This team is delinquent with payment and we‘ll suspend it on ${suspensionTime}`)
+        expect(stderrOutput).to.include(`Warning: This team is delinquent with payment and we'll suspend it on ${suspensionTime}`)
         stderr.stop()
         particleboard.done()
       })
@@ -373,13 +374,13 @@ describe('api_client', () => {
         await cmd.heroku.get('/teams/my_team/members')
 
         const stderrOutput = stderr.output.replace(/ *[»›] */g, '').replace(/ *\n */g, ' ')
-        expect(stderrOutput).to.include(`This team is delinquent with payment and we suspended it on ${suspensionTime}. If the team is still delinquent, we‘ll delete it on ${deletionTime}`)
+        expect(stderrOutput).to.include(`Warning: This team is delinquent with payment and we suspended it on ${suspensionTime}. If the team is still delinquent, we'll delete it on ${deletionTime}`)
         stderr.stop()
         particleboard.done()
       })
 
     test
-      .it('it doesn‘t send a Particleboard request or show duplicated delinquency warnings with multiple matching requests when delinquent', async ctx => {
+      .it('it doesn\'t send a Particleboard request or show duplicated delinquency warnings with multiple matching requests when delinquent', async ctx => {
         api = nock('https://api.heroku.com', {
           reqheaders: {authorization: 'Bearer mypass'},
         })
@@ -402,7 +403,7 @@ describe('api_client', () => {
         await cmd.heroku.get('/teams/my_team/members')
 
         const stderrOutput = stderr.output.replace(/ *[»›] */g, '').replace(/ *\n */g, ' ')
-        expect(stderrOutput).to.include(`This team is delinquent with payment and we‘ll suspend it on ${suspensionTime}`)
+        expect(stderrOutput).to.include(`Warning: This team is delinquent with payment and we'll suspend it on ${suspensionTime}`)
         stderr.stop()
 
         stderr.start()
@@ -416,35 +417,40 @@ describe('api_client', () => {
 
   test
     .it('2fa no preauth', async ctx => {
-      api = nock('https://api.heroku.com')
-      api.get('/apps').reply(403, {id: 'two_factor'})
-      const _api = api as any
-      _api.get('/apps').matchHeader('heroku-two-factor-code', '123456').reply(200, [{name: 'myapp'}])
+      const generateStub = sinon.stub(RequestId, '_generate')
+      generateStub.onFirstCall().returns('first-request-id')
+      generateStub.onSecondCall().returns('second-request-id')
+      RequestId.empty()
+
+      // First request - will trigger 2FA
+      const scope = nock('https://api.heroku.com')
+        .get('/apps')
+        .reply(403, {id: 'two_factor'})
+
+      // Second request - with 2FA code
+      scope
+        .get('/apps')
+        .reply(200, [{name: 'myapp'}])
 
       const cmd = new Command([], ctx.config)
-      // todo: this should be stubbed, but other tests rely on it and break if it is done correctly
-      Object.defineProperty(ux, 'prompt', {
-        get: () => () => Promise.resolve('123456'),
-      })
       const {body} = await cmd.heroku.get('/apps')
       expect(body).to.deep.equal([{name: 'myapp'}])
+
+      generateStub.restore()
+      scope.done()
     })
 
   test
     .it('2fa preauth', async ctx => {
-      api = nock('https://api.heroku.com')
-      api.get('/apps/myapp').reply(403, {id: 'two_factor', app: {name: 'myapp'}})
-      const _api = api as any
-      _api.put('/apps/myapp/pre-authorizations').matchHeader('heroku-two-factor-code', '123456').reply(200, {})
-      api.get('/apps/myapp').reply(200, {name: 'myapp'})
-      api.get('/apps/anotherapp').reply(200, {name: 'anotherapp'})
-      api.get('/apps/myapp/config').reply(200, {foo: 'bar'})
-      api.get('/apps/myapp/dynos').reply(200, {web: 1})
+      const scope = nock('https://api.heroku.com')
+      scope.get('/apps/myapp').reply(403, {id: 'two_factor', app: {name: 'myapp'}})
+      scope.put('/apps/myapp/pre-authorizations').reply(200, {})
+      scope.get('/apps/myapp').reply(200, {name: 'myapp'})
+      scope.get('/apps/anotherapp').reply(200, {name: 'anotherapp'})
+      scope.get('/apps/myapp/config').reply(200, {foo: 'bar'})
+      scope.get('/apps/myapp/dynos').reply(200, {web: 1})
 
       const cmd = new Command([], ctx.config)
-      Object.defineProperty(ux, 'prompt', {
-        get: () => () => Promise.resolve('123456'),
-      })
       const info = cmd.heroku.get('/apps/myapp')
       const anotherapp = cmd.heroku.get('/apps/anotherapp')
       const _config = cmd.heroku.get('/apps/myapp/config')
@@ -453,6 +459,7 @@ describe('api_client', () => {
       expect((await anotherapp).body).to.deep.equal({name: 'anotherapp'})
       expect((await _config).body).to.deep.equal({foo: 'bar'})
       expect((await dynos).body).to.deep.equal({web: 1})
+      scope.done()
     })
 
   context('with HEROKU_DEBUG = "1"', function () {
@@ -507,7 +514,7 @@ describe('api_client', () => {
   context('without HEROKU_DEBUG = "1"', function () {
     context('with HEROKU_DEBUG_HEADERS = "1"', function () {
       test
-        .it('doesn‘t enable any HTTP debug info', async ctx => {
+        .it('doesn\'t enable any HTTP debug info', async ctx => {
           process.env = {
             HEROKU_DEBUG_HEADERS: '1',
           }
@@ -530,7 +537,7 @@ describe('api_client', () => {
 
     context('without HEROKU_DEBUG_HEADERS = "1"', function () {
       test
-        .it('doesn‘t enable any HTTP debug info', async ctx => {
+        .it('doesn\'t enable any HTTP debug info', async ctx => {
           api = nock('https://api.heroku.com', {
             reqheaders: {authorization: 'Bearer mypass'},
           })
