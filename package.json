@@ -12,6 +12,7 @@
     "fs-extra": "^9.1.0",
     "heroku-client": "^3.1.0",
     "inquirer": "^8.2.6",
+    "inquirer-press-to-continue": "^1.2.0",
     "netrc-parser": "^3.1.6",
     "open": "^8.4.2",
     "uuid": "^8.3.0",
@@ -83,7 +84,8 @@
     "posttest": "npm run lint",
     "prepublishOnly": "npm run build && npm run changelog",
     "test": "mocha --forbid-only \"test/**/*.test.ts\"",
-    "changelog": "conventional-changelog -p conventionalcommits -i CHANGELOG.md -s"
+    "changelog": "conventional-changelog -p conventionalcommits -i CHANGELOG.md -s",
+    "example": "sh examples/run.sh"
   },
   "types": "./lib/index.d.ts"
 }

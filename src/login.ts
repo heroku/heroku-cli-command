@@ -6,13 +6,15 @@ import Netrc from 'netrc-parser'
 import open from 'open'
 import * as os from 'os'
 import inquirer, {QuestionCollection} from 'inquirer'
-
+import PressToContinuePrompt from 'inquirer-press-to-continue'
+import type {KeyDescriptor} from 'inquirer-press-to-continue'
 import {APIClient, HerokuAPIError} from './api-client'
 import {vars} from './vars'
 
 const debug = require('debug')('heroku-cli-command')
 const hostname = os.hostname()
 const thirtyDays = 60 * 60 * 24 * 30
+inquirer.registerPrompt('press-to-continue', PressToContinuePrompt)
 
 export namespace Login {
   export interface Options {
@@ -55,19 +57,12 @@ export class Login {
         } else if (process.env.HEROKU_LEGACY_SSO === '1') {
           input = 'sso'
         } else {
-          const questions: QuestionCollection = [{
-            type: 'input',
-            name: 'action',
-            message: `heroku: Press any key to open up the browser to login or ${color.yellow('q')} to exit`,
-            validate: (input: string) => {
-              if (input.toLowerCase() === 'q') {
-                throw new Error('Login cancelled by user')
-              }
-
-              return true
-            },
-          }]
-          await inquirer.prompt<{action: string}>(questions)
+          await inquirer.prompt<{ key: KeyDescriptor }>({
+            name: 'key',
+            type: 'press-to-continue',
+            anyKey: true,
+            pressToContinueMessage: 'heroku: Press any key to open up the browser to login or q to exit',
+          })
           input = 'browser'
         }
       }
