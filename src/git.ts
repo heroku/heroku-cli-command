@@ -43,8 +43,8 @@ export function configRemote() {
 }
 
 export interface IGitRemotes {
-  remote: string
   app: string
+  remote: string
 }
 
 export function getGitRemotes(onlyRemote: string | undefined): IGitRemotes[] {

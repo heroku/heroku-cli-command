@@ -1,6 +1,6 @@
-import {Flags, Errors} from '@oclif/core'
+import {Errors, Flags} from '@oclif/core'
 
-import {configRemote, getGitRemotes, IGitRemotes} from '../git'
+import {IGitRemotes, configRemote, getGitRemotes} from '../git'
 
 class MultipleRemotesError extends Errors.CLIError {
   constructor(gitRemotes: IGitRemotes[]) {
@@ -19,8 +19,7 @@ class MultipleRemotesError extends Errors.CLIError {
 
 export const app = Flags.custom({
   char: 'a',
-  description: 'app to run command against',
-  default: async ({options, flags}) => {
+  async default({flags, options}) {
     const envApp = process.env.HEROKU_APP
     if (envApp) return envApp
     const gitRemotes = getGitRemotes(flags.remote || configRemote())
@@ -33,6 +32,7 @@ export const app = Flags.custom({
       throw new MultipleRemotesError(gitRemotes)
     }
   },
+  description: 'app to run command against',
 })
 
 export const remote = Flags.custom({

@@ -8,7 +8,7 @@ function debug(...args: any[]) {
 }
 
 export function exists(f: string): Promise<boolean> {
-  // tslint:disable-next-line
+  // eslint-disable-next-line n/no-deprecated-api
   return promisify(fs.exists)(f)
 }
 

@@ -13,18 +13,16 @@ class MyCommand extends Command {
 }
 
 describe('command', () => {
-  it('sets app', () => {
-    return class AppCommand extends Command {
-      static flags = {
-        app: flags.app(),
-      }
+  it('sets app', () => class AppCommand extends Command {
+    static flags = {
+      app: flags.app(),
+    }
 
-      async run() {
-        const {flags} = await this.parse(AppCommand)
-        expect(flags.app).to.equal('myapp')
-      }
-    }.run(['--app=myapp'])
-  })
+    async run() {
+      const {flags} = await this.parse(AppCommand)
+      expect(flags.app).to.equal('myapp')
+    }
+  }.run(['--app=myapp']))
 
   test
     .it('has heroku clients', async ctx => {

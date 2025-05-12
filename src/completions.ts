@@ -1,5 +1,6 @@
-import {Interfaces, Errors} from '@oclif/core'
+import {Errors, Interfaces} from '@oclif/core'
 import * as path from 'node:path'
+
 import deps from './deps'
 import {configRemote, getGitRemotes} from './git'
 
@@ -14,7 +15,7 @@ export const herokuGet = async (resource: string, ctx: {config: Interfaces.Confi
 
 export const AppCompletion = {
   cacheDuration: oneDay,
-  options: async (ctx: { config: Interfaces.Config }) => {
+  async options(ctx: { config: Interfaces.Config }) {
     const apps = await herokuGet('apps', ctx)
     return apps
   },
@@ -22,10 +23,10 @@ export const AppCompletion = {
 
 export const AppAddonCompletion = {
   cacheDuration: oneDay,
-  cacheKey: async (ctx: { flags: { app: any } }) => {
+  async cacheKey(ctx: { flags: { app: any } }) {
     return ctx.flags && ctx.flags.app ? `${ctx.flags.app}_addons` : ''
   },
-  options: async (ctx: { flags?: any; config: Interfaces.Config }) => {
+  async options(ctx: { config: Interfaces.Config; flags?: any }) {
     const addons = ctx.flags && ctx.flags.app ? await herokuGet(`apps/${ctx.flags.app}/addons`, ctx) : []
     return addons
   },
@@ -33,19 +34,17 @@ export const AppAddonCompletion = {
 
 export const AppDynoCompletion = {
   cacheDuration: oneDay,
-  cacheKey: async (ctx: { flags: { app: any } }) => {
+  async cacheKey(ctx: { flags: { app: any } }) {
     return ctx.flags && ctx.flags.app ? `${ctx.flags.app}_dynos` : ''
   },
-  options: async (ctx: { flags?: any; config: Interfaces.Config }) => {
+  async options(ctx: { config: Interfaces.Config; flags?: any }) {
     const dynos = ctx.flags && ctx.flags.app ? await herokuGet(`apps/${ctx.flags.app}/dynos`, ctx) : []
     return dynos
   },
 }
 
 export const BuildpackCompletion = {
-  skipCache: true,
-
-  options: async () => {
+  async options() {
     return [
       'heroku/ruby',
       'heroku/nodejs',
@@ -58,37 +57,37 @@ export const BuildpackCompletion = {
       'heroku/go',
     ]
   },
+
+  skipCache: true,
 }
 
 export const DynoSizeCompletion = {
   cacheDuration: oneDay * 90,
-  options: async (ctx: { config: Interfaces.Config }) => {
+  async options(ctx: { config: Interfaces.Config }) {
     const sizes = await herokuGet('dyno-sizes', ctx)
     return sizes
   },
 }
 
 export const FileCompletion = {
-  skipCache: true,
-
-  options: async () => {
+  async options() {
     const files = await deps.file.readdir(process.cwd())
     return files
   },
+
+  skipCache: true,
 }
 
 export const PipelineCompletion = {
   cacheDuration: oneDay,
-  options: async (ctx: { config: Interfaces.Config }) => {
+  async options(ctx: { config: Interfaces.Config }) {
     const pipelines = await herokuGet('pipelines', ctx)
     return pipelines
   },
 }
 
 export const ProcessTypeCompletion = {
-  skipCache: true,
-
-  options: async () => {
+  async options() {
     let types: string[] = []
     const procfile = path.join(process.cwd(), 'Procfile')
     try {
@@ -101,51 +100,54 @@ export const ProcessTypeCompletion = {
           const m = s.match(/^([\w-]+)/)
           return m ? m[0] : false
         })
-        .filter((t: string | boolean) => t) as string[]
+        // eslint-disable-next-line unicorn/prefer-native-coercion-functions
+        .filter((t: boolean | string) => t) as string[]
     } catch (error) {
       if (error instanceof Errors.CLIError && error.code !== 'ENOENT') throw error
     }
 
     return types
   },
+
+  skipCache: true,
 }
 
 export const RegionCompletion = {
   cacheDuration: oneDay * 7,
-  options: async (ctx: { config: Interfaces.Config }) => {
+  async options(ctx: { config: Interfaces.Config }) {
     const regions = await herokuGet('regions', ctx)
     return regions
   },
 }
 
 export const RemoteCompletion = {
-  skipCache: true,
-
-  options: async () => {
+  async options() {
     const remotes = getGitRemotes(configRemote())
     return remotes.map(r => r.remote)
   },
+
+  skipCache: true,
 }
 
 export const RoleCompletion = {
-  skipCache: true,
-
-  options: async () => {
+  async options() {
     return ['admin', 'collaborator', 'member', 'owner']
   },
+
+  skipCache: true,
 }
 
 export const ScopeCompletion = {
-  skipCache: true,
-
-  options: async () => {
+  async options() {
     return ['global', 'identity', 'read', 'write', 'read-protected', 'write-protected']
   },
+
+  skipCache: true,
 }
 
 export const SpaceCompletion = {
   cacheDuration: oneDay,
-  options: async (ctx: { config: Interfaces.Config }) => {
+  async options(ctx: { config: Interfaces.Config }) {
     const spaces = await herokuGet('spaces', ctx)
     return spaces
   },
@@ -153,23 +155,23 @@ export const SpaceCompletion = {
 
 export const StackCompletion = {
   cacheDuration: oneDay,
-  options: async (ctx: { config: Interfaces.Config }) => {
+  async options(ctx: { config: Interfaces.Config }) {
     const stacks = await herokuGet('stacks', ctx)
     return stacks
   },
 }
 
 export const StageCompletion = {
-  skipCache: true,
-
-  options: async () => {
+  async options() {
     return ['test', 'review', 'development', 'staging', 'production']
   },
+
+  skipCache: true,
 }
 
 export const TeamCompletion = {
   cacheDuration: oneDay,
-  options: async (ctx: { config: Interfaces.Config }) => {
+  async options(ctx: { config: Interfaces.Config }) {
     const teams = await herokuGet('teams', ctx)
     return teams
   },

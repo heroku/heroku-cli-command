@@ -1,5 +1,10 @@
 import {Command as Base} from '@oclif/core'
-import {ArgOutput, FlagOutput, Input, ParserOutput} from '@oclif/core/lib/interfaces/parser'
+import {
+  ArgOutput,
+  FlagOutput,
+  Input,
+  ParserOutput,
+} from '@oclif/core/lib/interfaces/parser'
 import {NonExistentFlagsError} from '@oclif/core/lib/parser/errors'
 import parser from 'yargs-parser'
 import unparser from 'yargs-unparser'
@@ -10,9 +15,9 @@ import {APIClient, IOptions} from './api-client'
 import deps from './deps'
 
 export abstract class Command extends Base {
+  allowArbitraryFlags: boolean = false
   base = `${pjson.name}@${pjson.version}`
   _heroku!: APIClient
-  allowArbitraryFlags: boolean = false;
 
   get heroku(): APIClient {
     if (this._heroku) return this._heroku
@@ -56,7 +61,7 @@ export abstract class Command extends Base {
           const doubleHyphenRegex = /^--/
           const positionalValueIsFlag = doubleHyphenRegex.test(positionalValue)
           if (positionalValueIsFlag) {
-            const nextElement = result.nonExistentFlags[index + 1] ? result.nonExistentFlags[index + 1] : ''
+            const nextElement = result.nonExistentFlags[index + 1] ?? ''
             const nextElementIsFlag = doubleHyphenRegex.test(nextElement)
             // eslint-disable-next-line max-depth
             if (nextElement && !nextElementIsFlag) {

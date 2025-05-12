@@ -1,3 +1,4 @@
+/* eslint-disable unicorn/prefer-top-level-await */
 import {Command} from '../src'
 
 class LoginCommand extends Command {

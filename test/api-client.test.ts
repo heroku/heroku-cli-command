@@ -1,9 +1,9 @@
-import {stderr} from 'stdout-stderr'
 import {Config} from '@oclif/core'
 import base, {expect} from 'fancy-test'
 import nock from 'nock'
 import {resolve} from 'path'
 import * as sinon from 'sinon'
+import {stderr} from 'stdout-stderr'
 
 import {Command as CommandBase} from '../src/command'
 import {RequestId, requestIdHeader} from '../src/request-id'
@@ -19,7 +19,7 @@ netrc.loadSync = function (this: typeof netrc) {
   }
 }
 
-const env = process.env
+const {env} = process
 const debug = require('debug')
 let api: nock.Scope
 const test = base.add('config', new Config({root: resolve(__dirname, '../package.json')}))
@@ -160,8 +160,8 @@ describe('api_client', () => {
           reqheaders: {authorization: 'Bearer mypass'},
         })
         particleboard.get('/account').reply(200, {
-          scheduled_suspension_time: null,
           scheduled_deletion_time: null,
+          scheduled_suspension_time: null,
         })
 
         stderr.start()
@@ -186,8 +186,8 @@ describe('api_client', () => {
           reqheaders: {authorization: 'Bearer mypass'},
         })
         particleboard.get('/account').reply(200, {
-          scheduled_suspension_time: suspensionTime.toISOString(),
           scheduled_deletion_time: deletionTime.toISOString(),
+          scheduled_suspension_time: suspensionTime.toISOString(),
         })
 
         stderr.start()
@@ -213,8 +213,8 @@ describe('api_client', () => {
           reqheaders: {authorization: 'Bearer mypass'},
         })
         particleboard.get('/account').reply(200, {
-          scheduled_suspension_time: suspensionTime.toISOString(),
           scheduled_deletion_time: deletionTime.toISOString(),
+          scheduled_suspension_time: suspensionTime.toISOString(),
         })
 
         stderr.start()
@@ -242,8 +242,8 @@ describe('api_client', () => {
         })
         particleboard
           .get('/account').reply(200, {
-            scheduled_suspension_time: suspensionTime.toISOString(),
             scheduled_deletion_time: deletionTime.toISOString(),
+            scheduled_suspension_time: suspensionTime.toISOString(),
           })
 
         stderr.start()
@@ -312,8 +312,8 @@ describe('api_client', () => {
           reqheaders: {authorization: 'Bearer mypass'},
         })
         particleboard.get('/teams/my_team').reply(200, {
-          scheduled_suspension_time: null,
           scheduled_deletion_time: null,
+          scheduled_suspension_time: null,
         })
 
         stderr.start()
@@ -338,8 +338,8 @@ describe('api_client', () => {
           reqheaders: {authorization: 'Bearer mypass'},
         })
         particleboard.get('/teams/my_team').reply(200, {
-          scheduled_suspension_time: suspensionTime.toISOString(),
           scheduled_deletion_time: deletionTime.toISOString(),
+          scheduled_suspension_time: suspensionTime.toISOString(),
         })
 
         stderr.start()
@@ -365,8 +365,8 @@ describe('api_client', () => {
           reqheaders: {authorization: 'Bearer mypass'},
         })
         particleboard.get('/teams/my_team').reply(200, {
-          scheduled_suspension_time: suspensionTime.toISOString(),
           scheduled_deletion_time: deletionTime.toISOString(),
+          scheduled_suspension_time: suspensionTime.toISOString(),
         })
 
         stderr.start()
@@ -394,8 +394,8 @@ describe('api_client', () => {
         })
         particleboard
           .get('/teams/my_team').reply(200, {
-            scheduled_suspension_time: suspensionTime.toISOString(),
             scheduled_deletion_time: deletionTime.toISOString(),
+            scheduled_suspension_time: suspensionTime.toISOString(),
           })
 
         stderr.start()
@@ -443,7 +443,7 @@ describe('api_client', () => {
   test
     .it('2fa preauth', async ctx => {
       const scope = nock('https://api.heroku.com')
-      scope.get('/apps/myapp').reply(403, {id: 'two_factor', app: {name: 'myapp'}})
+      scope.get('/apps/myapp').reply(403, {app: {name: 'myapp'}, id: 'two_factor'})
       scope.put('/apps/myapp/pre-authorizations').reply(200, {})
       scope.get('/apps/myapp').reply(200, {name: 'myapp'})
       scope.get('/apps/anotherapp').reply(200, {name: 'anotherapp'})

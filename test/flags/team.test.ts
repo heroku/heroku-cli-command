@@ -103,8 +103,8 @@ describe('with flag/env variable priorities', () => {
   // #convertFlagsFromV5
   class TeamCommand extends Command {
     static flags = {
-      team: flags.team(),
       org: flags.team({char: 'o', hidden: true}),
+      team: flags.team(),
     }
 
     async run() {

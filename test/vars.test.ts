@@ -2,7 +2,7 @@ import {expect} from 'chai'
 
 import {vars} from '../src/vars'
 
-const env = process.env
+const {env} = process
 beforeEach(() => {
   process.env = {}
 })

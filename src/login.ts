@@ -1,13 +1,15 @@
+import type {KeyDescriptor} from 'inquirer-press-to-continue'
+
+import HTTP from '@heroku/http-call'
 import color from '@heroku-cli/color'
 import * as Heroku from '@heroku-cli/schema'
 import {Interfaces, ux} from '@oclif/core'
-import HTTP from '@heroku/http-call'
+import inquirer, {QuestionCollection} from 'inquirer'
+import PressToContinuePrompt from 'inquirer-press-to-continue'
 import Netrc from 'netrc-parser'
 import open from 'open'
 import * as os from 'os'
-import inquirer, {QuestionCollection} from 'inquirer'
-import PressToContinuePrompt from 'inquirer-press-to-continue'
-import type {KeyDescriptor} from 'inquirer-press-to-continue'
+
 import {APIClient, HerokuAPIError} from './api-client'
 import {vars} from './vars'
 
@@ -16,11 +18,12 @@ const hostname = os.hostname()
 const thirtyDays = 60 * 60 * 24 * 30
 inquirer.registerPrompt('press-to-continue', PressToContinuePrompt)
 
+// eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace Login {
   export interface Options {
-    expiresIn?: number
-    method?: 'interactive' | 'sso' | 'browser'
     browser?: string
+    expiresIn?: number
+    method?: 'browser' | 'interactive' | 'sso'
   }
 }
 
@@ -58,10 +61,10 @@ export class Login {
           input = 'sso'
         } else {
           await inquirer.prompt<{ key: KeyDescriptor }>({
-            name: 'key',
-            type: 'press-to-continue',
             anyKey: true,
+            name: 'key',
             pressToContinueMessage: 'heroku: Press any key to open up the browser to login or q to exit',
+            type: 'press-to-continue',
           })
           input = 'browser'
         }
@@ -77,19 +80,26 @@ export class Login {
       let auth
       switch (input) {
       case 'b':
-      case 'browser':
+      case 'browser': {
         auth = await this.browser(opts.browser)
         break
+      }
+
       case 'i':
-      case 'interactive':
+      case 'interactive': {
         auth = await this.interactive(previousEntry && previousEntry.login, opts.expiresIn)
         break
+      }
+
       case 's':
-      case 'sso':
+      case 'sso': {
         auth = await this.sso()
         break
-      default:
+      }
+
+      default: {
         return this.login(opts)
+      }
       }
 
       await this.saveToken(auth)
@@ -170,9 +180,9 @@ export class Login {
       if (code !== 0) showUrl()
     })
     ux.action.start('heroku: Waiting for login')
-    const fetchAuth = async (retries = 3): Promise<{error?: string, access_token: string}> => {
+    const fetchAuth = async (retries = 3): Promise<{access_token: string, error?: string}> => {
       try {
-        const {body: auth} = await HTTP.get<{error?: string, access_token: string}>(`${this.loginHost}${urls.cli_url}`, {
+        const {body: auth} = await HTTP.get<{access_token: string, error?: string}>(`${this.loginHost}${urls.cli_url}`, {
           headers: {authorization: `Bearer ${urls.token}`},
         })
         return auth
@@ -194,21 +204,58 @@ export class Login {
     }
   }
 
+  private async createOAuthToken(username: string, password: string, opts: {expiresIn?: number, secondFactor?: string} = {}): Promise<NetrcEntry> {
+    function basicAuth(username: string, password: string) {
+      let auth = [username, password].join(':')
+      auth = Buffer.from(auth).toString('base64')
+      return `Basic ${auth}`
+    }
+
+    const headers: {[k: string]: string} = {
+      accept: 'application/vnd.heroku+json; version=3',
+      authorization: basicAuth(username, password),
+    }
+
+    if (opts.secondFactor) headers['Heroku-Two-Factor-Code'] = opts.secondFactor
+
+    const {body: auth} = await HTTP.post<Heroku.OAuthAuthorization>(`${vars.apiUrl}/oauth/authorizations`, {
+      body: {
+        description: `Heroku CLI login from ${hostname}`,
+        expires_in: opts.expiresIn || thirtyDays,
+        scope: ['global'],
+      },
+      headers,
+    })
+    return {login: auth.user!.email!, password: auth.access_token!.token!}
+  }
+
+  private async defaultToken(): Promise<string | undefined> {
+    try {
+      const {body: authorization} = await HTTP.get<Heroku.OAuthAuthorization>(`${vars.apiUrl}/oauth/authorizations/~`, headers(this.heroku.auth!))
+      return authorization.access_token && authorization.access_token.token
+    } catch (error: any) {
+      if (!error.http) throw error
+      if (error.http.statusCode === 404 && error.http.body && error.http.body.id === 'not_found' && error.body.resource === 'authorization') return
+      if (error.http.statusCode === 401 && error.http.body && error.http.body.id === 'unauthorized') return
+      throw error
+    }
+  }
+
   private async interactive(login?: string, expiresIn?: number): Promise<NetrcEntry> {
     ux.stderr('heroku: Enter your login credentials\n')
     const emailQuestions: QuestionCollection = [{
-      type: 'input',
-      name: 'email',
-      message: 'Email',
       default: login,
+      message: 'Email',
+      name: 'email',
+      type: 'input',
     }]
     const {email} = await inquirer.prompt<{email: string}>(emailQuestions)
     login = email
 
     const passwordQuestions: QuestionCollection = [{
-      type: 'password',
-      name: 'password',
       message: 'Password',
+      name: 'password',
+      type: 'password',
     }]
     const {password} = await inquirer.prompt<{password: string}>(passwordQuestions)
 
@@ -226,9 +273,9 @@ export class Login {
       }
 
       const secondFactorQuestions: QuestionCollection = [{
-        type: 'password',
-        name: 'secondFactor',
         message: 'Two-factor code',
+        name: 'secondFactor',
+        type: 'password',
       }]
       const {secondFactor} = await inquirer.prompt<{secondFactor: string}>(secondFactorQuestions)
       auth = await this.createOAuthToken(login!, password, {expiresIn, secondFactor})
@@ -236,31 +283,6 @@ export class Login {
 
     this.heroku.auth = auth.password
     return auth
-  }
-
-  private async createOAuthToken(username: string, password: string, opts: {expiresIn?: number, secondFactor?: string} = {}): Promise<NetrcEntry> {
-    function basicAuth(username: string, password: string) {
-      let auth = [username, password].join(':')
-      auth = Buffer.from(auth).toString('base64')
-      return `Basic ${auth}`
-    }
-
-    const headers: {[k: string]: string} = {
-      accept: 'application/vnd.heroku+json; version=3',
-      authorization: basicAuth(username, password),
-    }
-
-    if (opts.secondFactor) headers['Heroku-Two-Factor-Code'] = opts.secondFactor
-
-    const {body: auth} = await HTTP.post<Heroku.OAuthAuthorization>(`${vars.apiUrl}/oauth/authorizations`, {
-      headers,
-      body: {
-        scope: ['global'],
-        description: `Heroku CLI login from ${hostname}`,
-        expires_in: opts.expiresIn || thirtyDays,
-      },
-    })
-    return {password: auth.access_token!.token!, login: auth.user!.email!}
   }
 
   private async saveToken(entry: NetrcEntry) {
@@ -284,27 +306,15 @@ export class Login {
     await Netrc.save()
   }
 
-  private async defaultToken(): Promise<string | undefined> {
-    try {
-      const {body: authorization} = await HTTP.get<Heroku.OAuthAuthorization>(`${vars.apiUrl}/oauth/authorizations/~`, headers(this.heroku.auth!))
-      return authorization.access_token && authorization.access_token.token
-    } catch (error: any) {
-      if (!error.http) throw error
-      if (error.http.statusCode === 404 && error.http.body && error.http.body.id === 'not_found' && error.body.resource === 'authorization') return
-      if (error.http.statusCode === 401 && error.http.body && error.http.body.id === 'unauthorized') return
-      throw error
-    }
-  }
-
   private async sso(): Promise<NetrcEntry> {
     let url = process.env.SSO_URL
     let org = process.env.HEROKU_ORGANIZATION
     if (!url) {
       const orgQuestions: QuestionCollection = [{
-        type: 'input',
-        name: 'orgName',
-        message: 'Organization name',
         default: org,
+        message: 'Organization name',
+        name: 'orgName',
+        type: 'input',
       }]
       const {orgName} = await inquirer.prompt<{orgName: string}>(orgQuestions)
       org = orgName
@@ -315,16 +325,16 @@ export class Login {
     debug(`opening browser to ${url}`)
     ux.stderr(`Opening browser to:\n${url}\n`)
     ux.stderr(color.gray(
-      'If the browser fails to open or you\'re authenticating on a ' +
-      'remote machine, please manually open the URL above in your ' +
-      'browser.\n',
+      'If the browser fails to open or you\'re authenticating on a '
+      + 'remote machine, please manually open the URL above in your '
+      + 'browser.\n',
     ))
     await open(url, {wait: false})
 
     const passwordQuestions: QuestionCollection = [{
-      type: 'password',
-      name: 'password',
       message: 'Access token',
+      name: 'password',
+      type: 'password',
     }]
     const {password} = await inquirer.prompt<{password: string}>(passwordQuestions)
     ux.action.start('Validating token')
