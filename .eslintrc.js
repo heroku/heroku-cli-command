@@ -11,6 +11,13 @@ module.exports = {
         'unicorn/consistent-destructuring': 'warn',
       },
     },
+    {
+      files: ['examples/**/*.ts', 'examples/**/*.js'],
+      rules: {
+        'unicorn/prefer-module': 'off',
+        'unicorn/prefer-top-level-await': 'off',
+      },
+    },
   ],
   plugins: ['import'],
   rules: {

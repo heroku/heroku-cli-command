@@ -1,4 +1,3 @@
-/* eslint-disable unicorn/prefer-top-level-await */
 import {Command} from '../src'
 
 class LogoutCommand extends Command {
