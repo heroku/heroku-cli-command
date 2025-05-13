@@ -1,5 +1,5 @@
-import {Command} from '../src'
-import {flags} from '../src'
+import {Command, flags} from '../src'
+
 class LoginCommand extends Command {
   static flags = {
     interactive: flags.boolean({char: 'i', description: 'login with username/password'}),
