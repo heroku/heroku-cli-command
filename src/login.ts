@@ -7,8 +7,8 @@ import {Interfaces, ux} from '@oclif/core'
 import inquirer, {QuestionCollection} from 'inquirer'
 import PressToContinuePrompt from 'inquirer-press-to-continue'
 import Netrc from 'netrc-parser'
+import * as os from 'node:os'
 import open from 'open'
-import * as os from 'os'
 
 import {APIClient, HerokuAPIError} from './api-client'
 import {vars} from './vars'
@@ -60,12 +60,17 @@ export class Login {
         } else if (process.env.HEROKU_LEGACY_SSO === '1') {
           input = 'sso'
         } else {
-          await inquirer.prompt<{ key: KeyDescriptor }>({
+          const {key} = await inquirer.prompt<{ key: KeyDescriptor }>({
             anyKey: true,
             name: 'key',
-            pressToContinueMessage: 'heroku: Press any key to open up the browser to login or q to exit',
+            pressToContinueMessage: `heroku: Press any key to open up the browser to login or ${color.yellow('q')} to exit`,
             type: 'press-to-continue',
           })
+          ux.stdout('')
+          if (key.value === 'q') {
+            ux.error('Login cancelled by user')
+          }
+
           input = 'browser'
         }
       }
@@ -325,9 +330,8 @@ export class Login {
     debug(`opening browser to ${url}`)
     ux.stderr(`Opening browser to:\n${url}\n`)
     ux.stderr(color.gray(
-      'If the browser fails to open or you\'re authenticating on a '
-      + 'remote machine, please manually open the URL above in your '
-      + 'browser.\n',
+      `If the browser fails to open or you're authenticating on a remote
+machine, please manually open the URL above in your browser.\n`,
     ))
     await open(url, {wait: false})
 

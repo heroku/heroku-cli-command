@@ -5,9 +5,12 @@ if [ -z "$1" ]; then
   exit 1
 fi
 
-if [ ! -f "examples/$1.ts" ]; then
-  echo "Command '$1' not found in examples directory"
+COMMAND=$1
+shift
+
+if [ ! -f "examples/$COMMAND.ts" ]; then
+  echo "Command '$COMMAND' not found in examples directory"
   exit 1
 fi
 
-./node_modules/.bin/ts-node "examples/$1.ts" 
+./node_modules/.bin/ts-node "examples/$COMMAND.ts" "$@" 
