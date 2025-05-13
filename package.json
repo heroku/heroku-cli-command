@@ -33,7 +33,7 @@
     "chai": "^5.2.0",
     "conventional-changelog-cli": "^5.0.0",
     "eslint": "^8.57.0",
-    "eslint-config-oclif": "^5.2.2",
+    "eslint-config-oclif": "^6.0.56",
     "eslint-config-oclif-typescript": "^3.1.14",
     "eslint-plugin-import": "^2.31.0",
     "fancy-test": "^2.0.42",
