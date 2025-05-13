@@ -37,7 +37,7 @@
     "eslint-config-oclif-typescript": "^3.1.14",
     "eslint-plugin-import": "^2.31.0",
     "fancy-test": "^2.0.42",
-    "mocha": "^10.7.3",
+    "mocha": "^11.2.2",
     "nock": "^14.0.1",
     "np": "^10.2.0",
     "proxyquire": "^2.1.3",
