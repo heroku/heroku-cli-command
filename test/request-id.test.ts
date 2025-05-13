@@ -8,7 +8,7 @@ describe('getRequestId', () => {
 
   beforeEach(function () {
     RequestId.empty()
-    generateStub = sinon.stub(RequestId, '_generate').returns('randomly-generated-uuid')
+    generateStub = sinon.stub(RequestId, '_generate').returns('randomly-generated-uuid-1234-5678')
   })
 
   afterEach(function () {
@@ -20,7 +20,7 @@ describe('getRequestId', () => {
     expect(generateStub.called).to.be.false
     const ids = RequestId.create()
     expect(ids).to.deep.equal(RequestId.ids)
-    expect(ids).to.deep.equal(['randomly-generated-uuid'])
+    expect(ids).to.deep.equal(['randomly-generated-uuid-1234-5678'])
     expect(RequestId.ids.length).to.equal(1)
     expect(generateStub.called).to.be.true
   })
@@ -42,7 +42,7 @@ describe('getRequestId', () => {
   it('can generate a header value', () => {
     RequestId.create()
     RequestId.track('incoming-header-id')
-    expect(RequestId.headerValue).to.equal('incoming-header-id,randomly-generated-uuid')
+    expect(RequestId.headerValue).to.equal('incoming-header-id,randomly-generated-uuid-1234-5678')
   })
 
   it('create and track uuids together putting latest in front', () => {

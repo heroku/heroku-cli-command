@@ -1,4 +1,4 @@
-export type PromiseResolve<T> = (value: T | PromiseLike<T>) => void
+export type PromiseResolve<T> = (value: PromiseLike<T> | T) => void
 export type PromiseReject = (reason?: any) => void
 export type Task<T> = () => Promise<T>
 export type Record<T> = [Task<T>, PromiseResolve<T>, PromiseReject]
@@ -6,15 +6,6 @@ export type Record<T> = [Task<T>, PromiseResolve<T>, PromiseReject]
 export class Mutex<T> {
   private busy = false
   private readonly queue: Array<Record<T>> = []
-
-  synchronize(task: Task<T>): Promise<T> {
-    return new Promise((resolve, reject) => {
-      this.queue.push([task, resolve, reject])
-      if (!this.busy) {
-        this.dequeue()
-      }
-    })
-  }
 
   dequeue() {
     this.busy = true
@@ -35,5 +26,14 @@ export class Mutex<T> {
       .then(() => {
         this.dequeue()
       })
+  }
+
+  synchronize(task: Task<T>): Promise<T> {
+    return new Promise((resolve, reject) => {
+      this.queue.push([task, resolve, reject])
+      if (!this.busy) {
+        this.dequeue()
+      }
+    })
   }
 }

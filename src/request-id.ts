@@ -1,16 +1,9 @@
-import * as uuid from 'uuid'
+import {randomUUID} from 'node:crypto'
 
 export const requestIdHeader = 'Request-Id'
 
 export class RequestId {
   static ids: string[] = []
-
-  static track(...ids: string[]) {
-    const tracked = RequestId.ids
-    ids = ids.filter(id => !(tracked.includes(id)))
-    RequestId.ids = [...ids, ...tracked]
-    return RequestId.ids
-  }
 
   static create(): string[] {
     const tracked = RequestId.ids
@@ -27,7 +20,14 @@ export class RequestId {
     return RequestId.ids.join(',')
   }
 
+  static track(...ids: string[]) {
+    const tracked = RequestId.ids
+    ids = ids.filter(id => !(tracked.includes(id)))
+    RequestId.ids = [...ids, ...tracked]
+    return RequestId.ids
+  }
+
   static _generate() {
-    return uuid.v4()
+    return randomUUID()
   }
 }

@@ -122,9 +122,11 @@ describe('required', () => {
 
 describe('optional', () => {
   it('works when git errors out', async () => {
-    Object.defineProperty(Git.prototype, 'remotes', {get: () => {
-      throw new Error('whoa!')
-    }})
+    Object.defineProperty(Git.prototype, 'remotes', {
+      get() {
+        throw new Error('whoa!')
+      },
+    })
 
     await class Command extends Base {
       static flags = {

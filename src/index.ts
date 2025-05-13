@@ -1,10 +1,6 @@
-import {Command} from './command'
-import * as completions from './completions'
-import * as flags from './flags'
 
 export {APIClient} from './api-client'
+export {Command, Command as default} from './command'
+export * as completions from './completions'
+export * as flags from './flags'
 export {vars} from './vars'
-export {flags, completions}
-
-export {Command}
-export default Command

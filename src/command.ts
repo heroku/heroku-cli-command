@@ -1,7 +1,11 @@
 import {Command as Base} from '@oclif/core'
-import {ArgOutput, FlagOutput, Input, ParserOutput} from '@oclif/core/lib/interfaces/parser'
+import {
+  ArgOutput,
+  FlagOutput,
+  Input,
+  ParserOutput,
+} from '@oclif/core/lib/interfaces/parser'
 import {NonExistentFlagsError} from '@oclif/core/lib/parser/errors'
-import {deprecate} from 'util'
 import parser from 'yargs-parser'
 import unparser from 'yargs-unparser'
 
@@ -10,15 +14,10 @@ const pjson = require('../package.json')
 import {APIClient, IOptions} from './api-client'
 import deps from './deps'
 
-const deprecatedCLI = deprecate(() => {
-  return require('cli-ux').cli
-}, 'this.out and this.cli is deprecated. Please import "CliUx" from the @oclif/core module directly instead.')
-
 export abstract class Command extends Base {
+  allowArbitraryFlags: boolean = false
   base = `${pjson.name}@${pjson.version}`
   _heroku!: APIClient
-  _legacyHerokuClient: any
-  allowArbitraryFlags: boolean = false;
 
   get heroku(): APIClient {
     if (this._heroku) return this._heroku
@@ -28,29 +27,6 @@ export abstract class Command extends Base {
     }
     this._heroku = new deps.APIClient(this.config, options)
     return this._heroku
-  }
-
-  get legacyHerokuClient(): any {
-    if (this._legacyHerokuClient) return this._legacyHerokuClient
-    const HerokuClient = require('heroku-client')
-    const options = {
-      debug: this.config.debug,
-      host: `${this.heroku.defaults.protocol || 'https:'}//${this.heroku.defaults.host ||
-        'api.heroku.com'}`,
-      token: this.heroku.auth,
-      userAgent: (this.heroku.defaults as any).headers['user-agent'],
-    }
-
-    this._legacyHerokuClient = new HerokuClient(options)
-    return this._legacyHerokuClient
-  }
-
-  get cli(): any {
-    return deprecatedCLI()
-  }
-
-  get out(): any {
-    return deprecatedCLI()
   }
 
   protected async parse<F extends FlagOutput, B extends FlagOutput, A extends ArgOutput>(options?: Input<F, B, A>, argv?: string[]): Promise<ParserOutput<F, B, A>> {
@@ -63,7 +39,7 @@ export abstract class Command extends Base {
         const nonExistentFlagsWithValues = {...parsed}
 
         if (nonExistentFlags && nonExistentFlags.length > 0) {
-          this.warn(`You’re using a deprecated syntax with the [${nonExistentFlags}] flag.\nAdd a '--' (end of options) separator before the flags you’re passing through.`)
+          this.warn(`You're using a deprecated syntax with the [${nonExistentFlags}] flag.\nAdd a '--' (end of options) separator before the flags you're passing through.`)
           for (const flag of nonExistentFlags) {
             const key = flag.replace('--', '')
             delete parsed[key]
@@ -85,7 +61,7 @@ export abstract class Command extends Base {
           const doubleHyphenRegex = /^--/
           const positionalValueIsFlag = doubleHyphenRegex.test(positionalValue)
           if (positionalValueIsFlag) {
-            const nextElement = result.nonExistentFlags[index + 1] ? result.nonExistentFlags[index + 1] : ''
+            const nextElement = result.nonExistentFlags[index + 1] ?? ''
             const nextElementIsFlag = doubleHyphenRegex.test(nextElement)
             // eslint-disable-next-line max-depth
             if (nextElement && !nextElementIsFlag) {

@@ -1,18 +1,19 @@
-import {Interfaces} from '@oclif/core'
-import {CLIError, warn} from '@oclif/core/lib/errors'
 import {HTTP, HTTPError, HTTPRequestOptions} from '@heroku/http-call'
+import {Errors, Interfaces} from '@oclif/core'
+import inquirer from 'inquirer'
 import Netrc from 'netrc-parser'
-import * as url from 'url'
+import * as url from 'node:url'
 
 import deps from './deps'
 import {Login} from './login'
 import {Mutex} from './mutex'
+import {IDelinquencyConfig, IDelinquencyInfo, ParticleboardClient} from './particleboard-client'
 import {RequestId, requestIdHeader} from './request-id'
 import {vars} from './vars'
-import {ParticleboardClient, IDelinquencyInfo, IDelinquencyConfig} from './particleboard-client'
 
 const debug = require('debug')
 
+// eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace APIClient {
   export interface Options extends HTTPRequestOptions {
     retryAuth?: boolean
@@ -20,23 +21,23 @@ export namespace APIClient {
 }
 
 export interface IOptions {
-  required?: boolean
-  preauth?: boolean
   debug?: boolean
   debugHeaders?: boolean
+  preauth?: boolean
+  required?: boolean
 }
 
 export interface IHerokuAPIErrorOptions {
-  resource?: string
   app?: { id: string; name: string }
   id?: string
   message?: string
+  resource?: string
   url?: string
 }
 
-export class HerokuAPIError extends CLIError {
-  http: HTTPError
+export class HerokuAPIError extends Errors.CLIError {
   body: IHerokuAPIErrorOptions
+  http: HTTPError
 
   constructor(httpError: HTTPError) {
     if (!httpError) throw new Error('invalid error')
@@ -54,13 +55,13 @@ export class HerokuAPIError extends CLIError {
 }
 
 export class APIClient {
-  preauthPromises: { [k: string]: Promise<HTTP<any>> }
   authPromise?: Promise<HTTP<any>>
   http: typeof HTTP
-  private readonly _login = new Login(this.config, this)
-  private _twoFactorMutex: Mutex<string> | undefined
+  preauthPromises: { [k: string]: Promise<HTTP<any>> }
   private _auth?: string
+  private readonly _login = new Login(this.config, this)
   private _particleboard!: ParticleboardClient
+  private _twoFactorMutex: Mutex<string> | undefined
 
   constructor(protected config: Interfaces.Config, public options: IOptions = {}) {
     this.config = config
@@ -70,61 +71,22 @@ export class APIClient {
     if (options.debug) debug.enable('http')
     if (options.debug && options.debugHeaders) debug.enable('http,http:headers')
     this.options = options
-    const apiUrl = url.URL ? new url.URL(vars.apiUrl) : url.parse(vars.apiUrl)
+    const apiUrl = new url.URL(vars.apiUrl)
     const envHeaders = JSON.parse(process.env.HEROKU_HEADERS || '{}')
     this.preauthPromises = {}
     const self = this as any
     const opts = {
-      host: apiUrl.hostname,
-      port: apiUrl.port,
-      protocol: apiUrl.protocol,
       headers: {
         accept: 'application/vnd.heroku+json; version=3',
         'user-agent': `heroku-cli/${self.config.version} ${self.config.platform}`,
         ...envHeaders,
       },
+      host: apiUrl.hostname,
+      port: apiUrl.port,
+      protocol: apiUrl.protocol,
     }
     const delinquencyConfig: IDelinquencyConfig = {fetch_delinquency: false, warning_shown: false}
     this.http = class APIHTTPClient<T> extends deps.HTTP.HTTP.create(opts)<T> {
-      static async twoFactorRetry(
-        err: HTTPError,
-        url: string,
-        opts: APIClient.Options = {},
-        retries = 3,
-      ): Promise<APIHTTPClient<any>> {
-        const app = err.body.app ? err.body.app.name : null
-        if (!app || !options.preauth) {
-          opts.headers = opts.headers || {}
-          opts.headers['Heroku-Two-Factor-Code'] = await self.twoFactorPrompt()
-          return this.request(url, opts, retries)
-        }
-
-        // if multiple requests are run in parallel for the same app, we should
-        // only preauth for the first so save the fact we already preauthed
-        if (!self.preauthPromises[app]) {
-          self.preauthPromises[app] = self.twoFactorPrompt().then((factor: any) => self.preauth(app, factor))
-        }
-
-        await self.preauthPromises[app]
-        return this.request(url, opts, retries)
-      }
-
-      static trackRequestIds<T>(response: HTTP<T>) {
-        const responseRequestIdHeader = response.headers[requestIdHeader] || response.headers[requestIdHeader.toLocaleLowerCase()]
-        if (responseRequestIdHeader) {
-          const requestIds = Array.isArray(responseRequestIdHeader) ? responseRequestIdHeader : responseRequestIdHeader.split(',')
-          RequestId.track(...requestIds)
-        }
-      }
-
-      static showWarnings<T>(response: HTTP<T>) {
-        const warnings = response.headers['x-heroku-warning'] || response.headers['warning-message']
-        if (Array.isArray(warnings))
-          warnings.forEach(warning => warn(`${warning}\n`))
-        else if (typeof warnings === 'string')
-          warn(`${warnings}\n`)
-      }
-
       static configDelinquency(url: string, opts: APIClient.Options): void {
         if (opts.method?.toUpperCase() !== 'GET' || (opts.hostname && opts.hostname !== apiUrl.hostname)) {
           delinquencyConfig.fetch_delinquency = false
@@ -161,15 +123,15 @@ export class APIClient {
           const now = Date.now()
 
           if (suspension > now) {
-            warn(`This ${resource} is delinquent with payment and we‘ll suspend it on ${new Date(suspension)}.`)
+            Errors.warn(`This ${resource} is delinquent with payment and we'll suspend it on ${new Date(suspension)}.`)
             delinquencyConfig.warning_shown = true
             return
           }
 
           if (deletion)
-            warn(`This ${resource} is delinquent with payment and we suspended it on ${new Date(suspension)}. If the ${resource} is still delinquent, we‘ll delete it on ${new Date(deletion)}.`)
+            Errors.warn(`This ${resource} is delinquent with payment and we suspended it on ${new Date(suspension)}. If the ${resource} is still delinquent, we'll delete it on ${new Date(deletion)}.`)
         } else if (deletion)
-          warn(`This ${resource} is delinquent with payment and we‘ll delete it on ${new Date(deletion)}.`)
+          Errors.warn(`This ${resource} is delinquent with payment and we'll delete it on ${new Date(deletion)}.`)
 
         delinquencyConfig.warning_shown = true
       }
@@ -252,21 +214,46 @@ export class APIClient {
           throw new HerokuAPIError(error)
         }
       }
+
+      static showWarnings<T>(response: HTTP<T>) {
+        const warnings = response.headers['x-heroku-warning'] || response.headers['warning-message']
+        if (Array.isArray(warnings))
+          warnings.forEach(warning => Errors.warn(`${warning}\n`))
+        else if (typeof warnings === 'string')
+          Errors.warn(`${warnings}\n`)
+      }
+
+      static trackRequestIds<T>(response: HTTP<T>) {
+        const responseRequestIdHeader = response.headers[requestIdHeader] || response.headers[requestIdHeader.toLocaleLowerCase()]
+        if (responseRequestIdHeader) {
+          const requestIds = Array.isArray(responseRequestIdHeader) ? responseRequestIdHeader : responseRequestIdHeader.split(',')
+          RequestId.track(...requestIds)
+        }
+      }
+
+      static async twoFactorRetry(
+        err: HTTPError,
+        url: string,
+        opts: APIClient.Options = {},
+        retries = 3,
+      ): Promise<APIHTTPClient<any>> {
+        const app = err.body.app ? err.body.app.name : null
+        if (!app || !options.preauth) {
+          opts.headers = opts.headers || {}
+          opts.headers['Heroku-Two-Factor-Code'] = await self.twoFactorPrompt()
+          return this.request(url, opts, retries)
+        }
+
+        // if multiple requests are run in parallel for the same app, we should
+        // only preauth for the first so save the fact we already preauthed
+        if (!self.preauthPromises[app]) {
+          self.preauthPromises[app] = self.twoFactorPrompt().then((factor: any) => self.preauth(app, factor))
+        }
+
+        await self.preauthPromises[app]
+        return this.request(url, opts, retries)
+      }
     }
-  }
-
-  get particleboard(): ParticleboardClient {
-    if (this._particleboard) return this._particleboard
-    this._particleboard = new deps.ParticleboardClient(this.config)
-    return this._particleboard
-  }
-
-  get twoFactorMutex(): Mutex<string> {
-    if (!this._twoFactorMutex) {
-      this._twoFactorMutex = new deps.Mutex()
-    }
-
-    return this._twoFactorMutex
   }
 
   get auth(): string | undefined {
@@ -287,52 +274,30 @@ export class APIClient {
     this._auth = token
   }
 
-  twoFactorPrompt() {
-    deps.yubikey.enable()
-    return this.twoFactorMutex.synchronize(async () => {
-      try {
-        const factor = await deps.cli.prompt('Two-factor code', {type: 'mask'})
-        deps.yubikey.disable()
-        return factor
-      } catch (error) {
-        deps.yubikey.disable()
-        throw error
-      }
-    })
+  get defaults(): typeof HTTP.defaults {
+    return this.http.defaults
   }
 
-  preauth(app: string, factor: string) {
-    return this.put(`/apps/${app}/pre-authorizations`, {
-      headers: {'Heroku-Two-Factor-Code': factor},
-    })
+  get particleboard(): ParticleboardClient {
+    if (this._particleboard) return this._particleboard
+    this._particleboard = new deps.ParticleboardClient(this.config)
+    return this._particleboard
   }
 
-  get<T>(url: string, options: APIClient.Options = {}) {
-    return this.http.get<T>(url, options)
-  }
+  get twoFactorMutex(): Mutex<string> {
+    if (!this._twoFactorMutex) {
+      this._twoFactorMutex = new deps.Mutex()
+    }
 
-  post<T>(url: string, options: APIClient.Options = {}) {
-    return this.http.post<T>(url, options)
-  }
-
-  put<T>(url: string, options: APIClient.Options = {}) {
-    return this.http.put<T>(url, options)
-  }
-
-  patch<T>(url: string, options: APIClient.Options = {}) {
-    return this.http.patch<T>(url, options)
+    return this._twoFactorMutex
   }
 
   delete<T>(url: string, options: APIClient.Options = {}) {
     return this.http.delete<T>(url, options)
   }
 
-  stream(url: string, options: APIClient.Options = {}) {
-    return this.http.stream(url, options)
-  }
-
-  request<T>(url: string, options: APIClient.Options = {}) {
-    return this.http.request<T>(url, options)
+  get<T>(url: string, options: APIClient.Options = {}) {
+    return this.http.get<T>(url, options)
   }
 
   login(opts: Login.Options = {}) {
@@ -343,7 +308,7 @@ export class APIClient {
     try {
       await this._login.logout()
     } catch (error) {
-      if (error instanceof CLIError) warn(error)
+      if (error instanceof Errors.CLIError) Errors.warn(error)
     }
 
     delete Netrc.machines['api.heroku.com']
@@ -351,7 +316,48 @@ export class APIClient {
     await Netrc.save()
   }
 
-  get defaults(): typeof HTTP.defaults {
-    return this.http.defaults
+  patch<T>(url: string, options: APIClient.Options = {}) {
+    return this.http.patch<T>(url, options)
+  }
+
+  post<T>(url: string, options: APIClient.Options = {}) {
+    return this.http.post<T>(url, options)
+  }
+
+  preauth(app: string, factor: string) {
+    return this.put(`/apps/${app}/pre-authorizations`, {
+      headers: {'Heroku-Two-Factor-Code': factor},
+    })
+  }
+
+  put<T>(url: string, options: APIClient.Options = {}) {
+    return this.http.put<T>(url, options)
+  }
+
+  request<T>(url: string, options: APIClient.Options = {}) {
+    return this.http.request<T>(url, options)
+  }
+
+  stream(url: string, options: APIClient.Options = {}) {
+    return this.http.stream(url, options)
+  }
+
+  twoFactorPrompt() {
+    deps.yubikey.enable()
+    return this.twoFactorMutex.synchronize(async () => {
+      try {
+        const {factor} = await inquirer.prompt([{
+          mask: '*',
+          message: 'Two-factor code',
+          name: 'factor',
+          type: 'password',
+        }])
+        deps.yubikey.disable()
+        return factor
+      } catch (error) {
+        deps.yubikey.disable()
+        throw error
+      }
+    })
   }
 }

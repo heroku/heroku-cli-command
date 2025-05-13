@@ -1,11 +1,11 @@
 import {Command} from '../src'
 
-class LoginCommand extends Command {
+class LogoutCommand extends Command {
   async run() {
     this.log('logging out')
     await this.heroku.logout()
   }
 }
 
-LoginCommand.run([])
-  .catch(require('@oclif/errors/handle'))
+(LogoutCommand.run([]) as any)
+  .catch(require('@oclif/core').Errors.handle)

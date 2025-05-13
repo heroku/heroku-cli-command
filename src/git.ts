@@ -1,4 +1,4 @@
-import {CLIError} from '@oclif/core/lib/errors'
+import {Errors} from '@oclif/core'
 
 import {vars} from './vars'
 
@@ -26,8 +26,8 @@ export class Git {
         stdio: [null, 'pipe', null],
       })
     } catch (error) {
-      if ((error as CLIError).code === 'ENOENT') {
-        throw new CLIError('Git must be installed to use the Heroku CLI.  See instructions here: http://git-scm.com')
+      if ((error as any).code === 'ENOENT') {
+        throw new Errors.CLIError('Git must be installed to use the Heroku CLI.  See instructions here: http://git-scm.com')
       }
 
       throw error
@@ -43,8 +43,8 @@ export function configRemote() {
 }
 
 export interface IGitRemotes {
-  remote: string
   app: string
+  remote: string
 }
 
 export function getGitRemotes(onlyRemote: string | undefined): IGitRemotes[] {

@@ -1,7 +1,10 @@
 import {Config} from '@oclif/core'
 import base, {expect} from 'fancy-test'
+import inquirer from 'inquirer'
+import Netrc from 'netrc-parser'
 import nock from 'nock'
 import {resolve} from 'path'
+import * as sinon from 'sinon'
 
 import {Command as CommandBase} from '../src/command'
 
@@ -15,6 +18,33 @@ beforeEach(() => {
   api.delete('/oauth/sessions/~').reply(200, {})
   api.get('/oauth/authorizations').reply(200, [])
   api.get('/oauth/authorizations/~').reply(200, {})
+
+  // Mock netrc-parser
+  sinon.stub(Netrc, 'load').resolves()
+  sinon.stub(Netrc, 'save').resolves()
+
+  // Mock inquirer prompts
+  sinon.stub(inquirer, 'prompt').callsFake(async (questions: any) => {
+    if (Array.isArray(questions)) {
+      const answers: any = {}
+
+      for (const q of questions) {
+        if (q.name === 'email') answers.email = 'test@example.com'
+        if (q.name === 'password') answers.password = 'test-password'
+        if (q.name === 'secondFactor') answers.secondFactor = '123456'
+        if (q.name === 'action') answers.action = 'y'
+        if (q.name === 'orgName') answers.orgName = 'test-org'
+      }
+
+      return answers
+    }
+
+    return {}
+  })
+})
+
+afterEach(() => {
+  sinon.restore()
 })
 
 const test = base
@@ -54,7 +84,7 @@ describe('login with interactive', () => {
       const cmd = new Command([], ctx.config)
       api
         .post('/oauth/authorizations',
-          {scope: ['global'], description: /^Heroku CLI login from .*/, expires_in: 60 * 60 * 24 * 30})
+          {description: /^Heroku CLI login from .*/, expires_in: 60 * 60 * 24 * 30, scope: ['global']})
         .reply(401, {id: 'unauthorized', message: 'not authorized'})
 
       await cmd.heroku.login({method: 'interactive'})
@@ -68,10 +98,10 @@ describe('login with interactive', () => {
       const cmd = new Command([], ctx.config)
       api
         .post('/oauth/authorizations',
-          {scope: ['global'], description: /^Heroku CLI login from .*/, expires_in: 12345})
+          {description: /^Heroku CLI login from .*/, expires_in: 12345, scope: ['global']})
         .reply(401, {id: 'unauthorized', message: 'not authorized'})
 
-      await cmd.heroku.login({method: 'interactive', expiresIn: 12_345})
+      await cmd.heroku.login({expiresIn: 12_345, method: 'interactive'})
         .catch(error => {
           expect(error.message).to.contain('Error ID: unauthorized')
         })
@@ -81,7 +111,7 @@ describe('login with interactive', () => {
     .it('does not allow logins longer than 30 days', async ctx => {
       const cmd = new Command([], ctx.config)
 
-      await cmd.heroku.login({method: 'interactive', expiresIn: 60 * 60 * 24 * 31})
+      await cmd.heroku.login({expiresIn: 60 * 60 * 24 * 31, method: 'interactive'})
         .catch(error => {
           expect(error.message).to.contain('Cannot set an expiration longer than thirty days')
         })

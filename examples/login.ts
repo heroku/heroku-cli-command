@@ -1,11 +1,17 @@
-import {Command} from '../src'
+import {Command, flags} from '../src'
 
 class LoginCommand extends Command {
+  static flags = {
+    interactive: flags.boolean({char: 'i', description: 'login with username/password'}),
+  }
+
   async run() {
+    const {flags} = await this.parse(LoginCommand)
     this.log('logging in')
-    await this.heroku.login()
+    const interactive = (flags.interactive) ? 'interactive' : undefined
+    await this.heroku.login({method: interactive})
   }
 }
 
-(LoginCommand.run([]) as any)
+(LoginCommand.run(process.argv.slice(2)) as any)
   .catch(require('@oclif/core').Errors.handle)
