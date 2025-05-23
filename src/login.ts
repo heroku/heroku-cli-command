@@ -1,13 +1,11 @@
-import type {KeyDescriptor} from 'inquirer-press-to-continue'
-
 import HTTP from '@heroku/http-call'
 import color from '@heroku-cli/color'
 import * as Heroku from '@heroku-cli/schema'
 import {Interfaces, ux} from '@oclif/core'
 import inquirer, {QuestionCollection} from 'inquirer'
-import PressToContinuePrompt from 'inquirer-press-to-continue'
 import Netrc from 'netrc-parser'
 import * as os from 'node:os'
+import * as readline from 'node:readline'
 import open from 'open'
 
 import {APIClient, HerokuAPIError} from './api-client'
@@ -16,7 +14,6 @@ import {vars} from './vars'
 const debug = require('debug')('heroku-cli-command')
 const hostname = os.hostname()
 const thirtyDays = 60 * 60 * 24 * 30
-inquirer.registerPrompt('press-to-continue', PressToContinuePrompt)
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace Login {
@@ -60,14 +57,25 @@ export class Login {
         } else if (process.env.HEROKU_LEGACY_SSO === '1') {
           input = 'sso'
         } else {
-          const {key} = await inquirer.prompt<{ key: KeyDescriptor }>({
-            anyKey: true,
-            name: 'key',
-            pressToContinueMessage: `heroku: Press any key to open up the browser to login or ${color.yellow('q')} to exit`,
-            type: 'press-to-continue',
+          ux.stderr(`heroku: Press any key to open up the browser to login or ${color.yellow('q')} to exit`)
+          const rl = readline.createInterface({
+            input: process.stdin,
+            output: process.stdout,
           })
+          // Set raw mode to get immediate keypresses
+          process.stdin.setRawMode(true)
+          process.stdin.resume()
+          const key = await new Promise<string>(resolve => {
+            process.stdin.once('data', data => {
+              const key = data.toString()
+              resolve(key)
+            })
+          })
+          // Restore normal terminal settings
+          process.stdin.setRawMode(false)
+          rl.close()
           ux.stdout('')
-          if (key.value === 'q') {
+          if (key.toLowerCase() === 'q') {
             ux.error('Login cancelled by user')
           }
 
