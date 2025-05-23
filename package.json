@@ -12,7 +12,7 @@
     "inquirer": "^8.2.6",
     "netrc-parser": "^3.1.6",
     "open": "^10.1.2",
-    "yargs-parser": "^20.2.9",
+    "yargs-parser": "^21.1.1",
     "yargs-unparser": "^2.0.0"
   },
   "devDependencies": {
