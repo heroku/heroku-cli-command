@@ -1,5 +1,5 @@
-import childProcess from 'child_process'
 import {expect, fancy} from 'fancy-test'
+import childProcess from 'node:child_process'
 
 import {Git} from '../src/git'
 

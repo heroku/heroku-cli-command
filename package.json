@@ -19,9 +19,10 @@
   "devDependencies": {
     "@heroku-cli/schema": "^1.0.25",
     "@types/chai": "^5.2.2",
+    "@types/debug": "^4.1.12",
     "@types/inquirer": "^8.2.11",
-    "@types/mocha": "^10.0.6",
-    "@types/node": "22.15.17",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^22.15.17",
     "@types/proxyquire": "^1.3.31",
     "@types/sinon": "^17.0.3",
     "@types/supports-color": "^5.3.0",
@@ -37,15 +38,16 @@
     "eslint-config-oclif-typescript": "^3.1.14",
     "eslint-plugin-import": "^2.31.0",
     "fancy-test": "^2.0.42",
-    "mocha": "^10.7.3",
+    "mocha": "^10.8.2",
     "nock": "^14.0.1",
     "np": "^10.2.0",
+    "prettier": "3.2.4",
     "proxyquire": "^2.1.3",
     "sinon": "^20.0.0",
     "stdout-stderr": "^0.1.13",
-    "ts-node": "^10.9.1",
+    "ts-mocha": "^11.1.0",
     "tslint": "^6.1.3",
-    "typescript": "^5.7.3"
+    "typescript": "^5.8.3"
   },
   "engines": {
     "node": ">= 20"
@@ -58,27 +60,28 @@
     "heroku"
   ],
   "license": "ISC",
-  "main": "lib/index.js",
   "repository": "heroku/heroku-cli-command",
-  "mocha": {
-    "require": [
-      "test/helpers/init.js",
-      "ts-node/register",
-      "source-map-support/register"
-    ],
-    "watch-extensions": "ts",
-    "recursive": true,
-    "reporter": "spec",
-    "timeout": 360000
-  },
   "scripts": {
-    "build": "rm -rf lib && tsc",
+    "build:cjs": "tsc --project ./tsconfig.json --module commonjs --outDir lib/cjs --target esnext",
+    "build:esm": "tsc --project ./tsconfig.json --module esnext --outDir lib/esm --target esnext",
+    "build": "rm -rf lib && eslint . --config .eslintrc.js --fix && prettier -w --config ./.prettier.mjs ./src/**/*.ts && (npm run build:cjs & npm run build:esm)",
+    "postbuild": "node scripts/write-type-package-jsons.mjs",
+    "pretest": "npm run build",
+    "test": "export NODE_OPTIONS=\"--loader ts-node/esm\" && mocha 'test/**/*.ts'",
     "lint": "tsc -p test --noEmit && eslint . --ext .ts",
     "posttest": "npm run lint",
     "prepublishOnly": "npm run build && npm run changelog",
-    "test": "mocha --forbid-only \"test/**/*.test.ts\"",
     "changelog": "conventional-changelog -p conventionalcommits -i CHANGELOG.md -s",
     "example": "sh examples/run.sh"
   },
-  "types": "./lib/index.d.ts"
+  "main": "./lib/cjs/index.js",
+  "module": "./lib/esm/index.js",
+  "types": "./lib/esm/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./lib/esm/index.js",
+      "require": "./lib/cjs/index.js",
+      "types": "./lib/esm/index.d.ts"
+    }
+  }
 }

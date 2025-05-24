@@ -1,7 +1,7 @@
 import {Config} from '@oclif/core'
 import base, {expect} from 'fancy-test'
 import nock from 'nock'
-import {resolve} from 'path'
+import {resolve} from 'node:path'
 import * as sinon from 'sinon'
 import {stderr} from 'stdout-stderr'
 

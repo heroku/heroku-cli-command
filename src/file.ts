@@ -1,14 +1,14 @@
-import * as fs from 'fs'
-import {promisify} from 'util'
+import debugModule from 'debug'
+import * as fs from 'node:fs'
+import {promisify} from 'node:util'
 
 let _debug: any
 function debug(...args: any[]) {
-  if (_debug) _debug = require('debug')('@heroku-cli/command:file')
+  if (!_debug) _debug = debugModule('@heroku-cli/command:file')
   _debug(...args)
 }
 
 export function exists(f: string): Promise<boolean> {
-  // eslint-disable-next-line n/no-deprecated-api
   return promisify(fs.exists)(f)
 }
 

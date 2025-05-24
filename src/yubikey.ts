@@ -1,8 +1,9 @@
+import {execSync} from 'node:child_process'
+
 function toggle(onoff: string) {
-  const cp = require('child_process')
   if (yubikey.platform !== 'darwin') return
   try {
-    cp.execSync(
+    execSync(
       `osascript -e 'if application "yubiswitch" is running then tell application "yubiswitch" to ${onoff}'`,
       {stdio: 'inherit'},
     )

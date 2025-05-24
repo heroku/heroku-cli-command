@@ -4,17 +4,18 @@
     "forceConsistentCasingInFileNames": true,
     "esModuleInterop": true,
     "importHelpers": true,
-    "module": "commonjs",
+    "module": "esnext",
+    "moduleResolution": "node",
     "outDir": "./lib",
     "pretty": true,
-    "rootDirs": [
-      "./src"
-    ],
+    "rootDir": "./src",
+    "baseUrl": "./",
     "skipLibCheck": true,
     "strict": true,
-    "target": "es2017"
+    "target": "ES2020",
+    "resolveJsonModule": true
   },
   "include": [
-    "./src/**/*"
+    "src/**/*"
   ]
 }

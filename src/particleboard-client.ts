@@ -2,9 +2,8 @@ import {HTTP, HTTPRequestOptions} from '@heroku/http-call'
 import {Interfaces} from '@oclif/core'
 import * as url from 'node:url'
 
-import deps from './deps'
-import {RequestId, requestIdHeader} from './request-id'
-import {vars} from './vars'
+import {RequestId, requestIdHeader} from './request-id.js'
+import {vars} from './vars.js'
 
 export interface IDelinquencyInfo {
   scheduled_deletion_time?: null | string
@@ -37,7 +36,7 @@ export class ParticleboardClient {
       port: particleboardUrl.port,
       protocol: particleboardUrl.protocol,
     }
-    this.http = class ParticleboardHTTPClient<T> extends deps.HTTP.HTTP.create(particleboardOpts)<T> {
+    this.http = class ParticleboardHTTPClient<T> extends HTTP.create(particleboardOpts)<T> {
       static async request<T>(url: string, opts: HTTPRequestOptions = {}): Promise<ParticleboardHTTPClient<T>> {
         opts.headers = opts.headers || {}
         opts.headers[requestIdHeader] = RequestId.create() && RequestId.headerValue

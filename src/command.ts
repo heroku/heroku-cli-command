@@ -9,14 +9,10 @@ import {NonExistentFlagsError} from '@oclif/core/lib/parser/errors'
 import parser from 'yargs-parser'
 import unparser from 'yargs-unparser'
 
-const pjson = require('../package.json')
-
-import {APIClient, IOptions} from './api-client'
-import deps from './deps'
+import {APIClient, IOptions} from './api-client.js'
 
 export abstract class Command extends Base {
   allowArbitraryFlags: boolean = false
-  base = `${pjson.name}@${pjson.version}`
   _heroku!: APIClient
 
   get heroku(): APIClient {
@@ -25,7 +21,7 @@ export abstract class Command extends Base {
       debug: process.env.HEROKU_DEBUG === '1' || process.env.HEROKU_DEBUG?.toUpperCase() === 'TRUE',
       debugHeaders: process.env.HEROKU_DEBUG_HEADERS === '1' || process.env.HEROKU_DEBUG_HEADERS?.toUpperCase() === 'TRUE',
     }
-    this._heroku = new deps.APIClient(this.config, options)
+    this._heroku = new APIClient(this.config, options)
     return this._heroku
   }
 

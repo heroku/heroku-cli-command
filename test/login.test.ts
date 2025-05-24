@@ -1,12 +1,12 @@
 import {Config} from '@oclif/core'
 import base, {expect} from 'fancy-test'
-import inquirer from 'inquirer'
+import * as inquirer from 'inquirer'
 import Netrc from 'netrc-parser'
 import nock from 'nock'
-import {resolve} from 'path'
+import {resolve} from 'node:path'
 import * as sinon from 'sinon'
 
-import {Command as CommandBase} from '../src/command'
+import {Command as CommandBase} from '../src/command.js'
 
 class Command extends CommandBase {
   async run() {}

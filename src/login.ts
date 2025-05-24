@@ -4,16 +4,16 @@ import HTTP from '@heroku/http-call'
 import color from '@heroku-cli/color'
 import * as Heroku from '@heroku-cli/schema'
 import {Interfaces, ux} from '@oclif/core'
+import herokuDebug from 'debug'
 import inquirer, {QuestionCollection} from 'inquirer'
 import PressToContinuePrompt from 'inquirer-press-to-continue'
 import Netrc from 'netrc-parser'
 import * as os from 'node:os'
 import open from 'open'
 
-import {APIClient, HerokuAPIError} from './api-client'
-import {vars} from './vars'
-
-const debug = require('debug')('heroku-cli-command')
+import {APIClient, HerokuAPIError} from './api-client.js'
+import {vars} from './vars.js'
+const debug = herokuDebug.default('heroku-cli-command')
 const hostname = os.hostname()
 const thirtyDays = 60 * 60 * 24 * 30
 inquirer.registerPrompt('press-to-continue', PressToContinuePrompt)

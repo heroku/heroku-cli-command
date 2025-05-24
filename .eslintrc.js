@@ -1,4 +1,7 @@
 module.exports = {
+  env: {
+    mocha: true,
+  },
   extends: [
     'oclif',
     'oclif-typescript',
