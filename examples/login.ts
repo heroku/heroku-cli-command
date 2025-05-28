@@ -1,4 +1,4 @@
-import {Command, flags} from '../src'
+import {Command, flags} from '../src/index.js'
 
 class LoginCommand extends Command {
   static flags = {

@@ -1,6 +1,6 @@
 import {ux} from '@oclif/core'
 
-import {Command} from '../src'
+import {Command} from '../src/index.js'
 
 type Favorite = {
   id: string;

@@ -1,7 +1,7 @@
 import * as Heroku from '@heroku-cli/schema'
 import {ux} from '@oclif/core'
 
-import {Command} from '../src'
+import {Command} from '../src/index.js'
 
 class StatusCommand extends Command {
   notloggedin() {

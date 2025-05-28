@@ -1,6 +1,6 @@
 import {Errors} from '@oclif/core'
 
-import {vars} from './vars'
+import {vars} from './vars.js'
 
 export interface IGitRemote {
   name: string

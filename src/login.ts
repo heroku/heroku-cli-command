@@ -1,5 +1,5 @@
-import HTTP from '@heroku/http-call'
-import color from '@heroku-cli/color'
+import {HTTP} from '@heroku/http-call'
+import {color} from '@heroku-cli/color'
 import * as Heroku from '@heroku-cli/schema'
 import {Interfaces, ux} from '@oclif/core'
 import inquirer, {QuestionCollection} from 'inquirer'
@@ -8,10 +8,11 @@ import * as os from 'node:os'
 import * as readline from 'node:readline'
 import open from 'open'
 
-import {APIClient, HerokuAPIError} from './api-client'
-import {vars} from './vars'
+import {APIClient, HerokuAPIError} from './api-client.js'
+import {vars} from './vars.js'
+import debug from 'debug'
 
-const debug = require('debug')('heroku-cli-command')
+const debugCommand = debug('heroku-cli-command')
 const hostname = os.hostname()
 const thirtyDays = 60 * 60 * 24 * 30
 
@@ -124,7 +125,7 @@ export class Login {
   }
 
   async logout(token = this.heroku.auth) {
-    if (!token) return debug('no credentials to logout')
+    if (!token) return debugCommand('no credentials to logout')
     const requests: Promise<any>[] = []
     // for SSO logins we delete the session since those do not show up in
     // authorizations because they are created a trusted client
@@ -335,7 +336,7 @@ export class Login {
     }
 
     // TODO: handle browser
-    debug(`opening browser to ${url}`)
+    debugCommand(`opening browser to ${url}`)
     ux.stderr(`Opening browser to:\n${url}\n`)
     ux.stderr(color.gray(
       `If the browser fails to open or you're authenticating on a remote

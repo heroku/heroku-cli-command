@@ -4,17 +4,28 @@
     "forceConsistentCasingInFileNames": true,
     "esModuleInterop": true,
     "importHelpers": true,
-    "module": "commonjs",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "outDir": "./lib",
     "pretty": true,
+    "resolveJsonModule": true,
     "rootDirs": [
       "./src"
     ],
     "skipLibCheck": true,
     "strict": true,
-    "target": "es2017"
+    "target": "es2020",
+    "allowJs": true,
+    "baseUrl": ".",
+    "paths": {
+      "@oclif/core/*": ["./node_modules/@oclif/core/*"]
+    }
   },
   "include": [
-    "./src/**/*"
-  ]
+    "./src/**/*",
+    "./examples/**/*"
+  ],
+  "ts-node": {
+    "esm": true
+  }
 }

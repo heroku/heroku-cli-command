@@ -1,13 +1,13 @@
 import {Errors, Interfaces} from '@oclif/core'
 import * as path from 'node:path'
-
-import deps from './deps'
-import {configRemote, getGitRemotes} from './git'
+import {APIClient} from './api-client.js'
+import * as file from './file.js'
+import {configRemote, getGitRemotes} from './git.js'
 
 export const oneDay = 60 * 60 * 24
 
 export const herokuGet = async (resource: string, ctx: {config: Interfaces.Config}): Promise<string[]> => {
-  const heroku = new deps.APIClient(ctx.config)
+  const heroku = new APIClient(ctx.config)
   let {body: resources} = await heroku.get<any>(`/${resource}`)
   if (typeof resources === 'string') resources = JSON.parse(resources)
   return resources.map((a: any) => a.name).sort()
@@ -71,7 +71,7 @@ export const DynoSizeCompletion = {
 
 export const FileCompletion = {
   async options() {
-    const files = await deps.file.readdir(process.cwd())
+    const files = await file.readdir(process.cwd())
     return files
   },
 
@@ -91,7 +91,7 @@ export const ProcessTypeCompletion = {
     let types: string[] = []
     const procfile = path.join(process.cwd(), 'Procfile')
     try {
-      const buff = await deps.file.readFile(procfile)
+      const buff = await file.readFile(procfile)
       types = buff
         .toString()
         .split('\n')

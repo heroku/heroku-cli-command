@@ -1,9 +1,10 @@
-import * as fs from 'fs'
-import {promisify} from 'util'
+import * as fs from 'node:fs'
+import {promisify} from 'node:util'
+import debugModule from 'debug'
 
 let _debug: any
 function debug(...args: any[]) {
-  if (_debug) _debug = require('debug')('@heroku-cli/command:file')
+  if (!_debug) _debug = debugModule('@heroku-cli/command:file')
   _debug(...args)
 }
 

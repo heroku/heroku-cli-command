@@ -1,18 +1,23 @@
 import {Command as Base} from '@oclif/core'
-import {
+import type {
   ArgOutput,
   FlagOutput,
   Input,
   ParserOutput,
-} from '@oclif/core/lib/interfaces/parser'
-import {NonExistentFlagsError} from '@oclif/core/lib/parser/errors'
+} from '@oclif/core/lib/interfaces/parser.js'
+import {NonExistentFlagsError} from '@oclif/core/lib/parser/errors.js'
+import * as fs from 'node:fs'
+import path from 'node:path'
+import {fileURLToPath} from 'node:url'
 import parser from 'yargs-parser'
 import unparser from 'yargs-unparser'
 
-const pjson = require('../package.json')
+import {APIClient, IOptions} from './api-client.js'
 
-import {APIClient, IOptions} from './api-client'
-import deps from './deps'
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+const packageJsonPath = path.resolve(__dirname, '../../../package.json')
+const pjson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
 
 export abstract class Command extends Base {
   allowArbitraryFlags: boolean = false
@@ -25,7 +30,7 @@ export abstract class Command extends Base {
       debug: process.env.HEROKU_DEBUG === '1' || process.env.HEROKU_DEBUG?.toUpperCase() === 'TRUE',
       debugHeaders: process.env.HEROKU_DEBUG_HEADERS === '1' || process.env.HEROKU_DEBUG_HEADERS?.toUpperCase() === 'TRUE',
     }
-    this._heroku = new deps.APIClient(this.config, options)
+    this._heroku = new APIClient(this.config, options)
     return this._heroku
   }
 
