@@ -1,19 +1,21 @@
-import HTTP from '@heroku/http-call'
-import color from '@heroku-cli/color'
+import {HTTP} from '@heroku/http-call'
+import {color} from '@heroku-cli/color'
 import * as Heroku from '@heroku-cli/schema'
 import {Interfaces, ux} from '@oclif/core'
+import debug from 'debug'
 import inquirer, {QuestionCollection} from 'inquirer'
-import Netrc from 'netrc-parser'
+import {Netrc} from 'netrc-parser'
 import * as os from 'node:os'
 import * as readline from 'node:readline'
 import open from 'open'
 
-import {APIClient, HerokuAPIError} from './api-client'
-import {vars} from './vars'
+import {APIClient, HerokuAPIError} from './api-client.js'
+import {vars} from './vars.js'
 
-const debug = require('debug')('heroku-cli-command')
+const cliDebug = debug('heroku-cli-command')
 const hostname = os.hostname()
 const thirtyDays = 60 * 60 * 24 * 30
+const netrc = new Netrc()
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace Login {
@@ -47,8 +49,8 @@ export class Login {
       if (process.env.HEROKU_API_KEY) ux.error('Cannot log in with HEROKU_API_KEY set')
       if (opts.expiresIn && opts.expiresIn > thirtyDays) ux.error('Cannot set an expiration longer than thirty days')
 
-      await Netrc.load()
-      const previousEntry = Netrc.machines['api.heroku.com']
+      await netrc.load()
+      const previousEntry = netrc.machines['api.heroku.com']
       let input: string | undefined = opts.method
       if (!input) {
         if (opts.expiresIn) {
@@ -124,7 +126,7 @@ export class Login {
   }
 
   async logout(token = this.heroku.auth) {
-    if (!token) return debug('no credentials to logout')
+    if (!token) return cliDebug('no credentials to logout')
     const requests: Promise<any>[] = []
     // for SSO logins we delete the session since those do not show up in
     // authorizations because they are created a trusted client
@@ -182,7 +184,7 @@ export class Login {
       urlDisplayed = true
     }
 
-    // ux.warn(`If browser does not open, visit ${color.greenBright(url)}`)
+    ux.warn(`If browser does not open, visit ${color.greenBright(url)}`)
     const cp = await open(url, {wait: false, ...(browser ? {app: {name: browser}} : {})})
     cp.on('error', err => {
       ux.warn(err)
@@ -301,22 +303,22 @@ export class Login {
   private async saveToken(entry: NetrcEntry) {
     const hosts = [vars.apiHost, vars.httpGitHost]
     hosts.forEach(host => {
-      if (!Netrc.machines[host]) Netrc.machines[host] = {}
-      Netrc.machines[host].login = entry.login
-      Netrc.machines[host].password = entry.password
-      delete Netrc.machines[host].method
-      delete Netrc.machines[host].org
+      if (!netrc.machines[host]) netrc.machines[host] = {}
+      netrc.machines[host].login = entry.login
+      netrc.machines[host].password = entry.password
+      delete netrc.machines[host].method
+      delete netrc.machines[host].org
     })
 
-    if (Netrc.machines._tokens) {
-      (Netrc.machines._tokens as any).forEach((token: any) => {
+    if (netrc.machines._tokens) {
+      (netrc.machines._tokens as any).forEach((token: any) => {
         if (hosts.includes(token.host)) {
           token.internalWhitespace = '\n  '
         }
       })
     }
 
-    await Netrc.save()
+    await netrc.save()
   }
 
   private async sso(): Promise<NetrcEntry> {
@@ -335,7 +337,7 @@ export class Login {
     }
 
     // TODO: handle browser
-    debug(`opening browser to ${url}`)
+    cliDebug(`opening browser to ${url}`)
     ux.stderr(`Opening browser to:\n${url}\n`)
     ux.stderr(color.gray(
       `If the browser fails to open or you're authenticating on a remote

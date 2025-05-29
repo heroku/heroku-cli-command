@@ -1,7 +1,7 @@
 import {expect} from 'chai'
 import * as sinon from 'sinon'
 
-import {RequestId} from '../src/request-id'
+import {RequestId} from '../src/request-id.js'
 
 describe('getRequestId', () => {
   let generateStub: any

@@ -1,7 +1,8 @@
-import childProcess from 'child_process'
-import {expect, fancy} from 'fancy-test'
+import {expect} from 'chai'
+import childProcess from 'node:child_process'
+import sinon from 'sinon'
 
-import {Git} from '../src/git'
+import {Git} from '../src/git.js'
 
 describe('git', () => {
   it('gets the remotes', () => {
@@ -17,16 +18,16 @@ heroku\thttps://git.heroku.com/myapp.git  (pull)
     ])
   })
 
-  fancy
-    .stub(childProcess, 'execSync', () => {
+  it('rethrows other git error', () => {
+    const stub = sinon.stub(childProcess, 'execSync').callsFake(() => {
       const err: any = new Error('some other message')
-      err.code = 'ENOTNOENT'
+      err.code = 'SOME_OTHER_CODE'
       throw err
     })
-    .it('rethrows other git error', () => {
-      const git = new Git()
-      expect(() => {
-        git.exec('version')
-      }).to.throw('some other message')
-    })
+    const git = new Git()
+    expect(() => {
+      git.exec('version')
+    }).to.throw('some other message')
+    stub.restore()
+  })
 })

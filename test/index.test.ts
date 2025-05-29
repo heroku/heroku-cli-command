@@ -1,6 +1,6 @@
 import {expect} from 'chai'
 
-import {Command, flags} from '../src'
+import {Command, flags} from '../src/index.js'
 
 describe('index', () => {
   it('has flags', async () => {

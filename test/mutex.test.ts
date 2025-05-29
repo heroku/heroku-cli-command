@@ -1,6 +1,6 @@
 import {expect} from 'chai'
 
-import {Mutex} from '../src/mutex'
+import {Mutex} from '../src/mutex.js'
 
 let output: string[]
 

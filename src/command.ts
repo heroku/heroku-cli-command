@@ -1,22 +1,12 @@
 import {Command as Base} from '@oclif/core'
-import {
-  ArgOutput,
-  FlagOutput,
-  Input,
-  ParserOutput,
-} from '@oclif/core/lib/interfaces/parser'
-import {NonExistentFlagsError} from '@oclif/core/lib/parser/errors'
+import {Errors} from '@oclif/core'
 import parser from 'yargs-parser'
 import unparser from 'yargs-unparser'
 
-const pjson = require('../package.json')
-
-import {APIClient, IOptions} from './api-client'
-import deps from './deps'
+import {APIClient, IOptions} from './api-client.js'
 
 export abstract class Command extends Base {
   allowArbitraryFlags: boolean = false
-  base = `${pjson.name}@${pjson.version}`
   _heroku!: APIClient
 
   get heroku(): APIClient {
@@ -25,16 +15,16 @@ export abstract class Command extends Base {
       debug: process.env.HEROKU_DEBUG === '1' || process.env.HEROKU_DEBUG?.toUpperCase() === 'TRUE',
       debugHeaders: process.env.HEROKU_DEBUG_HEADERS === '1' || process.env.HEROKU_DEBUG_HEADERS?.toUpperCase() === 'TRUE',
     }
-    this._heroku = new deps.APIClient(this.config, options)
+    this._heroku = new APIClient(this.config, options)
     return this._heroku
   }
 
-  protected async parse<F extends FlagOutput, B extends FlagOutput, A extends ArgOutput>(options?: Input<F, B, A>, argv?: string[]): Promise<ParserOutput<F, B, A>> {
+  protected async parse(options?: any, argv?: string[]): Promise<any> {
     if (this.allowArbitraryFlags) {
       try {
         return await super.parse(options, argv)
       } catch (error) {
-        const {flags: nonExistentFlags} = error as NonExistentFlagsError
+        const {flags: nonExistentFlags} = error as {flags: string[]} & Errors.CLIError
         const parsed = parser(this.argv)
         const nonExistentFlagsWithValues = {...parsed}
 

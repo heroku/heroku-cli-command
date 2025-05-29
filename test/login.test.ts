@@ -1,12 +1,13 @@
 import {Config} from '@oclif/core'
-import base, {expect} from 'fancy-test'
+import {expect, fancy} from 'fancy-test'
 import inquirer from 'inquirer'
-import Netrc from 'netrc-parser'
 import nock from 'nock'
-import {resolve} from 'path'
+import {dirname, resolve} from 'node:path'
+import {fileURLToPath} from 'node:url'
 import * as sinon from 'sinon'
 
-import {Command as CommandBase} from '../src/command'
+import {Command as CommandBase} from '../src/command.js'
+import {restoreNetrcStub, stubNetrc} from './helpers/netrc-stub.js'
 
 class Command extends CommandBase {
   async run() {}
@@ -19,9 +20,7 @@ beforeEach(() => {
   api.get('/oauth/authorizations').reply(200, [])
   api.get('/oauth/authorizations/~').reply(200, {})
 
-  // Mock netrc-parser
-  sinon.stub(Netrc, 'load').resolves()
-  sinon.stub(Netrc, 'save').resolves()
+  stubNetrc()
 
   // Mock inquirer prompts
   sinon.stub(inquirer, 'prompt').callsFake(async (questions: any) => {
@@ -45,10 +44,17 @@ beforeEach(() => {
 
 afterEach(() => {
   sinon.restore()
+  restoreNetrcStub()
 })
 
-const test = base
-  .add('config', new Config({root: resolve(__dirname, '../package.json')}))
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
+
+const test = fancy
+  .add('config', () => {
+    const config = new Config({root: resolve(__dirname, '../package.json')})
+    return config
+  })
 
 describe('login with interactive', () => {
   test

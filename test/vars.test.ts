@@ -1,6 +1,6 @@
 import {expect} from 'chai'
 
-import {vars} from '../src/vars'
+import {vars} from '../src/vars.js'
 
 const {env} = process
 beforeEach(() => {
@@ -9,12 +9,6 @@ beforeEach(() => {
 afterEach(() => {
   process.env = env
 })
-
-// jest.mock('netrc-parser', () => {
-//   return class {
-//     machines = {'api.heroku.com': {password: 'mypass'}}
-//   }
-// })
 
 describe('vars', () => {
   it('sets vars by default', () => {
