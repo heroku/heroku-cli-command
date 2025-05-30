@@ -13,4 +13,4 @@ if [ ! -f "examples/$COMMAND.ts" ]; then
   exit 1
 fi
 
-NODE_OPTIONS="--loader ts-node/esm" ./node_modules/.bin/ts-node --esm "examples/$COMMAND.ts" "$@" 
+NODE_NO_WARNINGS=1 NODE_OPTIONS="--loader ts-node/esm" ./node_modules/.bin/ts-node --esm "examples/$COMMAND.ts" "$@" 
