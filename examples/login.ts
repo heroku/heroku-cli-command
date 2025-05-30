@@ -1,4 +1,6 @@
-import {Command, flags} from '../src'
+import {Errors} from '@oclif/core'
+
+import {Command, flags} from '../src/index.js'
 
 class LoginCommand extends Command {
   static flags = {
@@ -14,4 +16,4 @@ class LoginCommand extends Command {
 }
 
 (LoginCommand.run(process.argv.slice(2)) as any)
-  .catch(require('@oclif/core').Errors.handle)
+  .catch(Errors.handle)

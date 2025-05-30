@@ -1,4 +1,6 @@
-import {Command} from '../src'
+import {Errors} from '@oclif/core'
+
+import {Command} from '../src/index.js'
 
 class LogoutCommand extends Command {
   async run() {
@@ -8,4 +10,4 @@ class LogoutCommand extends Command {
 }
 
 (LogoutCommand.run([]) as any)
-  .catch(require('@oclif/core').Errors.handle)
+  .catch(Errors.handle)

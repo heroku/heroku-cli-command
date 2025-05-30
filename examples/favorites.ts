@@ -1,6 +1,6 @@
-import {ux} from '@oclif/core'
+import {Errors, ux} from '@oclif/core'
 
-import {Command} from '../src'
+import {Command} from '../src/index.js'
 
 type Favorite = {
   id: string;
@@ -27,4 +27,4 @@ class FavoritesCommand extends Command {
 }
 
 (FavoritesCommand.run([]) as any)
-  .catch(require('@oclif/core').Errors.handle)
+  .catch(Errors.handle)
