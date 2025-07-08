@@ -1,39 +1,43 @@
 import {Config} from '@oclif/core'
-import base, {expect} from 'fancy-test'
+import debug from 'debug'
+import {expect, fancy} from 'fancy-test'
 import nock from 'nock'
-import {resolve} from 'path'
+import {dirname, resolve} from 'node:path'
+import {fileURLToPath} from 'node:url'
 import * as sinon from 'sinon'
 import {stderr} from 'stdout-stderr'
 
-import {Command as CommandBase} from '../src/command'
-import {RequestId, requestIdHeader} from '../src/request-id'
+import {Command as CommandBase} from '../src/command.js'
+import {RequestId, requestIdHeader} from '../src/request-id.js'
+import {restoreNetrcStub, stubNetrc} from './helpers/netrc-stub.js'
 
 class Command extends CommandBase {
   async run() {}
 }
 
-const netrc = require('netrc-parser').default
-netrc.loadSync = function (this: typeof netrc) {
-  netrc.machines = {
-    'api.heroku.com': {password: 'mypass'},
-  }
-}
-
 const {env} = process
-const debug = require('debug')
 let api: nock.Scope
-const test = base.add('config', new Config({root: resolve(__dirname, '../package.json')}))
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
+const test = fancy
+  .add('config', () => {
+    const config = new Config({root: resolve(__dirname, '../package.json')})
+    return config
+  })
+// const test = base.add('config', new Config({root: resolve(__dirname, '../package.json')}))
 
 describe('api_client', () => {
   beforeEach(function () {
     process.env = {}
-    debug.disable('*')
+    debug.disable()
     api = nock('https://api.heroku.com')
+    stubNetrc()
   })
 
   afterEach(function () {
     process.env = env
     api.done()
+    restoreNetrcStub()
   })
 
   test
@@ -61,13 +65,23 @@ describe('api_client', () => {
     })
 
   describe('with HEROKU_HEADERS', () => {
+    let headersApi: nock.Scope
+
+    beforeEach(() => {
+      headersApi = nock('https://api.heroku.com')
+    })
+
+    afterEach(() => {
+      headersApi.done()
+    })
+
     test
       .it('makes an HTTP request with HEROKU_HEADERS', async ctx => {
         process.env.HEROKU_HEADERS = '{"x-foo": "bar"}'
-        api = nock('https://api.heroku.com', {
+        headersApi = nock('https://api.heroku.com', {
           reqheaders: {'x-foo': 'bar'},
         })
-        api.get('/apps').reply(200, [{name: 'myapp'}])
+        headersApi.get('/apps').reply(200, [{name: 'myapp'}])
 
         const cmd = new Command([], ctx.config)
         const {body} = await cmd.heroku.get('/apps')
@@ -433,6 +447,8 @@ describe('api_client', () => {
         .reply(200, [{name: 'myapp'}])
 
       const cmd = new Command([], ctx.config)
+      // Mock the twoFactorPrompt method
+      sinon.stub(cmd.heroku, 'twoFactorPrompt').resolves('123456')
       const {body} = await cmd.heroku.get('/apps')
       expect(body).to.deep.equal([{name: 'myapp'}])
 
@@ -451,6 +467,8 @@ describe('api_client', () => {
       scope.get('/apps/myapp/dynos').reply(200, {web: 1})
 
       const cmd = new Command([], ctx.config)
+      // Mock the twoFactorPrompt method
+      sinon.stub(cmd.heroku, 'twoFactorPrompt').resolves('123456')
       const info = cmd.heroku.get('/apps/myapp')
       const anotherapp = cmd.heroku.get('/apps/anotherapp')
       const _config = cmd.heroku.get('/apps/myapp/config')

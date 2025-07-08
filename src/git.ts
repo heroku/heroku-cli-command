@@ -1,6 +1,7 @@
 import {Errors} from '@oclif/core'
+import childProcess from 'node:child_process'
 
-import {vars} from './vars'
+import {vars} from './vars.js'
 
 export interface IGitRemote {
   name: string
@@ -19,9 +20,8 @@ export class Git {
   }
 
   exec(cmd: string): string {
-    const {execSync: exec} = require('child_process')
     try {
-      return exec(`git ${cmd}`, {
+      return childProcess.execSync(`git ${cmd}`, {
         encoding: 'utf8',
         stdio: [null, 'pipe', null],
       })

@@ -1,7 +1,7 @@
 import {HTTP} from '@heroku/http-call'
-import {ux} from '@oclif/core'
+import {Errors, ux} from '@oclif/core'
 
-import {Command} from '../src'
+import {Command} from '../src/index.js'
 
 class StatusCommand extends Command {
   async run() {
@@ -26,4 +26,4 @@ class StatusCommand extends Command {
 }
 
 (StatusCommand.run([]) as any)
-  .catch(require('@oclif/core').Errors.handle)
+  .catch(Errors.handle)

@@ -1,17 +1,18 @@
 import {HTTP, HTTPError, HTTPRequestOptions} from '@heroku/http-call'
 import {Errors, Interfaces} from '@oclif/core'
+import debug from 'debug'
 import inquirer from 'inquirer'
-import Netrc from 'netrc-parser'
+import {Netrc} from 'netrc-parser'
 import * as url from 'node:url'
 
-import deps from './deps'
-import {Login} from './login'
-import {Mutex} from './mutex'
-import {IDelinquencyConfig, IDelinquencyInfo, ParticleboardClient} from './particleboard-client'
-import {RequestId, requestIdHeader} from './request-id'
-import {vars} from './vars'
+import {Login} from './login.js'
+import {Mutex} from './mutex.js'
+import {IDelinquencyConfig, IDelinquencyInfo, ParticleboardClient} from './particleboard-client.js'
+import {RequestId, requestIdHeader} from './request-id.js'
+import {vars} from './vars.js'
+import {yubikey} from './yubikey.js'
 
-const debug = require('debug')
+const netrc = new Netrc()
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace APIClient {
@@ -59,13 +60,13 @@ export class APIClient {
   http: typeof HTTP
   preauthPromises: { [k: string]: Promise<HTTP<any>> }
   private _auth?: string
-  private readonly _login = new Login(this.config, this)
+  private readonly _login: Login
   private _particleboard!: ParticleboardClient
   private _twoFactorMutex: Mutex<string> | undefined
 
   constructor(protected config: Interfaces.Config, public options: IOptions = {}) {
     this.config = config
-
+    this._login = new Login(this.config, this)
     if (options.required === undefined) options.required = true
     options.preauth = options.preauth !== false
     if (options.debug) debug.enable('http')
@@ -86,7 +87,7 @@ export class APIClient {
       protocol: apiUrl.protocol,
     }
     const delinquencyConfig: IDelinquencyConfig = {fetch_delinquency: false, warning_shown: false}
-    this.http = class APIHTTPClient<T> extends deps.HTTP.HTTP.create(opts)<T> {
+    this.http = class APIHTTPClient<T> extends HTTP.create(opts)<T> {
       static configDelinquency(url: string, opts: APIClient.Options): void {
         if (opts.method?.toUpperCase() !== 'GET' || (opts.hostname && opts.hostname !== apiUrl.hostname)) {
           delinquencyConfig.fetch_delinquency = false
@@ -193,7 +194,7 @@ export class APIClient {
           this.showWarnings<T>(response)
           return response
         } catch (error) {
-          if (!(error instanceof deps.HTTP.HTTPError)) throw error
+          if (!(error instanceof HTTPError)) throw error
           if (retries > 0) {
             if (opts.retryAuth !== false && error.http.statusCode === 401 && error.body.id === 'unauthorized') {
               if (process.env.HEROKU_API_KEY) {
@@ -258,11 +259,11 @@ export class APIClient {
 
   get auth(): string | undefined {
     if (!this._auth) {
-      if (process.env.HEROKU_API_TOKEN && !process.env.HEROKU_API_KEY) deps.cli.warn('HEROKU_API_TOKEN is set but you probably meant HEROKU_API_KEY')
+      if (process.env.HEROKU_API_TOKEN && !process.env.HEROKU_API_KEY) Errors.warn('HEROKU_API_TOKEN is set but you probably meant HEROKU_API_KEY')
       this._auth = process.env.HEROKU_API_KEY
       if (!this._auth) {
-        deps.netrc.loadSync()
-        this._auth = deps.netrc.machines[vars.apiHost] && deps.netrc.machines[vars.apiHost].password
+        netrc.loadSync()
+        this._auth = netrc.machines[vars.apiHost] && netrc.machines[vars.apiHost].password
       }
     }
 
@@ -280,13 +281,13 @@ export class APIClient {
 
   get particleboard(): ParticleboardClient {
     if (this._particleboard) return this._particleboard
-    this._particleboard = new deps.ParticleboardClient(this.config)
+    this._particleboard = new ParticleboardClient(this.config)
     return this._particleboard
   }
 
   get twoFactorMutex(): Mutex<string> {
     if (!this._twoFactorMutex) {
-      this._twoFactorMutex = new deps.Mutex()
+      this._twoFactorMutex = new Mutex()
     }
 
     return this._twoFactorMutex
@@ -311,9 +312,9 @@ export class APIClient {
       if (error instanceof Errors.CLIError) Errors.warn(error)
     }
 
-    delete Netrc.machines['api.heroku.com']
-    delete Netrc.machines['git.heroku.com']
-    await Netrc.save()
+    delete netrc.machines['api.heroku.com']
+    delete netrc.machines['git.heroku.com']
+    await netrc.save()
   }
 
   patch<T>(url: string, options: APIClient.Options = {}) {
@@ -343,7 +344,7 @@ export class APIClient {
   }
 
   twoFactorPrompt() {
-    deps.yubikey.enable()
+    yubikey.enable()
     return this.twoFactorMutex.synchronize(async () => {
       try {
         const {factor} = await inquirer.prompt([{
@@ -352,10 +353,10 @@ export class APIClient {
           name: 'factor',
           type: 'password',
         }])
-        deps.yubikey.disable()
+        yubikey.disable()
         return factor
       } catch (error) {
-        deps.yubikey.disable()
+        yubikey.disable()
         throw error
       }
     })

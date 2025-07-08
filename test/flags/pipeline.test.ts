@@ -1,7 +1,7 @@
 import {Command} from '@oclif/core'
 import {expect, fancy} from 'fancy-test'
 
-import * as flags from '../../src/flags'
+import * as flags from '../../src/flags/index.js'
 
 describe('required', () => {
   class PipelineCommand extends Command {

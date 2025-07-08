@@ -1,12 +1,19 @@
 import {Config} from '@oclif/core'
-import base, {expect} from 'fancy-test'
-import {resolve} from 'path'
+import {expect, fancy} from 'fancy-test'
+import {dirname, resolve} from 'node:path'
+import {fileURLToPath} from 'node:url'
 
-import {Command} from '../src/command'
-import * as flags from '../src/flags'
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
-const test = base
-  .add('config', new Config({root: resolve(__dirname, '../package.json')}))
+import {Command} from '../src/command.js'
+import * as flags from '../src/flags/index.js'
+
+const test = fancy
+  .add('config', () => {
+    const config = new Config({root: resolve(__dirname, '../package.json')})
+    return config
+  })
 
 class MyCommand extends Command {
   async run() {}
@@ -25,8 +32,9 @@ describe('command', () => {
   }.run(['--app=myapp']))
 
   test
-    .it('has heroku clients', async ctx => {
+    .it('has heroku clients', async (ctx: any) => {
       const cmd = new MyCommand([], ctx.config)
+      cmd.config = ctx.config
       expect(cmd.heroku).to.be.ok
     })
 })

@@ -1,7 +1,10 @@
 {
-  "extends": "../tsconfig",
+  "extends": "../tsconfig.json",
   "compilerOptions": {
-    "sourceMap": true
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "sourceMap": true,
+    "types": ["mocha", "node"]
   },
   "include": [
     "./**/*",

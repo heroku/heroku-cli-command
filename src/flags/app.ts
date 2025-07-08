@@ -1,6 +1,6 @@
 import {Errors, Flags} from '@oclif/core'
 
-import {IGitRemotes, configRemote, getGitRemotes} from '../git'
+import {IGitRemotes, configRemote, getGitRemotes} from '../git.js'
 
 class MultipleRemotesError extends Errors.CLIError {
   constructor(gitRemotes: IGitRemotes[]) {
