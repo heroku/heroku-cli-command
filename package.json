@@ -1,7 +1,7 @@
 {
   "name": "@heroku-cli/command",
   "description": "base class for Heroku CLI commands",
-  "version": "12.0.1",
+  "version": "12.0.2",
   "author": "Heroku",
   "bugs": "https://github.com/heroku/heroku-cli-command/issues",
   "dependencies": {
