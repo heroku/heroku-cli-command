@@ -9,7 +9,7 @@
     "@heroku/http-call": "^5.4.0",
     "@oclif/core": "^4.3.0",
     "debug": "^4.4.0",
-    "inquirer": "^8.2.6",
+    "inquirer": "^12.9.0",
     "netrc-parser": "^3.1.6",
     "open": "^10.1.2",
     "yargs-parser": "^20.2.9",
