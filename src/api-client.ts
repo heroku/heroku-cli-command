@@ -155,7 +155,22 @@ export class APIClient {
         }
 
         if (!Object.keys(opts.headers).some(h => h.toLowerCase() === 'authorization')) {
-          opts.headers.authorization = `Bearer ${self.auth}`
+          // Handle both relative and absolute URLs for security check
+          let targetUrl: URL
+          try {
+            // Try absolute URL first
+            targetUrl = new URL(url)
+          } catch {
+            // If that fails, assume it's relative and prepend the API base URL
+            targetUrl = new URL(url, vars.apiUrl)
+          }
+
+          const isHerokuApi = targetUrl.hostname === 'api.heroku.com'
+                             || targetUrl.hostname.endsWith('.heroku.com')
+
+          if (isHerokuApi) {
+            opts.headers.authorization = `Bearer ${self.auth}`
+          }
         }
 
         this.configDelinquency(url, opts)

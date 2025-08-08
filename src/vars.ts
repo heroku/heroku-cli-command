@@ -41,7 +41,14 @@ export class Vars {
   }
 
   get host(): string {
-    return this.envHost || 'heroku.com'
+    const {envHost} = this
+
+    if (envHost && !this.isValidHerokuHost(envHost)) {
+      console.warn(`Invalid HEROKU_HOST '${envHost}' - using default for security`)
+      return 'heroku.com'
+    }
+
+    return envHost || 'heroku.com'
   }
 
   get httpGitHost(): string {
@@ -61,6 +68,15 @@ export class Vars {
     return process.env.HEROKU_CLOUD === 'staging'
       ? 'https://particleboard-staging-cloud.herokuapp.com'
       : 'https://particleboard.heroku.com'
+  }
+
+  private isValidHerokuHost(host: string): boolean {
+    // Remove protocol if present
+    const cleanHost = host.replace(/^https?:\/\//, '')
+
+    return cleanHost === 'heroku.com'
+           || cleanHost.endsWith('.heroku.com')
+           || cleanHost === 'api.heroku.com'
   }
 }
 

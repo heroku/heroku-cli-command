@@ -111,12 +111,12 @@ describe('api_client', () => {
       })
   })
 
-  describe('with HEROKU_HOST', () => {
+  describe('with HEROKU_HOST security', () => {
     test
-      .it('makes an HTTP request with HEROKU_HOST', async ctx => {
-        const localHostURI = 'http://localhost:5000'
-        process.env.HEROKU_HOST = localHostURI
-        api = nock(localHostURI)
+      .it('rejects malicious HEROKU_HOST and uses default API', async ctx => {
+        // Test that malicious hosts are rejected and fallback to default
+        process.env.HEROKU_HOST = 'http://malicious-server.com'
+        api = nock('https://api.heroku.com') // Should fallback to default
         api.get('/apps').reply(200, [{name: 'myapp'}])
 
         const cmd = new Command([], ctx.config)
