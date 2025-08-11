@@ -1,3 +1,4 @@
+import {ux} from '@oclif/core'
 import * as url from 'node:url'
 
 import {ALLOWED_HEROKU_DOMAINS, LOCALHOST_DOMAINS} from './api-client.js'
@@ -46,7 +47,7 @@ export class Vars {
     const {envHost} = this
 
     if (envHost && !this.isValidHerokuHost(envHost)) {
-      console.warn(`Invalid HEROKU_HOST '${envHost}' - using default`)
+      ux.warn(`Invalid HEROKU_HOST '${envHost}' - using default`)
       return 'heroku.com'
     }
 
