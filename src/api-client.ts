@@ -14,8 +14,8 @@ import {yubikey} from './yubikey.js'
 
 const netrc = new Netrc()
 
-export const ALLOWED_HEROKU_DOMAINS = ['heroku.com', 'herokai.com', 'herokuspace.com', 'herokudev.com'] as const
-export const LOCALHOST_DOMAINS = ['localhost', '127.0.0.1'] as const
+export const ALLOWED_HEROKU_DOMAINS = Object.freeze(['heroku.com', 'herokai.com', 'herokuspace.com', 'herokudev.com']) as const
+export const LOCALHOST_DOMAINS = Object.freeze(['localhost', '127.0.0.1']) as const
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace APIClient {
