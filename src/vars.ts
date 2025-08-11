@@ -76,7 +76,7 @@ export class Vars {
     // Remove protocol if present
     const cleanHost = host.replace(/^https?:\/\//, '')
 
-    return ALLOWED_HEROKU_DOMAINS.some(domain => cleanHost.endsWith(`.${domain}`)) || LOCALHOST_DOMAINS.some(domain => cleanHost.endsWith(domain))
+    return ALLOWED_HEROKU_DOMAINS.some(domain => cleanHost.endsWith(`.${domain}`)) || LOCALHOST_DOMAINS.some(domain => cleanHost.includes(domain))
   }
 }
 
