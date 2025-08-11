@@ -159,7 +159,7 @@ export class APIClient {
         }
 
         if (!Object.keys(opts.headers).some(h => h.toLowerCase() === 'authorization')) {
-          // Handle both relative and absolute URLs for security check
+          // Handle both relative and absolute URLs for validation
           let targetUrl: URL
           try {
             // Try absolute URL first
