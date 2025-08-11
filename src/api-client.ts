@@ -14,6 +14,9 @@ import {yubikey} from './yubikey.js'
 
 const netrc = new Netrc()
 
+export const ALLOWED_HEROKU_DOMAINS = ['heroku.com', 'herokai.com', 'herokuspace.com', 'herokudev.com'] as const
+export const LOCALHOST_DOMAINS = ['localhost', '127.0.0.1'] as const
+
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace APIClient {
   export interface Options extends HTTPRequestOptions {
@@ -137,6 +140,7 @@ export class APIClient {
         delinquencyConfig.warning_shown = true
       }
 
+      // eslint-disable-next-line complexity
       static async request<T>(url: string, opts: APIClient.Options = {}, retries = 3): Promise<APIHTTPClient<T>> {
         opts.headers = opts.headers || {}
         const currentRequestId = RequestId.create() && RequestId.headerValue
@@ -155,7 +159,22 @@ export class APIClient {
         }
 
         if (!Object.keys(opts.headers).some(h => h.toLowerCase() === 'authorization')) {
-          opts.headers.authorization = `Bearer ${self.auth}`
+          // Handle both relative and absolute URLs for security check
+          let targetUrl: URL
+          try {
+            // Try absolute URL first
+            targetUrl = new URL(url)
+          } catch {
+            // If that fails, assume it's relative and prepend the API base URL
+            targetUrl = new URL(url, vars.apiUrl)
+          }
+
+          const isHerokuApi = ALLOWED_HEROKU_DOMAINS.some(domain => targetUrl.hostname.endsWith(`.${domain}`))
+          const isLocalhost = LOCALHOST_DOMAINS.includes(targetUrl.hostname as (typeof LOCALHOST_DOMAINS)[number])
+
+          if (isHerokuApi || isLocalhost) {
+            opts.headers.authorization = `Bearer ${self.auth}`
+          }
         }
 
         this.configDelinquency(url, opts)
