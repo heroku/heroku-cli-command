@@ -1,3 +1,9 @@
+## [12.1.0](https://github.com/heroku/heroku-cli-command/compare/v12.0.2...v12.1.0) (2025-08-12)
+
+### Features
+
+* **W-19264912** add domain name validation for outgoing requests ([#159](https://github.com/heroku/heroku-cli-command/issues/218)) ([c710d42](https://github.com/heroku/heroku-cli-command/commit/c710d4278cb429635b638083dbabf1db6420a438))
+
 ## [12.0.2](https://github.com/heroku/heroku-cli-command/compare/v12.0.1...v12.0.2) (2025-08-07)
 
 ### Bug Fixes
