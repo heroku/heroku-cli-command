@@ -98,6 +98,16 @@ describe('api_client', () => {
 
   describe('with HEROKU_HOST', () => {
     test
+      .it('rejects invalid HEROKU_HOST and uses default API', async ctx => {
+        process.env.HEROKU_HOST = 'http://bogus-server.com'
+        api = nock('https://api.heroku.com') // Should fallback to default
+        api.get('/apps').reply(200, [{name: 'myapp'}])
+
+        const cmd = new Command([], ctx.config)
+        await cmd.heroku.get('/apps')
+      })
+
+    test
       .it('makes an HTTP request with HEROKU_HOST', async ctx => {
         const localHostURI = 'http://localhost:5000'
         process.env.HEROKU_HOST = localHostURI

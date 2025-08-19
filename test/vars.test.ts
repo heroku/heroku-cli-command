@@ -28,26 +28,44 @@ describe('vars', () => {
     expect(vars.particleboardUrl).to.equal('https://particleboard.heroku.com')
   })
 
-  it('respects HEROKU_HOST', () => {
-    process.env.HEROKU_HOST = 'customhost'
-    expect(vars.apiHost).to.equal('api.customhost')
-    expect(vars.apiUrl).to.equal('https://api.customhost')
-    expect(vars.gitHost).to.equal('customhost')
-    expect(vars.host).to.equal('customhost')
-    expect(vars.httpGitHost).to.equal('git.customhost')
-    expect(vars.gitPrefixes).to.deep.equal(['git@customhost:', 'ssh://git@customhost/', 'https://git.customhost/'])
+  it('respects valid HEROKU_HOST values', () => {
+    // Test with a valid heroku.com subdomain
+    process.env.HEROKU_HOST = 'staging.heroku.com'
+    expect(vars.apiHost).to.equal('api.staging.heroku.com')
+    expect(vars.apiUrl).to.equal('https://api.staging.heroku.com')
+    expect(vars.gitHost).to.equal('staging.heroku.com')
+    expect(vars.host).to.equal('staging.heroku.com')
+    expect(vars.httpGitHost).to.equal('git.staging.heroku.com')
+    expect(vars.gitPrefixes).to.deep.equal(['git@staging.heroku.com:', 'ssh://git@staging.heroku.com/', 'https://git.staging.heroku.com/'])
     expect(vars.particleboardUrl).to.equal('https://particleboard.heroku.com')
   })
 
-  it('respects HEROKU_HOST as url', () => {
-    process.env.HEROKU_HOST = 'https://customhost'
-    expect(vars.host).to.equal('https://customhost')
-    expect(vars.apiHost).to.equal('customhost')
-    expect(vars.apiUrl).to.equal('https://customhost')
-    expect(vars.gitHost).to.equal('customhost')
-    expect(vars.httpGitHost).to.equal('customhost')
-    expect(vars.gitPrefixes).to.deep.equal(['git@customhost:', 'ssh://git@customhost/', 'https://customhost/'])
+  it('rejects invalid HEROKU_HOST values for security', () => {
+    // Test that invalid hosts are rejected and fallback to default
+    process.env.HEROKU_HOST = 'bogus-server.com'
+    expect(vars.host).to.equal('heroku.com') // Should fallback to default
+    expect(vars.apiHost).to.equal('api.heroku.com')
+    expect(vars.apiUrl).to.equal('https://api.heroku.com')
+  })
+
+  it('respects legitimate HEROKU_HOST as url', () => {
+    // Test with a valid heroku.com subdomain URL
+    process.env.HEROKU_HOST = 'https://staging.heroku.com'
+    expect(vars.host).to.equal('https://staging.heroku.com')
+    expect(vars.apiHost).to.equal('staging.heroku.com')
+    expect(vars.apiUrl).to.equal('https://staging.heroku.com')
+    expect(vars.gitHost).to.equal('staging.heroku.com')
+    expect(vars.httpGitHost).to.equal('staging.heroku.com')
+    expect(vars.gitPrefixes).to.deep.equal(['git@staging.heroku.com:', 'ssh://git@staging.heroku.com/', 'https://staging.heroku.com/'])
     expect(vars.particleboardUrl).to.equal('https://particleboard.heroku.com')
+  })
+
+  it('rejects invalid HEROKU_HOST URLs', () => {
+    // Test that invalid URL hosts are rejected and fallback to default
+    process.env.HEROKU_HOST = 'https://bogus-server.com'
+    expect(vars.host).to.equal('heroku.com') // Should fallback to default for security
+    expect(vars.apiHost).to.equal('api.heroku.com')
+    expect(vars.apiUrl).to.equal('https://api.heroku.com')
   })
 
   it('respects HEROKU_PARTICLEBOARD_URL', () => {
