@@ -1,8 +1,18 @@
+import {ux} from '@oclif/core'
 import * as url from 'url'
+
+import {ALLOWED_HEROKU_DOMAINS, LOCALHOST_DOMAINS} from './api-client'
 
 export class Vars {
   get host(): string {
-    return this.envHost || 'heroku.com'
+    const {envHost} = this
+
+    if (envHost && !this.isValidHerokuHost(envHost)) {
+      ux.warn(`Invalid HEROKU_HOST '${envHost}' - using default`)
+      return 'heroku.com'
+    }
+
+    return envHost || 'heroku.com'
   }
 
   get apiUrl(): string {
@@ -61,6 +71,13 @@ export class Vars {
     return process.env.HEROKU_CLOUD === 'staging' ?
       'https://particleboard-staging-cloud.herokuapp.com' :
       'https://particleboard.heroku.com'
+  }
+
+  private isValidHerokuHost(host: string): boolean {
+    // Remove protocol if present
+    const cleanHost = host.replace(/^https?:\/\//, '')
+
+    return ALLOWED_HEROKU_DOMAINS.some(domain => cleanHost.endsWith(`.${domain}`)) || LOCALHOST_DOMAINS.some(domain => cleanHost.includes(domain))
   }
 }
 
