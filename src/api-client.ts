@@ -206,7 +206,7 @@ export class APIClient {
             targetUrl = new URL(url, vars.apiUrl)
           }
 
-          const isHerokuApi = ALLOWED_HEROKU_DOMAINS.some(domain => targetUrl.hostname.endsWith(`.${domain}`))
+          const isHerokuApi = ALLOWED_HEROKU_DOMAINS.some(domain => targetUrl.hostname.endsWith(`.${domain}`) || targetUrl.hostname === domain)
           const isLocalhost = LOCALHOST_DOMAINS.includes(targetUrl.hostname as (typeof LOCALHOST_DOMAINS)[number])
 
           if (isHerokuApi || isLocalhost) {
