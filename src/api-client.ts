@@ -238,9 +238,9 @@ export class APIClient {
       static showWarnings<T>(response: HTTP<T>) {
         const warnings = response.headers['x-heroku-warning'] || response.headers['warning-message']
         if (Array.isArray(warnings))
-          warnings.forEach(warning => Errors.warn(`${warning}\n`))
+          warnings.forEach(warning => Errors.warn(`${warning.replace(/^\s*warning:?\s*/i, '')}\n`))
         else if (typeof warnings === 'string')
-          Errors.warn(`${warnings}\n`)
+          Errors.warn(`${warnings.replace(/^\s*warning:?\s*/i, '')}\n`)
       }
 
       static trackRequestIds<T>(response: HTTP<T>) {
