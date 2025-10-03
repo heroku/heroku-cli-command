@@ -590,15 +590,18 @@ describe('api_client', () => {
         api = nock('https://api.heroku.com', {
           reqheaders: {authorization: 'Bearer mypass'},
         })
-        api.get('/apps').reply(200, [], {'X-Heroku-Warning': ['warning message 1', 'warning message 2']})
+        api.get('/apps').reply(200, [], {'X-Heroku-Warning': ['Some warning without heading', 'Warning: some other warning with heading']})
 
         const cmd = new Command([], ctx.config)
         stderr.start()
         await cmd.heroku.get('/apps')
         stderr.stop()
 
-        expect(stderr.output).to.contain('warning message 1')
-        expect(stderr.output).to.contain('warning message 2')
+        // Assert that a heading is added to the warning by oclif Error.warn when the message doesn't have a heading.
+        expect(stderr.output).to.contain('Warning: Some warning without heading')
+        // Assert that a heading is added to the warning by oclif Error.warn but it doesn't get duplicated if it already has a heading.
+        expect(stderr.output).to.contain('Warning: some other warning with heading')
+        expect(stderr.output).not.to.contain('Warning: Warning: some other warning with heading')
       })
   })
 
@@ -608,14 +611,18 @@ describe('api_client', () => {
         api = nock('https://api.heroku.com', {
           reqheaders: {authorization: 'Bearer mypass'},
         })
-        api.get('/apps').reply(200, [], {'Warning-Message': 'warning message 1'})
+        api.get('/apps').reply(200, [], {'Warning-Message': ['Some warning without heading', 'Warning: some other warning with heading']})
 
         const cmd = new Command([], ctx.config)
         stderr.start()
         await cmd.heroku.get('/apps')
         stderr.stop()
 
-        expect(stderr.output).to.contain('warning message 1')
+        // Assert that a heading is added to the warning by oclif Error.warn when the message doesn't have a heading.
+        expect(stderr.output).to.contain('Warning: Some warning without heading')
+        // Assert that a heading is added to the warning by oclif Error.warn but it doesn't get duplicated if it already has a heading.
+        expect(stderr.output).to.contain('Warning: some other warning with heading')
+        expect(stderr.output).not.to.contain('Warning: Warning: some other warning with heading')
       })
   })
 
