@@ -11,7 +11,7 @@
     "debug": "^4.4.0",
     "inquirer": "^8.2.6",
     "netrc-parser": "^3.1.6",
-    "open": "^10.1.2",
+    "open": "^11.0.0",
     "yargs-parser": "^20.2.9",
     "yargs-unparser": "^2.0.0"
   },
