@@ -1,4 +1,24 @@
 ## [12.1.1](https://github.com/heroku/heroku-cli-command/compare/v12.1.0...v12.1.1) (2025-09-30)
+## [12.1.2](https://github.com/heroku/heroku-cli-command/compare/command-v12.1.1...command-v12.1.2) (2025-12-06)
+
+
+### Bug Fixes
+
+* remove vulns and repeated warning headings (W-17068244) ([#233](https://github.com/heroku/heroku-cli-command/issues/233)) ([7edf773](https://github.com/heroku/heroku-cli-command/commit/7edf7730cb44af96f1475f32d2a4ae614ab43e27))
+
+
+### Miscellaneous Chores
+
+* **deps:** bump @oclif/core from 4.3.0 to 4.7.2 ([#240](https://github.com/heroku/heroku-cli-command/issues/240)) ([394ecb1](https://github.com/heroku/heroku-cli-command/commit/394ecb1291c8ae50abac5dbf9695b98f67ddea72))
+* **deps:** bump actions/checkout from 4 to 5 ([#221](https://github.com/heroku/heroku-cli-command/issues/221)) ([de1e693](https://github.com/heroku/heroku-cli-command/commit/de1e693bc47f2c73a7f83a9f361a712512cf4b81))
+* **deps:** bump actions/checkout from 5 to 6 ([#244](https://github.com/heroku/heroku-cli-command/issues/244)) ([b8ec182](https://github.com/heroku/heroku-cli-command/commit/b8ec18251c34e1c8ce4ea68eb79bbf1c546544b4))
+* **deps:** bump actions/setup-node from 4 to 5 ([#227](https://github.com/heroku/heroku-cli-command/issues/227)) ([ba71066](https://github.com/heroku/heroku-cli-command/commit/ba7106650a0e7927cbae9a76c5bff4bba5513f47))
+* **deps:** bump actions/setup-node from 5 to 6 ([#239](https://github.com/heroku/heroku-cli-command/issues/239)) ([9b66ef4](https://github.com/heroku/heroku-cli-command/commit/9b66ef4264a59021867d3a85babe7d76cce5928b))
+* **deps:** bump debug in the patch-dependencies group ([#234](https://github.com/heroku/heroku-cli-command/issues/234)) ([1291d55](https://github.com/heroku/heroku-cli-command/commit/1291d5580d2e63ee1e78e0f70eaf46c48c30e5ac))
+* **deps:** bump open from 10.1.2 to 10.2.0 ([#236](https://github.com/heroku/heroku-cli-command/issues/236)) ([cab484c](https://github.com/heroku/heroku-cli-command/commit/cab484cb9ebe244dd3550d209da3103542de7b68))
+* onboard shared workflows ([#248](https://github.com/heroku/heroku-cli-command/issues/248)) ([109c763](https://github.com/heroku/heroku-cli-command/commit/109c763173c5faf88783b0e829024a72379658f7))
+* update changelog ([#232](https://github.com/heroku/heroku-cli-command/issues/232)) ([2420b09](https://github.com/heroku/heroku-cli-command/commit/2420b09c16a79454580058bdc1148992a616d6bc))
+
 ## [12.1.0](https://github.com/heroku/heroku-cli-command/compare/v12.0.2...v12.1.0) (2025-08-12)
 
 ### Features
