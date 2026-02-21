@@ -153,3 +153,75 @@ describe('optional', () => {
     }.run([])
   })
 })
+
+describe('defaultHelp', () => {
+  let originalEnv: string | undefined
+
+  beforeEach(() => {
+    originalEnv = process.env.HEROKU_APP
+  })
+
+  afterEach(() => {
+    if (originalEnv) {
+      process.env.HEROKU_APP = originalEnv
+    } else {
+      delete process.env.HEROKU_APP
+    }
+  })
+
+  it('returns app from HEROKU_APP env var', async () => {
+    process.env.HEROKU_APP = 'myapp-from-env'
+
+    const appFlag = flags.app()
+    const helpText = typeof appFlag.defaultHelp === 'function'
+      ? await appFlag.defaultHelp({flags: {}, options: {name: 'app'}} as any)
+      : undefined
+    expect(helpText).to.equal('myapp-from-env')
+  })
+
+  it('returns app from single git remote', async () => {
+    withRemotes([{name: 'heroku', url: 'https://git.heroku.com/myapp.git'}])
+
+    const appFlag = flags.app()
+    const helpText = typeof appFlag.defaultHelp === 'function'
+      ? await appFlag.defaultHelp({flags: {}, options: {name: 'app'}} as any)
+      : undefined
+    expect(helpText).to.equal('myapp')
+  })
+
+  it('returns undefined with multiple git remotes', async () => {
+    withRemotes([
+      {name: 'staging', url: 'https://git.heroku.com/myapp-staging.git'},
+      {name: 'production', url: 'https://git.heroku.com/myapp-production.git'},
+    ])
+
+    const appFlag = flags.app()
+    const helpText = typeof appFlag.defaultHelp === 'function'
+      ? await appFlag.defaultHelp({flags: {}, options: {name: 'app'}} as any)
+      : undefined
+    expect(helpText).to.be.undefined
+  })
+
+  it('returns undefined with no git remotes', async () => {
+    withRemotes([])
+
+    const appFlag = flags.app()
+    const helpText = typeof appFlag.defaultHelp === 'function'
+      ? await appFlag.defaultHelp({flags: {}, options: {name: 'app'}} as any)
+      : undefined
+    expect(helpText).to.be.undefined
+  })
+
+  it('returns app from specified remote', async () => {
+    withRemotes([
+      {name: 'staging', url: 'https://git.heroku.com/myapp-staging.git'},
+      {name: 'production', url: 'https://git.heroku.com/myapp-production.git'},
+    ])
+
+    const appFlag = flags.app()
+    const helpText = typeof appFlag.defaultHelp === 'function'
+      ? await appFlag.defaultHelp({flags: {remote: 'production'}, options: {name: 'app'}} as any)
+      : undefined
+    expect(helpText).to.equal('myapp-production')
+  })
+})
