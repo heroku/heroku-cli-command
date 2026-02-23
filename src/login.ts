@@ -1,7 +1,7 @@
 import {HTTP} from '@heroku/http-call'
-import {color} from '@heroku-cli/color'
 import * as Heroku from '@heroku-cli/schema'
 import {Interfaces, ux} from '@oclif/core'
+import ansis from 'ansis'
 import debug from 'debug'
 import inquirer, {QuestionCollection} from 'inquirer'
 import {Netrc} from 'netrc-parser'
@@ -59,7 +59,7 @@ export class Login {
         } else if (process.env.HEROKU_LEGACY_SSO === '1') {
           input = 'sso'
         } else {
-          ux.stderr(`heroku: Press any key to open up the browser to login or ${color.yellow('q')} to exit`)
+          ux.stderr(`heroku: Press any key to open up the browser to login or ${ansis.yellow('q')} to exit`)
           const rl = readline.createInterface({
             input: process.stdin,
             output: process.stdout,
@@ -184,7 +184,7 @@ export class Login {
       urlDisplayed = true
     }
 
-    ux.warn(`If browser does not open, visit ${color.greenBright(url)}`)
+    ux.warn(`If browser does not open, visit ${ansis.greenBright(url)}`)
     const cp = await open(url, {wait: false, ...(browser ? {app: {name: browser}} : {})})
     cp.on('error', err => {
       ux.warn(err)
@@ -339,7 +339,7 @@ export class Login {
     // TODO: handle browser
     cliDebug(`opening browser to ${url}`)
     ux.stderr(`Opening browser to:\n${url}\n`)
-    ux.stderr(color.gray(
+    ux.stderr(ansis.gray(
       `If the browser fails to open or you're authenticating on a remote
 machine, please manually open the URL above in your browser.\n`,
     ))
