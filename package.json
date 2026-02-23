@@ -5,9 +5,9 @@
   "author": "Heroku",
   "bugs": "https://github.com/heroku/heroku-cli-command/issues",
   "dependencies": {
-    "@heroku-cli/color": "^2.0.4",
     "@heroku/http-call": "^5.4.0",
     "@oclif/core": "^4.3.0",
+    "ansis": "^4",
     "debug": "^4.4.0",
     "inquirer": "^8.2.6",
     "netrc-parser": "^3.1.6",
@@ -66,6 +66,7 @@
     "prepublishOnly": "npm run build",
     "prepare": "npm run build",
     "test": "nyc mocha --forbid-only \"test/**/*.test.ts\"",
+    "test:file": "nyc mocha",
     "test:local": "nyc mocha \"test/**/*.test.ts\"",
     "changelog": "conventional-changelog -p conventionalcommits -i CHANGELOG.md -s -r 0",
     "example": "sh examples/run.sh"

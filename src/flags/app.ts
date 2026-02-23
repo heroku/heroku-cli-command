@@ -17,13 +17,21 @@ class MultipleRemotesError extends Errors.CLIError {
   }
 }
 
+function getDefaultApp(remote?: string) {
+  const envApp = process.env.HEROKU_APP
+  if (envApp) return envApp
+  const gitRemotes = getGitRemotes(remote || configRemote())
+  if (gitRemotes.length === 1) return gitRemotes[0].app
+}
+
 export const app = Flags.custom({
   char: 'a',
+
   async default({flags, options}) {
-    const envApp = process.env.HEROKU_APP
-    if (envApp) return envApp
+    const defaultApp = getDefaultApp(flags.remote)
+    if (defaultApp) return defaultApp
+
     const gitRemotes = getGitRemotes(flags.remote || configRemote())
-    if (gitRemotes.length === 1) return gitRemotes[0].app
     if (flags.remote && gitRemotes.length === 0) {
       Errors.error(`remote ${flags.remote} not found in git remotes`)
     }
@@ -32,6 +40,11 @@ export const app = Flags.custom({
       throw new MultipleRemotesError(gitRemotes)
     }
   },
+
+  async defaultHelp({flags}) {
+    return getDefaultApp(flags.remote)
+  },
+
   description: 'app to run command against',
 })
 
