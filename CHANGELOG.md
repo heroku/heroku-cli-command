@@ -1,4 +1,12 @@
 ## [12.1.1](https://github.com/heroku/heroku-cli-command/compare/v12.1.0...v12.1.1) (2025-09-30)
+## [12.1.3](https://github.com/heroku/heroku-cli-command/compare/command-v12.1.2...command-v12.1.3) (2026-02-24)
+
+
+### Bug Fixes
+
+* Add default help text hook so that display default app value in --help ([#268](https://github.com/heroku/heroku-cli-command/issues/268)) ([d45dc5c](https://github.com/heroku/heroku-cli-command/commit/d45dc5c5361ead501dc3d07c04b4e84121db85c0))
+* **deps:** bump the patch-dependencies group across 1 directory with 3 updates ([#260](https://github.com/heroku/heroku-cli-command/issues/260)) ([548fab1](https://github.com/heroku/heroku-cli-command/commit/548fab1f0becfe089e4956ac84ac1750e820316b))
+
 ## [12.1.2](https://github.com/heroku/heroku-cli-command/compare/command-v12.1.1...command-v12.1.2) (2026-01-29)
 
 
