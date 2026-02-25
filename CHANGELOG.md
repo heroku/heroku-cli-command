@@ -1,4 +1,19 @@
 ## [12.1.1](https://github.com/heroku/heroku-cli-command/compare/v12.1.0...v12.1.1) (2025-09-30)
+## [12.2.0-beta.0](https://github.com/heroku/heroku-cli-command/compare/command-v12.1.2-beta.0...command-v12.2.0-beta.0) (2026-02-25)
+
+
+### Features
+
+* add global --prompt flag for interactive command execution ([#269](https://github.com/heroku/heroku-cli-command/issues/269)) ([c73322b](https://github.com/heroku/heroku-cli-command/commit/c73322be0700709f8d2a809f9538bc6b06612db9))
+
+
+### Bug Fixes
+
+* Add default help text hook so that display default app value in --help ([#268](https://github.com/heroku/heroku-cli-command/issues/268)) ([d45dc5c](https://github.com/heroku/heroku-cli-command/commit/d45dc5c5361ead501dc3d07c04b4e84121db85c0))
+* **deps:** bump lodash from 4.17.21 to 4.17.23 ([#255](https://github.com/heroku/heroku-cli-command/issues/255)) ([f056708](https://github.com/heroku/heroku-cli-command/commit/f056708bc5cd4858597afb95495cf3024791d578))
+* **deps:** bump the patch-dependencies group across 1 directory with 3 updates ([#260](https://github.com/heroku/heroku-cli-command/issues/260)) ([548fab1](https://github.com/heroku/heroku-cli-command/commit/548fab1f0becfe089e4956ac84ac1750e820316b))
+* remove vulns and repeated warning headings (W-17068244) ([#233](https://github.com/heroku/heroku-cli-command/issues/233)) ([7edf773](https://github.com/heroku/heroku-cli-command/commit/7edf7730cb44af96f1475f32d2a4ae614ab43e27))
+
 ## [12.1.3](https://github.com/heroku/heroku-cli-command/compare/command-v12.1.2...command-v12.1.3) (2026-02-24)
 
 
