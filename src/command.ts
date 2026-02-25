@@ -1,13 +1,39 @@
-import {Command as Base} from '@oclif/core'
-import {Errors} from '@oclif/core'
+import {
+  Command as Base,
+  Errors,
+  Flags,
+} from '@oclif/core'
 import parser from 'yargs-parser'
 import unparser from 'yargs-unparser'
 
 import {APIClient, IOptions} from './api-client.js'
+import {promptAndRun} from './prompt.js'
 
 export abstract class Command extends Base {
+  /**
+   * Set this to false in a command class to disable the --prompt flag for that command
+   */
+  static promptFlagActive = true
+
   allowArbitraryFlags: boolean = false
+
   _heroku!: APIClient
+  /**
+   * Global flags available to all commands that extend this base class
+   * Only includes the prompt flag if promptFlagActive is true
+   */
+  static get baseFlags(): Record<string, any> {
+    if (this.promptFlagActive === false) {
+      return {}
+    }
+
+    return {
+      prompt: Flags.boolean({
+        description: 'interactively prompt for command arguments and flags',
+        helpGroup: 'GLOBAL',
+      }),
+    }
+  }
 
   get heroku(): APIClient {
     if (this._heroku) return this._heroku
@@ -17,6 +43,31 @@ export abstract class Command extends Base {
     }
     this._heroku = new APIClient(this.config, options)
     return this._heroku
+  }
+
+  async init(): Promise<void> {
+    await super.init()
+
+    // Check if the command has opted out of the prompt flag
+    const CommandClass = this.constructor as any
+    if (CommandClass.promptFlagActive === false) {
+      return
+    }
+
+    // Check if --prompt flag is present in argv
+    if (!this.argv.includes('--prompt')) {
+      return
+    }
+
+    // If we get here, we need to prompt for inputs
+    const commandId = this.id
+    if (!commandId) return
+
+    await promptAndRun({
+      argv: this.argv,
+      commandId,
+      config: this.config,
+    })
   }
 
   protected async parse(options?: any, argv?: string[]): Promise<any> {
