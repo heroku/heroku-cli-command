@@ -89,9 +89,7 @@ export abstract class Command extends Base {
    */
   protected isPromptModeActive(): boolean {
     const Ctor = this.constructor as typeof Command
-    if (Ctor.promptFlagActive === false) return false
-    if (!('prompt' in Ctor.baseFlags)) return false
-    return true
+    return Ctor.promptFlagActive && ('prompt' in Ctor.baseFlags)
   }
 
   protected async parse(options?: any, argv?: string[]): Promise<any> {
