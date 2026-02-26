@@ -19,6 +19,23 @@ class MyCommand extends Command {
   async run() {}
 }
 
+/** Exposes protected isPromptModeActive for testing */
+class TestableCommand extends Command {
+  isPromptModeActivePublic(): boolean {
+    return this.isPromptModeActive()
+  }
+
+  async run() {}
+}
+
+class CommandWithPromptFlagDisabled extends TestableCommand {
+  static promptFlagActive = false
+}
+
+class CommandWithoutPromptInBaseFlags extends TestableCommand {
+  static baseFlags = Command.baseFlagsWithoutPrompt()
+}
+
 describe('command', () => {
   it('sets app', () => class AppCommand extends Command {
     static flags = {
@@ -36,5 +53,26 @@ describe('command', () => {
       const cmd = new MyCommand([], ctx.config)
       cmd.config = ctx.config
       expect(cmd.heroku).to.be.ok
+    })
+
+  test
+    .it('isPromptModeActive returns true when prompt is in baseFlags and promptFlagActive is true', async (ctx: any) => {
+      const cmd = new TestableCommand([], ctx.config)
+      cmd.config = ctx.config
+      expect(cmd.isPromptModeActivePublic()).to.be.true
+    })
+
+  test
+    .it('isPromptModeActive returns false when promptFlagActive is false', async (ctx: any) => {
+      const cmd = new CommandWithPromptFlagDisabled([], ctx.config)
+      cmd.config = ctx.config
+      expect(cmd.isPromptModeActivePublic()).to.be.false
+    })
+
+  test
+    .it('isPromptModeActive returns false when prompt is not in baseFlags', async (ctx: any) => {
+      const cmd = new CommandWithoutPromptInBaseFlags([], ctx.config)
+      cmd.config = ctx.config
+      expect(cmd.isPromptModeActivePublic()).to.be.false
     })
 })

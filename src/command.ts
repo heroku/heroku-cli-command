@@ -62,9 +62,7 @@ export abstract class Command extends Base {
   async init(): Promise<void> {
     await super.init()
 
-    // Check if the command has opted out of the prompt flag
-    const CommandClass = this.constructor as any
-    if (CommandClass.promptFlagActive === false) {
+    if (!this.isPromptModeActive()) {
       return
     }
 
@@ -82,6 +80,18 @@ export abstract class Command extends Base {
       commandId,
       config: this.config,
     })
+  }
+
+  /**
+   * Returns whether prompt mode is active for this command.
+   * False if the command has opted out (static promptFlagActive = false)
+   * or if the prompt flag is not in baseFlags.
+   */
+  protected isPromptModeActive(): boolean {
+    const Ctor = this.constructor as typeof Command
+    if (Ctor.promptFlagActive === false) return false
+    if (!('prompt' in Ctor.baseFlags)) return false
+    return true
   }
 
   protected async parse(options?: any, argv?: string[]): Promise<any> {
