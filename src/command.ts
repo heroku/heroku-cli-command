@@ -11,6 +11,17 @@ import {promptAndRun} from './prompt.js'
 
 export abstract class Command extends Base {
   /**
+   * Base flags that includes the prompt flag by default
+   * Subclasses can override this to customize base flags
+   */
+  static baseFlags: Record<string, any> = {
+    prompt: Flags.boolean({
+      description: 'interactively prompt for command arguments and flags',
+      helpGroup: 'GLOBAL',
+    }),
+  }
+
+  /**
    * Set this to false in a command class to disable the --prompt flag for that command
    */
   static promptFlagActive = true
@@ -18,21 +29,24 @@ export abstract class Command extends Base {
   allowArbitraryFlags: boolean = false
 
   _heroku!: APIClient
-  /**
-   * Global flags available to all commands that extend this base class
-   * Only includes the prompt flag if promptFlagActive is true
-   */
-  static get baseFlags(): Record<string, any> {
-    if (this.promptFlagActive === false) {
-      return {}
-    }
 
-    return {
-      prompt: Flags.boolean({
-        description: 'interactively prompt for command arguments and flags',
-        helpGroup: 'GLOBAL',
-      }),
-    }
+  /* eslint-disable valid-jsdoc */
+  /**
+   * Helper function to get baseFlags without the prompt flag
+   * Use this when you want to remove the prompt flag in a specific command:
+   *
+   * @example
+   * export default class MyCommand extends Command {
+   *   static baseFlags = Command.baseFlagsWithoutPrompt()
+   *   static flags = { ... }
+   * }
+   */
+  static baseFlagsWithoutPrompt(): Record<string, any> {
+    // Destructure to remove the prompt flag
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const {prompt, ...rest} = this.baseFlags
+
+    return rest
   }
 
   get heroku(): APIClient {

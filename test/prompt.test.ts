@@ -25,9 +25,9 @@ describe('prompt flag feature', () => {
       expect(TestCommand.baseFlags.prompt).to.be.ok
     })
 
-    it('excludes prompt flag when promptFlagActive is false', () => {
+    it('excludes prompt flag when using baseFlagsWithoutPrompt()', () => {
       class TestCommand extends Command {
-        static promptFlagActive = false
+        static baseFlags = Command.baseFlagsWithoutPrompt()
 
         async run() {}
       }
@@ -36,15 +36,13 @@ describe('prompt flag feature', () => {
       expect(Object.keys(TestCommand.baseFlags)).to.have.lengthOf(0)
     })
 
-    it('allows different subclasses to have different promptFlagActive values', () => {
+    it('allows different subclasses to have different baseFlags', () => {
       class CommandWithPrompt extends Command {
-        static promptFlagActive = true
-
         async run() {}
       }
 
       class CommandWithoutPrompt extends Command {
-        static promptFlagActive = false
+        static baseFlags = Command.baseFlagsWithoutPrompt()
 
         async run() {}
       }
@@ -69,20 +67,18 @@ describe('prompt flag feature', () => {
       expect(TestCommand.flags).to.have.property('prompt')
     })
 
-    it('baseFlags getter allows dynamic checking per subclass', () => {
+    it('baseFlagsWithoutPrompt helper removes prompt flag', () => {
       class CommandWithPrompt extends Command {
-        static promptFlagActive = true
-
         async run() {}
       }
 
       class CommandWithoutPrompt extends Command {
-        static promptFlagActive = false
+        static baseFlags = Command.baseFlagsWithoutPrompt()
 
         async run() {}
       }
 
-      // Accessing baseFlags directly on each class respects their promptFlagActive
+      // Commands using baseFlagsWithoutPrompt() won't have the prompt flag
       expect(CommandWithPrompt.baseFlags).to.have.property('prompt')
       expect(CommandWithoutPrompt.baseFlags).to.not.have.property('prompt')
     })
