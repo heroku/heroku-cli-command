@@ -1,4 +1,16 @@
 ## [12.1.1](https://github.com/heroku/heroku-cli-command/compare/v12.1.0...v12.1.1) (2025-09-30)
+## [12.2.0](https://github.com/heroku/heroku-cli-command/compare/command-v12.1.3...command-v12.2.0) (2026-02-26)
+
+
+### Features
+
+* add global --prompt flag for interactive command execution ([#269](https://github.com/heroku/heroku-cli-command/issues/269)) ([c73322b](https://github.com/heroku/heroku-cli-command/commit/c73322be0700709f8d2a809f9538bc6b06612db9))
+
+
+### Bug Fixes
+
+* improve --prompt flag help text implementation ([#276](https://github.com/heroku/heroku-cli-command/issues/276)) ([f870d8b](https://github.com/heroku/heroku-cli-command/commit/f870d8b8f68ae78e8ab8ef9c4c9d49e7ae5f87e3))
+
 ## [12.1.3](https://github.com/heroku/heroku-cli-command/compare/command-v12.1.2...command-v12.1.3) (2026-02-24)
 
 
