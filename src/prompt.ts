@@ -8,7 +8,6 @@ interface PromptOptions {
   config: Config
 }
 
-// eslint-disable-next-line valid-jsdoc
 /**
  * Interactively prompts the user for command arguments and flags,
  * then re-runs the command with the collected inputs.

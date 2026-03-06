@@ -30,7 +30,6 @@ export abstract class Command extends Base {
 
   _heroku!: APIClient
 
-  /* eslint-disable valid-jsdoc */
   /**
    * Helper function to get baseFlags without the prompt flag
    * Use this when you want to remove the prompt flag in a specific command:
