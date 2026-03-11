@@ -1,4 +1,12 @@
 ## [12.1.1](https://github.com/heroku/heroku-cli-command/compare/v12.1.0...v12.1.1) (2025-09-30)
+## [12.2.1](https://github.com/heroku/heroku-cli-command/compare/command-v12.2.0...command-v12.2.1) (2026-03-11)
+
+
+### Bug Fixes
+
+* exclude workflows-repo from eslint ([#286](https://github.com/heroku/heroku-cli-command/issues/286)) ([093706f](https://github.com/heroku/heroku-cli-command/commit/093706fb5f912848acce8eb4da9c414ad24c9442))
+* remove extra newline from warning output ([#284](https://github.com/heroku/heroku-cli-command/issues/284)) ([94f6d94](https://github.com/heroku/heroku-cli-command/commit/94f6d946da772c852ed1589d1dcd72b4c507b527))
+
 ## [12.2.0](https://github.com/heroku/heroku-cli-command/compare/command-v12.1.3...command-v12.2.0) (2026-02-26)
 
 
