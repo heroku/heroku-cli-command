@@ -6,6 +6,7 @@ export default [
     ignores: [
       './lib',
       '**/*.js',
+      'workflows-repo/**',
     ],
   },
   {
