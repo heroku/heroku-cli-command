@@ -7,4 +7,5 @@ lib/
 node_modules/
 yarn.lock
 .idea/
+coverage/
 .nyc_output/
