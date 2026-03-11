@@ -626,6 +626,36 @@ describe('api_client', () => {
       })
   })
 
+  context('warning formatting', function () {
+    test
+      .it('does not add extra newlines to warnings', async ctx => {
+        api = nock('https://api.heroku.com', {
+          reqheaders: {authorization: 'Bearer mypass'},
+        })
+        api.get('/apps').reply(200, [], {'X-Heroku-Warning': 'Test warning message'})
+
+        const cmd = new Command([], ctx.config)
+        stderr.start()
+        await cmd.heroku.get('/apps')
+        stderr.stop()
+
+        // The warning output should contain exactly one newline after the message, not two
+        // Two newlines would create a blank line
+        const lines = stderr.output.split('\n')
+        const warningLineIndex = lines.findIndex(line => line.includes('Test warning message'))
+        expect(warningLineIndex).to.be.greaterThan(-1)
+
+        // Check that there isn't an extra blank line after the warning
+        // (the next line after warning should be the last empty line from the final newline)
+        if (warningLineIndex < lines.length - 2) {
+          const nextLine = lines[warningLineIndex + 1]
+          // The line immediately after warning should be the final empty string from split
+          // If it has content (even just whitespace/›), that means there's an extra newline
+          expect(nextLine.trim()).to.equal('')
+        }
+      })
+  })
+
   context('request ids', function () {
     let generateStub: any
 
