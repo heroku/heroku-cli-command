@@ -9,7 +9,7 @@ import {stderr} from 'stdout-stderr'
 
 import {Command as CommandBase} from '../src/command.js'
 import {RequestId, requestIdHeader} from '../src/request-id.js'
-import {restoreNetrcStub, stubNetrc} from './helpers/netrc-stub.js'
+import {restoreCredentialManagerStub, stubCredentialManager} from './helpers/credential-manager-stub.js'
 
 class Command extends CommandBase {
   async run() {}
@@ -31,13 +31,13 @@ describe('api_client', () => {
     process.env = {}
     debug.disable()
     api = nock('https://api.heroku.com')
-    stubNetrc()
+    stubCredentialManager()
   })
 
   afterEach(function () {
     process.env = env
     api.done()
-    restoreNetrcStub()
+    restoreCredentialManagerStub()
   })
 
   test
