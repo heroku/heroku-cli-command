@@ -10,7 +10,7 @@ class StatusCommand extends Command {
 
   async run() {
     if (process.env.HEROKU_API_KEY) this.warn('HEROKU_API_KEY is set')
-    if (!(await this.heroku.getAuth())) this.notloggedin()
+    if (!this.heroku.auth) this.notloggedin()
     try {
       const {body: account} = await this.heroku.get<Heroku.Account>('/account', {retryAuth: false})
       ux.stdout(account.email)
