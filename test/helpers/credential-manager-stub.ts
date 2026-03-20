@@ -14,6 +14,17 @@ export function stubCredentialManager(token = DEFAULT_TOKEN) {
   })
 }
 
+/** Simulates credential-manager when no token is stored (getAuth throws; APIClient.getAuth returns undefined). */
+export function stubCredentialManagerWithNoCredentials() {
+  setCredentialManagerProvider({
+    async getAuth() {
+      throw new Error('No credentials found. Please log in.')
+    },
+    async removeAuth() {},
+    async saveAuth() {},
+  })
+}
+
 export function restoreCredentialManagerStub() {
   setCredentialManagerProvider({
     getAuth: real.getAuth,
