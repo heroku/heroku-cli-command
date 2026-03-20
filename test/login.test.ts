@@ -7,7 +7,7 @@ import {fileURLToPath} from 'node:url'
 import * as sinon from 'sinon'
 
 import {Command as CommandBase} from '../src/command.js'
-import {restoreNetrcStub, stubNetrc} from './helpers/netrc-stub.js'
+import {restoreCredentialManagerStub, stubCredentialManager} from './helpers/credential-manager-stub.js'
 
 class Command extends CommandBase {
   async run() {}
@@ -20,7 +20,7 @@ beforeEach(() => {
   api.get('/oauth/authorizations').reply(200, [])
   api.get('/oauth/authorizations/~').reply(200, {})
 
-  stubNetrc()
+  stubCredentialManager()
 
   // Mock inquirer prompts
   sinon.stub(inquirer, 'prompt').callsFake(async (questions: any) => {
@@ -44,7 +44,7 @@ beforeEach(() => {
 
 afterEach(() => {
   sinon.restore()
-  restoreNetrcStub()
+  restoreCredentialManagerStub()
 })
 
 const __filename = fileURLToPath(import.meta.url)

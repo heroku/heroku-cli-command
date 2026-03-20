@@ -1,8 +1,8 @@
+import {getAuth as getStoredAuth, removeAuth} from './credential-manager.js'
 import {HTTP, HTTPError, HTTPRequestOptions} from '@heroku/http-call'
 import {Errors, Interfaces} from '@oclif/core'
 import debug from 'debug'
 import inquirer from 'inquirer'
-import {Netrc} from 'netrc-parser'
 import * as url from 'node:url'
 
 import {Login} from './login.js'
@@ -11,8 +11,6 @@ import {IDelinquencyConfig, IDelinquencyInfo, ParticleboardClient} from './parti
 import {RequestId, requestIdHeader} from './request-id.js'
 import {vars} from './vars.js'
 import {yubikey} from './yubikey.js'
-
-const netrc = new Netrc()
 
 export const ALLOWED_HEROKU_DOMAINS = Object.freeze(['heroku.com', 'herokai.com', 'herokuspace.com', 'herokudev.com'])
 export const LOCALHOST_DOMAINS = Object.freeze(['localhost', '127.0.0.1'])
@@ -158,6 +156,7 @@ export class APIClient {
           opts.headers[requestIdHeader] = currentRequestId
         }
 
+        let auth: string | undefined
         if (!Object.keys(opts.headers).some(h => h.toLowerCase() === 'authorization')) {
           // Handle both relative and absolute URLs for validation
           let targetUrl: URL
@@ -173,7 +172,8 @@ export class APIClient {
           const isLocalhost = LOCALHOST_DOMAINS.includes(targetUrl.hostname as (typeof LOCALHOST_DOMAINS)[number])
 
           if (isHerokuApi || isLocalhost) {
-            opts.headers.authorization = `Bearer ${self.auth}`
+            auth = await self.getAuth()
+            opts.headers.authorization = `Bearer ${auth}`
           }
         }
 
@@ -183,10 +183,10 @@ export class APIClient {
         try {
           let response: HTTP<T>
           let particleboardResponse: HTTP<IDelinquencyInfo> | undefined
-          const particleboardClient: ParticleboardClient = self.particleboard
 
           if (delinquencyConfig.fetch_delinquency && !delinquencyConfig.warning_shown) {
-            self._particleboard.auth = self.auth
+            const particleboardClient: ParticleboardClient = self.particleboard
+            particleboardClient.auth = auth ?? await self.getAuth()
             const settledResponses = await Promise.allSettled([
               super.request<T>(url, opts),
               particleboardClient.get<IDelinquencyInfo>(delinquencyConfig.fetch_url as string),
@@ -222,7 +222,8 @@ export class APIClient {
 
               if (!self.authPromise) self.authPromise = self.login()
               await self.authPromise
-              opts.headers.authorization = `Bearer ${self.auth}`
+              const retryAuth = await self.getAuth()
+              opts.headers.authorization = `Bearer ${retryAuth}`
               return this.request<T>(url, opts, retries)
             }
 
@@ -276,16 +277,23 @@ export class APIClient {
     }
   }
 
-  get auth(): string | undefined {
-    if (!this._auth) {
-      if (process.env.HEROKU_API_TOKEN && !process.env.HEROKU_API_KEY) Errors.warn('HEROKU_API_TOKEN is set but you probably meant HEROKU_API_KEY')
+  async getAuth(): Promise<string | undefined> {
+    if (this._auth) return this._auth
+    if (process.env.HEROKU_API_TOKEN && !process.env.HEROKU_API_KEY) Errors.warn('HEROKU_API_TOKEN is set but you probably meant HEROKU_API_KEY')
+    if (process.env.HEROKU_API_KEY) {
       this._auth = process.env.HEROKU_API_KEY
-      if (!this._auth) {
-        netrc.loadSync()
-        this._auth = netrc.machines[vars.apiHost] && netrc.machines[vars.apiHost].password
-      }
+      return this._auth
     }
 
+    try {
+      this._auth = await getStoredAuth(undefined, vars.apiHost)
+      return this._auth
+    } catch {
+      return undefined
+    }
+  }
+
+  get auth(): string | undefined {
     return this._auth
   }
 
@@ -325,15 +333,15 @@ export class APIClient {
   }
 
   async logout() {
+    const token = await this.getAuth()
     try {
-      await this._login.logout()
+      await this._login.logout(token)
     } catch (error) {
       if (error instanceof Errors.CLIError) Errors.warn(error)
     }
 
-    delete netrc.machines['api.heroku.com']
-    delete netrc.machines['git.heroku.com']
-    await netrc.save()
+    this._auth = undefined
+    await removeAuth(undefined, [vars.apiHost, vars.httpGitHost])
   }
 
   patch<T>(url: string, options: APIClient.Options = {}) {
