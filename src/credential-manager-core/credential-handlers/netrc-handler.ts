@@ -58,24 +58,6 @@ export class NetrcHandler {
     if (changed) await this.netrc.save()
   }
 
-  private applyAuthToHost(auth: NetrcAuthEntry, host: string) {
-    if (!this.netrc.machines[host]) this.netrc.machines[host] = {}
-    this.netrc.machines[host] = {
-      login: auth.login,
-      password: auth.password,
-    }
-    delete this.netrc.machines[host].method
-    delete this.netrc.machines[host].org
-
-    if (this.netrc.machines._tokens) {
-      for (const token of this.netrc.machines._tokens) {
-        if (token.type === 'machine' && host === token.host) {
-          token.internalWhitespace = '\n  '
-        }
-      }
-    }
-  }
-
   /**
    * Saves authentication credentials for a given host.
    * @param auth - The authentication entry containing login and password.
@@ -97,5 +79,23 @@ export class NetrcHandler {
     }
 
     await this.netrc.save()
+  }
+
+  private applyAuthToHost(auth: NetrcAuthEntry, host: string) {
+    if (!this.netrc.machines[host]) this.netrc.machines[host] = {}
+    this.netrc.machines[host] = {
+      login: auth.login,
+      password: auth.password,
+    }
+    delete this.netrc.machines[host].method
+    delete this.netrc.machines[host].org
+
+    if (this.netrc.machines._tokens) {
+      for (const token of this.netrc.machines._tokens) {
+        if (token.type === 'machine' && host === token.host) {
+          token.internalWhitespace = '\n  '
+        }
+      }
+    }
   }
 }

@@ -4,7 +4,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
-export type Token = {content: string, type: 'other'} | MachineToken
+export type Token = MachineToken | {content: string, type: 'other'}
 export type MachineToken = {
   comment?: string
   host: string
@@ -23,9 +23,9 @@ export type Machines = {
   }
 }
 
-export type MachinesWithTokens = {
+export type MachinesWithTokens = Machines & {
   _tokens?: Token[]
-} & Machines
+}
 
 const credDebug = debug('heroku-credential-manager')
 
@@ -178,6 +178,84 @@ export class Netrc {
   }
 
   /**
+   * Gets the default netrc file path based on the operating system.
+   * Checks for GPG-encrypted version first.
+   * @returns The path to the default netrc file
+   */
+  private get defaultFile(): string {
+    let home: string | undefined
+    if (os.platform() === 'win32') {
+      const fromDrive
+        = process.env.HOMEDRIVE && process.env.HOMEPATH
+          ? path.join(process.env.HOMEDRIVE, process.env.HOMEPATH)
+          : undefined
+      home = process.env.HOME || fromDrive || process.env.USERPROFILE
+    }
+
+    const resolved = home || os.homedir() || os.tmpdir()
+    const file = path.join(
+      resolved,
+      os.platform() === 'win32' ? '_netrc' : '.netrc',
+    )
+    const gpgFile = `${file}.gpg`
+    return fs.existsSync(gpgFile) ? gpgFile : file
+  }
+
+  /**
+   * Gets the GPG command arguments for decrypting the netrc file.
+   * @returns Array of GPG command-line arguments for decryption
+   */
+  private get gpgDecryptArgs() {
+    const args = ['--batch', '--quiet', '--decrypt', this.file]
+    credDebug('running gpg with args %o', args)
+    return args
+  }
+
+  /**
+   * Gets the GPG command arguments for encrypting the netrc file.
+   * @returns Array of GPG command-line arguments for encryption
+   */
+  private get gpgEncryptArgs() {
+    const args = ['-a', '--batch', '--default-recipient-self', '-e']
+    credDebug('running gpg with args %o', args)
+    return args
+  }
+
+  /**
+   * Generates the string representation of all machines for writing to file.
+   * @returns The formatted netrc file content as a string
+   */
+  private get output(): string {
+    const output: string[] = []
+    if (this.machines._tokens) {
+      for (const t of this.machines._tokens as Token[]) {
+        if (t.type === 'other') {
+          output.push(t.content)
+          continue
+        }
+
+        if (t.pre) {
+          output.push(t.pre + '\n')
+        }
+
+        output.push(`machine ${t.host}`)
+
+        if (t.internalWhitespace.includes('\n')) {
+          this.addCommentToOutput(t, output)
+          this.addPropsToOutput(t, output)
+          output.push('\n')
+        } else {
+          this.addPropsToOutput(t, output)
+          this.addCommentToOutput(t, output)
+          output.push('\n')
+        }
+      }
+    }
+
+    return output.join('')
+  }
+
+  /**
    * Asynchronously loads and parses the netrc file.
    * Handles both plain text and GPG-encrypted files.
    * @returns A promise that resolves when loading is complete, or throws on error
@@ -191,13 +269,15 @@ export class Netrc {
         return stdout
       }
 
-      const body = await (path.extname(this.file) === '.gpg' ? decryptFile() : new Promise<string>((resolve, reject) => {
-        fs.readFile(this.file, {encoding: 'utf8'}, (err, data) => {
-          if (err && err.code !== 'ENOENT') reject(err)
-          debug('ENOENT')
-          resolve(data || '')
-        })
-      }))
+      const body = await (path.extname(this.file) === '.gpg'
+        ? decryptFile()
+        : new Promise<string>((resolve, reject) => {
+          fs.readFile(this.file, {encoding: 'utf8'}, (err, data) => {
+            if (err && err.code !== 'ENOENT') reject(err)
+            debug('ENOENT')
+            resolve(data || '')
+          })
+        }))
       this.machines = parse(body)
       credDebug('machines: %o', Object.keys(this.machines))
     } catch (error) {
@@ -301,83 +381,12 @@ export class Netrc {
   }
 
   /**
-   * Gets the default netrc file path based on the operating system.
-   * Checks for GPG-encrypted version first.
-   * @returns The path to the default netrc file
-   */
-  private get defaultFile(): string {
-    const home = (os.platform() === 'win32'
-        && (process.env.HOME
-          || (process.env.HOMEDRIVE && process.env.HOMEPATH && path.join(process.env.HOMEDRIVE!, process.env.HOMEPATH!))
-          || process.env.USERPROFILE))
-      || os.homedir()
-      || os.tmpdir()
-    const file = path.join(home, os.platform() === 'win32' ? '_netrc' : '.netrc')
-    const gpgFile = `${file}.gpg`
-    return fs.existsSync(gpgFile) ? gpgFile : file
-  }
-
-  /**
-   * Gets the GPG command arguments for decrypting the netrc file.
-   * @returns Array of GPG command-line arguments for decryption
-   */
-  private get gpgDecryptArgs() {
-    const args = ['--batch', '--quiet', '--decrypt', this.file]
-    credDebug('running gpg with args %o', args)
-    return args
-  }
-
-  /**
-   * Gets the GPG command arguments for encrypting the netrc file.
-   * @returns Array of GPG command-line arguments for encryption
-   */
-  private get gpgEncryptArgs() {
-    const args = ['-a', '--batch', '--default-recipient-self', '-e']
-    credDebug('running gpg with args %o', args)
-    return args
-  }
-
-  /**
-   * Generates the string representation of all machines for writing to file.
-   * @returns The formatted netrc file content as a string
-   */
-  private get output(): string {
-    const output: string[] = []
-    if (this.machines._tokens) {
-      for (const t of this.machines._tokens as Token[]) {
-        if (t.type === 'other') {
-          output.push(t.content)
-          continue
-        }
-
-        if (t.pre) {
-          output.push(t.pre + '\n')
-        }
-
-        output.push(`machine ${t.host}`)
-
-        if (t.internalWhitespace.includes('\n')) {
-          this.addCommentToOutput(t, output)
-          this.addPropsToOutput(t, output)
-          output.push('\n')
-        } else {
-          this.addPropsToOutput(t, output)
-          this.addCommentToOutput(t, output)
-          output.push('\n')
-        }
-      }
-    }
-
-    return output.join('')
-  }
-
-  /**
    * Wraps and throws an error with additional context about the netrc file.
    * @param err - The original error
    * @returns Never returns; always throws
    */
   private throw(err: unknown): never {
-    const error = (err instanceof Error ? err : new Error(String(err))) as {detail?: string} & Error
+    const error = (err instanceof Error ? err : new Error(String(err))) as Error & {detail?: string}
     if (error.detail) error.detail += '\n'
     else error.detail = ''
     error.detail += `Error occurred during reading netrc file: ${this.file}`

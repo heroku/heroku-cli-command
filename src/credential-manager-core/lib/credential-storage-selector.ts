@@ -49,13 +49,6 @@ export function getStorageConfig(): StorageConfig {
     }
   }
 
-  case 'win32': {
-    return {
-      credentialStore: CredentialStore.WindowsCredentialManager,
-      useNetrc: true,
-    }
-  }
-
   case 'linux': {
     if (hasSecretTool()) {
       return {
@@ -67,6 +60,13 @@ export function getStorageConfig(): StorageConfig {
     // secret-tool not accessible, fall back to netrc only
     return {
       credentialStore: null,
+      useNetrc: true,
+    }
+  }
+
+  case 'win32': {
+    return {
+      credentialStore: CredentialStore.WindowsCredentialManager,
       useNetrc: true,
     }
   }
