@@ -5,7 +5,7 @@
   "author": "Heroku",
   "bugs": "https://github.com/heroku/heroku-cli-command/issues",
   "dependencies": {
-    "@heroku/heroku-credential-manager": "^0.0.0",
+    "@heroku/heroku-credential-manager": "^0.0.2-beta.0",
     "@heroku/http-call": "^5.4.0",
     "@oclif/core": "^4.3.0",
     "ansis": "^4",
