@@ -1,4 +1,11 @@
 ## [12.1.1](https://github.com/heroku/heroku-cli-command/compare/v12.1.0...v12.1.1) (2025-09-30)
+## [12.3.0](https://github.com/heroku/heroku-cli-command/compare/command-v12.2.1...command-v12.3.0) (2026-03-20)
+
+
+### Features
+
+* leverage the heroku credential manager for auth ([#291](https://github.com/heroku/heroku-cli-command/issues/291)) ([de1bf43](https://github.com/heroku/heroku-cli-command/commit/de1bf431094137669c092d2f568b32dc1ac065dd))
+
 ## [12.2.1](https://github.com/heroku/heroku-cli-command/compare/command-v12.2.0...command-v12.2.1) (2026-03-11)
 
 
