@@ -61,6 +61,10 @@ export class APIClient {
   http: typeof HTTP
   preauthPromises: { [k: string]: Promise<HTTP<any>> }
   private _auth?: string
+  /** In-flight dedupe for concurrent getAuth() calls before resolution completes. */
+  private _storedAuthPromise?: Promise<string | undefined>
+  /** After a failed read from storage, skip re-querying until state is reset (login/logout/auth setter). */
+  private _storedAuthResolvedAbsent = false
   private readonly _login: Login
   private _particleboard!: ParticleboardClient
   private _twoFactorMutex: Mutex<string> | undefined
@@ -277,6 +281,11 @@ export class APIClient {
     }
   }
 
+  private resetStoredAuthResolution(): void {
+    this._storedAuthPromise = undefined
+    this._storedAuthResolvedAbsent = false
+  }
+
   async getAuth(): Promise<string | undefined> {
     if (this._auth) return this._auth
     if (process.env.HEROKU_API_TOKEN && !process.env.HEROKU_API_KEY) Errors.warn('HEROKU_API_TOKEN is set but you probably meant HEROKU_API_KEY')
@@ -285,12 +294,25 @@ export class APIClient {
       return this._auth
     }
 
-    try {
-      this._auth = await getStoredAuth(undefined, vars.apiHost)
-      return this._auth
-    } catch {
-      return undefined
+    if (this._storedAuthResolvedAbsent) return undefined
+
+    if (!this._storedAuthPromise) {
+      this._storedAuthPromise = (async (): Promise<string | undefined> => {
+        try {
+          const token = await getStoredAuth(undefined, vars.apiHost)
+          this._auth = token
+          this._storedAuthResolvedAbsent = false
+          return token
+        } catch {
+          this._storedAuthResolvedAbsent = true
+          return undefined
+        } finally {
+          this._storedAuthPromise = undefined
+        }
+      })()
     }
+
+    return this._storedAuthPromise
   }
 
   get auth(): string | undefined {
@@ -300,6 +322,7 @@ export class APIClient {
   set auth(token: string | undefined) {
     delete this.authPromise
     this._auth = token
+    this.resetStoredAuthResolution()
   }
 
   get defaults(): typeof HTTP.defaults {
@@ -341,6 +364,7 @@ export class APIClient {
     }
 
     this._auth = undefined
+    this.resetStoredAuthResolution()
     await removeAuth(undefined, [vars.apiHost, vars.httpGitHost])
   }
 

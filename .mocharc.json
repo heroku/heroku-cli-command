@@ -1,6 +1,7 @@
 {
   "require": [
-    "ts-node/esm"
+    "ts-node/esm",
+    "./test/mocha-hooks.ts"
   ],
   "watch-extensions": ["ts"],
   "recursive": true,

@@ -1,12 +1,12 @@
 /**
- * Thin wrapper around @heroku/heroku-credential-manager so tests can inject a mock
+ * Thin wrapper around credential-manager-core so tests can inject a mock
  * (ESM module exports cannot be stubbed with sinon).
  */
 import {
   getAuth as realGetAuth,
   removeAuth as realRemoveAuth,
   saveAuth as realSaveAuth,
-} from '@heroku/heroku-credential-manager'
+} from './credential-manager-core/index.js'
 
 export interface CredentialManagerProvider {
   getAuth: (account: string | undefined, host: string, service?: string) => Promise<string>
