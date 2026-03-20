@@ -8,6 +8,7 @@ import * as sinon from 'sinon'
 import {stderr} from 'stdout-stderr'
 
 import {Command as CommandBase} from '../src/command.js'
+import {setCredentialManagerProvider} from '../src/credential-manager.js'
 import {RequestId, requestIdHeader} from '../src/request-id.js'
 import {restoreCredentialManagerStub, stubCredentialManager} from './helpers/credential-manager-stub.js'
 
@@ -28,6 +29,7 @@ const test = fancy
 
 describe('api_client', () => {
   beforeEach(function () {
+    nock.cleanAll()
     process.env = {}
     debug.disable()
     api = nock('https://api.heroku.com')
@@ -38,6 +40,56 @@ describe('api_client', () => {
     process.env = env
     api.done()
     restoreCredentialManagerStub()
+  })
+
+  describe('getAuth', () => {
+    test
+      .it('returns token from credential manager', async ctx => {
+        stubCredentialManager('token-from-store')
+        const cmd = new Command([], ctx.config)
+        cmd.config = ctx.config
+        expect(await cmd.heroku.getAuth()).to.equal('token-from-store')
+      })
+
+    test
+      .it('returns cached auth when _auth is already set', async ctx => {
+        stubCredentialManager('ignored-after-cache')
+        const cmd = new Command([], ctx.config)
+        cmd.config = ctx.config
+        cmd.heroku.auth = 'cached-only'
+        expect(await cmd.heroku.getAuth()).to.equal('cached-only')
+      })
+  })
+
+  describe('logout', () => {
+    const removeAuthCalls: {account: string | undefined; hosts: string[]}[] = []
+
+    beforeEach(() => {
+      removeAuthCalls.length = 0
+      setCredentialManagerProvider({
+        async getAuth() {
+          return 'logout-test-token'
+        },
+        async removeAuth(account: string | undefined, hosts: string[]) {
+          removeAuthCalls.push({account, hosts})
+        },
+        async saveAuth() {},
+      })
+      api.delete('/oauth/sessions/~').reply(200, {})
+      api.get('/oauth/authorizations').reply(200, [])
+      api.get('/oauth/authorizations/~').reply(200, {})
+    })
+
+    test
+      .it('calls removeAuth with api and git hosts after revoking session', async ctx => {
+        const cmd = new Command([], ctx.config)
+        cmd.config = ctx.config
+        await cmd.heroku.logout()
+        expect(removeAuthCalls).to.have.length(1)
+        expect(removeAuthCalls[0].account).to.be.undefined
+        expect(removeAuthCalls[0].hosts).to.deep.equal(['api.heroku.com', 'git.heroku.com'])
+        expect(cmd.heroku.auth).to.be.undefined
+      })
   })
 
   test
