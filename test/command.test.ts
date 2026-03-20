@@ -8,9 +8,6 @@ const __dirname = dirname(__filename)
 
 import {Command} from '../src/command.js'
 import * as flags from '../src/flags/index.js'
-import {restoreCredentialManagerStub, stubCredentialManager, stubCredentialManagerWithNoCredentials} from './helpers/credential-manager-stub.js'
-
-const {env: processEnv} = process
 
 const test = fancy
   .add('config', () => {
@@ -40,45 +37,6 @@ class CommandWithoutPromptInBaseFlags extends TestableCommand {
 }
 
 describe('command', () => {
-  describe('credential preload in init', () => {
-    beforeEach(() => {
-      process.env = {}
-      stubCredentialManager('mypass')
-    })
-
-    afterEach(() => {
-      process.env = processEnv
-      restoreCredentialManagerStub()
-    })
-
-    test
-      .it('populates this.heroku.auth after init so sync checks see the token', async (ctx: any) => {
-        const cmd = new MyCommand([], ctx.config)
-        cmd.config = ctx.config
-        await cmd.init()
-        expect(cmd.heroku.auth).to.equal('mypass')
-      })
-
-    test
-      .it('uses HEROKU_API_KEY over credential store in init', async (ctx: any) => {
-        process.env.HEROKU_API_KEY = 'env-token'
-        const cmd = new MyCommand([], ctx.config)
-        cmd.config = ctx.config
-        await cmd.init()
-        expect(cmd.heroku.auth).to.equal('env-token')
-      })
-
-    test
-      .it('leaves this.heroku.auth undefined after init when no credentials exist', async (ctx: any) => {
-        restoreCredentialManagerStub()
-        stubCredentialManagerWithNoCredentials()
-        const cmd = new MyCommand([], ctx.config)
-        cmd.config = ctx.config
-        await cmd.init()
-        expect(cmd.heroku.auth).to.be.undefined
-      })
-  })
-
   it('sets app', () => class AppCommand extends Command {
     static flags = {
       app: flags.app(),
