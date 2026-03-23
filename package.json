@@ -5,6 +5,7 @@
   "author": "Heroku",
   "bugs": "https://github.com/heroku/heroku-cli-command/issues",
   "dependencies": {
+    "@heroku/js-blanket": "^1.0.0",
     "@heroku/http-call": "^5.4.0",
     "@heroku/js-blanket": "^1.0.0",
     "@oclif/core": "^4.3.0",
