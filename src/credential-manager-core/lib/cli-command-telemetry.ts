@@ -101,7 +101,7 @@ export async function reportCredentialStoreError(
     ensureCredentialSentryInitialized()
     credentialSentrySdk.captureException(error, {
       tags: {
-        component: 'heroku-credential-manager',
+        component: 'heroku-cli-command',
         credential_operation: context.operation,
         credential_store: context.credentialStore,
       },

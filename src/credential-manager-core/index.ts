@@ -5,7 +5,7 @@ import {MacOSHandler} from './credential-handlers/macos-handler.js'
 import {NetrcHandler} from './credential-handlers/netrc-handler.js'
 import {WindowsHandler} from './credential-handlers/windows-handler.js'
 import {selectAccount} from './lib/account-selector.js'
-import {reportCredentialStoreError} from './lib/credential-sentry.js'
+import {reportCredentialStoreError} from './lib/cli-command-telemetry.js'
 import {CredentialStore, getStorageConfig} from './lib/credential-storage-selector.js'
 import {NetrcAuthEntry} from './lib/types.js'
 

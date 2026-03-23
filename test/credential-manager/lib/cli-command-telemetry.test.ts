@@ -6,12 +6,12 @@ import {
   credentialSentrySdk,
   reportCredentialStoreError,
   shouldReportCredentialErrorsToSentry,
-} from '../../../src/credential-manager-core/lib/credential-sentry.js'
+} from '../../../src/credential-manager-core/lib/cli-command-telemetry.js'
 import {CredentialStore} from '../../../src/credential-manager-core/lib/credential-storage-selector.js'
 
 use(chaiAsPromised)
 
-describe('credential-sentry', function () {
+describe('cli-command-telemetry', function () {
   afterEach(function () {
     sinon.restore()
     delete process.env.CI
@@ -97,7 +97,7 @@ describe('credential-sentry', function () {
       expect(captureStub.firstCall.args[0]).to.equal(err)
       expect(captureStub.firstCall.args[1]).to.deep.include({
         tags: {
-          component: 'heroku-credential-manager',
+          component: 'heroku-cli-command',
           credential_operation: 'getAuth',
           credential_store: CredentialStore.MacOSKeychain,
         },
