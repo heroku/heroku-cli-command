@@ -1,4 +1,4 @@
-import {expect, use,} from 'chai'
+import {expect, use} from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 
 import * as credentialManager from '../../../src/credential-manager-core/index.js'
