@@ -8,6 +8,7 @@ import {fileURLToPath} from 'node:url'
 import * as sinon from 'sinon'
 
 import {Command as CommandBase} from '../src/command.js'
+import {restoreCredentialManagerStub, stubCredentialManager} from './helpers/credential-manager-stub.js'
 import {Login} from '../src/login.js'
 import {prompter} from '../src/prompter.js'
 import {restoreNetrcStub, stubNetrc} from './helpers/netrc-stub.js'
@@ -15,36 +16,6 @@ import {restoreNetrcStub, stubNetrc} from './helpers/netrc-stub.js'
 class Command extends CommandBase {
   async run() {}
 }
-
-let api: nock.Scope
-beforeEach(() => {
-  api = nock('https://api.heroku.com')
-  api.delete('/oauth/sessions/~').reply(200, {})
-  api.get('/oauth/authorizations').reply(200, [])
-  api.get('/oauth/authorizations/~').reply(200, {})
-
-  stubNetrc()
-
-  // Mock prompter
-  sinon.stub(prompter, 'prompt').callsFake(async (questions: any[]) => {
-    const answers: any = {}
-
-    for (const q of questions) {
-      if (q.name === 'email') answers.email = 'test@example.com'
-      if (q.name === 'password') answers.password = 'test-password'
-      if (q.name === 'secondFactor') answers.secondFactor = '123456'
-      if (q.name === 'action') answers.action = 'y'
-      if (q.name === 'orgName') answers.orgName = 'test-org'
-    }
-
-    return answers
-  })
-})
-
-afterEach(() => {
-  sinon.restore()
-  restoreNetrcStub()
-})
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -56,6 +27,40 @@ const test = fancy
   })
 
 describe('login with interactive', () => {
+  let api: nock.Scope
+
+  beforeEach(() => {
+    api = nock('https://api.heroku.com')
+    api.delete('/oauth/sessions/~').reply(200, {})
+    api.get('/oauth/authorizations').reply(200, [])
+    api.get('/oauth/authorizations/~').reply(200, {})
+
+    stubCredentialManager()
+
+    sinon.stub(inquirer, 'prompt').callsFake(async (questions: any) => {
+      if (Array.isArray(questions)) {
+        const answers: any = {}
+
+        for (const q of questions) {
+          if (q.name === 'email') answers.email = 'test@example.com'
+          if (q.name === 'password') answers.password = 'test-password'
+          if (q.name === 'secondFactor') answers.secondFactor = '123456'
+          if (q.name === 'action') answers.action = 'y'
+          if (q.name === 'orgName') answers.orgName = 'test-org'
+        }
+
+        return answers
+      }
+
+      return {}
+    })
+  })
+
+  afterEach(() => {
+    sinon.restore()
+    restoreCredentialManagerStub()
+  })
+
   test
     .it('throws a custom error message body for device_trust_required error', async ctx => {
       const cmd = new Command([], ctx.config)

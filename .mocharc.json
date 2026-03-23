@@ -1,5 +1,8 @@
 {
-  "require": ["tsx"],
+  "require": [
+    "tsx",
+    "./test/mocha-hooks.ts"
+  ],
   "watch-extensions": ["ts"],
   "recursive": true,
   "reporter": "spec",
