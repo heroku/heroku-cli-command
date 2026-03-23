@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { Context } from 'mocha'
 
 export const HOST_NAME = 'acceptance.test.heroku.com'
 export const ALTERNATE_HOST_NAME = 'acceptance-2.test.heroku.com'
@@ -39,7 +40,7 @@ export const CREDENTIAL_FIXTURES: Record<string, Fixture> = {
 /**
  * Skip the current suite or test unless ACCEPTANCE_TESTS=true.
  */
-export function skipUnlessAcceptanceEnv(context: Mocha.Context): void {
+export function skipUnlessAcceptanceEnv(context: Context): void {
   const value = process.env.ACCEPTANCE_TESTS?.toLowerCase()
   if (value !== 'true') {
     context.skip()
