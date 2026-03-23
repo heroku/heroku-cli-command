@@ -5,6 +5,7 @@ import {MacOSHandler} from './credential-handlers/macos-handler.js'
 import {NetrcHandler} from './credential-handlers/netrc-handler.js'
 import {WindowsHandler} from './credential-handlers/windows-handler.js'
 import {selectAccount} from './lib/account-selector.js'
+import {reportCredentialStoreError} from './lib/credential-sentry.js'
 import {CredentialStore, getStorageConfig} from './lib/credential-storage-selector.js'
 import {NetrcAuthEntry} from './lib/types.js'
 
@@ -32,6 +33,10 @@ export async function saveAuth(account: string, token: string, hosts: string[], 
     } catch (error) {
       const {message} = error as Error
       credDebug(message)
+      await reportCredentialStoreError(error, {
+        credentialStore: config.credentialStore,
+        operation: 'saveAuth',
+      })
     }
   }
 
@@ -76,6 +81,10 @@ export async function getAuth(account: string | undefined, host: string, service
     } catch (error) {
       const {message} = error as Error
       credDebug(message)
+      await reportCredentialStoreError(error, {
+        credentialStore: config.credentialStore,
+        operation: 'getAuth',
+      })
     }
   }
 
@@ -123,6 +132,10 @@ export async function removeAuth(account: string | undefined, hosts: string[], s
     } catch (error) {
       const {message} = error as Error
       credDebug(message)
+      await reportCredentialStoreError(error, {
+        credentialStore: config.credentialStore,
+        operation: 'removeAuth',
+      })
     }
   }
 
