@@ -67,6 +67,7 @@
     "lint": "tsc -p test --noEmit && eslint .",
     "prepublishOnly": "npm run build",
     "prepare": "npm run build",
+    "probe:macos": "bash scripts/ci/probe-macos.sh",
     "test": "c8 --reporter=text-summary --check-coverage mocha --forbid-only --ignore \"test/credential-manager/acceptance/**\" \"test/**/*.test.ts\"",
     "test:acceptance": "c8 mocha --forbid-only \"test/credential-manager/acceptance/**/*.test.ts\"",
     "test:file": "c8 mocha",

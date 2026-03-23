@@ -36,5 +36,7 @@ jobs:
         env:
           ACCEPTANCE_TESTS: 'true'
         run: npm run test:acceptance
+      - name: probe macOS for 'security' command
+        run: npm run probe:macos
       - name: linting
         run: npm run lint
