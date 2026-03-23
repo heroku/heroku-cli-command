@@ -11,7 +11,7 @@ import {Command as CommandBase} from '../src/command.js'
 import {restoreCredentialManagerStub, stubCredentialManager} from './helpers/credential-manager-stub.js'
 import {Login} from '../src/login.js'
 import {prompter} from '../src/prompter.js'
-import {restoreNetrcStub, stubNetrc} from './helpers/netrc-stub.js'
+import {restoreCredentialManagerStub, stubCredentialManager} from './helpers/credential-manager-stub.js'
 
 class Command extends CommandBase {
   async run() {}

@@ -289,9 +289,15 @@ export class APIClient {
     this._storedAuthResolvedAbsent = false
   }
 
+  get auth(): string | undefined {
+  private resetStoredAuthResolution(): void {
+    this._storedAuthPromise = undefined
+    this._storedAuthResolvedAbsent = false
+  }
+
   async getAuth(): Promise<string | undefined> {
     if (this._auth) return this._auth
-    if (process.env.HEROKU_API_TOKEN && !process.env.HEROKU_API_KEY) warn('HEROKU_API_TOKEN is set but you probably meant HEROKU_API_KEY')
+    if (process.env.HEROKU_API_TOKEN && !process.env.HEROKU_API_KEY) Errors.warn('HEROKU_API_TOKEN is set but you probably meant HEROKU_API_KEY')
     if (process.env.HEROKU_API_KEY) {
       this._auth = process.env.HEROKU_API_KEY
       return this._auth
