@@ -2,9 +2,6 @@
   "packages": {
     ".": {
       "release-type": "node",
-      "version-file": "package.json",
-      "changelog-path": "CHANGELOG.md",
-      "extra-files": ["README.md"],
       "bump-minor-pre-major": true,
       "bump-patch-for-minor-pre-major": true,
       "prerelease": true,
