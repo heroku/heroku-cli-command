@@ -15,6 +15,4 @@ echo "=== default-keychain ==="
 security default-keychain
 
 echo "=== save credential ==="
-security add-generic-password -U -a "test@example.com" -s "heroku-cli-test" -w "fake-token"
-
-exit 0
+security add-generic-password -a "test@example.com" -s "heroku-cli-test" -w "fake-token"
