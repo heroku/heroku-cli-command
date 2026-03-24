@@ -20,44 +20,35 @@ if ($LASTEXITCODE -ne 0) {
   Write-Host 'OK: child loaded PasswordVault type'
 }
 
-$saveCommand =
-      '[void][Windows.Security.Credentials.PasswordVault,Windows.Security.Credentials,ContentType=WindowsRuntime]
-      $vault = New-Object Windows.Security.Credentials.PasswordVault
-      $credential = New-Object Windows.Security.Credentials.PasswordCredential("heroku-cli-test", "test@example.com", "fake-token")
-      $vault.Add($credential)'
-
 Write-Host '=== Save credential ==='
-& powershell -NoProfile -NonInteractive -Command $saveCommand
-if ($LASTEXITCODE -ne 0) {
-  Write-Host "FAILED: child exited with code $LASTEXITCODE"
-} else {
-  Write-Host 'OK: credential saved'
+try{
+    Invoke-Expression $vaultTypeLoad
+    $vault = New-Object Windows.Security.Credentials.PasswordVault
+    $credential = New-Object Windows.Security.Credentials.PasswordCredential("heroku-cli-test", "test@example.com", "fake-token")
+    $vault.Add($credential)
+    Write-Host 'OK: credential saved'
+} catch {
+    Write-Host "FAILED: $($_.Exception.Message)"
 }
-
-$getCommand =
-      '[void][Windows.Security.Credentials.PasswordVault,Windows.Security.Credentials,ContentType=WindowsRuntime]
-      $vault = New-Object Windows.Security.Credentials.PasswordVault
-      $credential = $vault.Retrieve("heroku-cli-test", "test@example.com")
-      $credential.Password'
 
 Write-Host '=== Get credential ==='
-& powershell -NoProfile -NonInteractive -Command $getCommand
-if ($LASTEXITCODE -ne 0) {
-  Write-Host "FAILED: child exited with code $LASTEXITCODE"
-} else {
-  Write-Host 'OK: credential retrieved'
+try{
+    Invoke-Expression $vaultTypeLoad
+    $vault = New-Object Windows.Security.Credentials.PasswordVault
+    $credential = $vault.Retrieve("heroku-cli-test", "test@example.com")
+    $credential.Password
+    Write-Host 'OK: credential retrieved'
+} catch {
+    Write-Host "FAILED: $($_.Exception.Message)"
 }
 
-$removeCommand =
-      '[void][Windows.Security.Credentials.PasswordVault,Windows.Security.Credentials,ContentType=WindowsRuntime]
-      $vault = New-Object Windows.Security.Credentials.PasswordVault
-      $credential = $vault.Retrieve("heroku-cli-test", "test@example.com")
-      $vault.Remove($credential)'
-
 Write-Host '=== Remove credential ==='
-& powershell -NoProfile -NonInteractive -Command $removeCommand
-if ($LASTEXITCODE -ne 0) {
-  Write-Host "FAILED: child exited with code $LASTEXITCODE"
-} else {
-  Write-Host 'OK: credential removed'
+try{
+    Invoke-Expression $vaultTypeLoad
+    $vault = New-Object Windows.Security.Credentials.PasswordVault
+    $credential = $vault.Retrieve("heroku-cli-test", "test@example.com")
+    $vault.Remove($credential)
+    Write-Host 'OK: credential removed'
+} catch {
+    Write-Host "FAILED: $($_.Exception.Message)"
 }
