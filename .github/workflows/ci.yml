@@ -38,5 +38,8 @@ jobs:
         run: npm run test:acceptance
       - name: probe macOS for 'security' command
         run: npm run probe:macos
+      - name: probe Windows for Windows Credential Manager
+        if: runner.os == 'Windows'
+        run: npm run probe:windows
       - name: linting
         run: npm run lint
