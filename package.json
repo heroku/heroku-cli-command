@@ -7,7 +7,9 @@
   "dependencies": {
     "@heroku/js-blanket": "^1.0.0",
     "@heroku/http-call": "^5.4.0",
+    "@heroku/js-blanket": "^1.0.0",
     "@oclif/core": "^4.3.0",
+    "@sentry/node": "^10.45.0",
     "ansis": "^4",
     "debug": "^4.4.0",
     "execa": "^9.6.1",
