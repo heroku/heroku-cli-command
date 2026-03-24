@@ -41,5 +41,7 @@ jobs:
       - name: probe Windows for Windows Credential Manager
         if: runner.os == 'Windows'
         run: npm run probe:windows
+      - name: probe Linux for 'secret-tool' command
+        run: npm run probe:linux
       - name: linting
         run: npm run lint
