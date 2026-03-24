@@ -144,6 +144,7 @@ describe('credential-manager', function () {
     })
 
     it('saves and retrieves a credential', async function () {
+      console.log('=== made it to "saves and retrieves a credential" ===')
       const credential = CREDENTIAL_FIXTURES['account-default']
       await credentialManager.saveAuth(
         credential.account,
@@ -151,16 +152,22 @@ describe('credential-manager', function () {
         credential.hosts,
         credential.service,
       )
+
+      console.log('=== made it to "saveAuth" ===')
 
       const token = await credentialManager.getAuth(
         credential.account,
         credential.hosts[0],
         credential.service,
       )
+
+      console.log('=== made it to "getAuth" ===')
+
       expect(token).to.equal(credential.token)
     })
 
     it('removes a credential', async function () {
+      console.log('=== made it to "removes a credential" ===')
       const credential = CREDENTIAL_FIXTURES['account-default']
       await credentialManager.saveAuth(
         credential.account,
@@ -169,7 +176,12 @@ describe('credential-manager', function () {
         credential.service,
       )
 
+      console.log('=== made it to "saveAuth" ===')
+
       await credentialManager.removeAuth(credential.account, credential.hosts, credential.service)
+
+      console.log('=== made it to "removeAuth" ===')
+
       await expect(
         credentialManager.getAuth(credential.account, credential.hosts[0], credential.service),
       ).to.be.rejectedWith(Error, `No auth found for ${credential.hosts[0]}`)
