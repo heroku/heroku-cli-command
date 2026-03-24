@@ -131,7 +131,7 @@ describe('credential-manager', function () {
         restoreNetrc()
       }
     })
-    
+
     afterEach(async function () {
       for (const credential of Object.values(CREDENTIAL_FIXTURES)) {
         try {
