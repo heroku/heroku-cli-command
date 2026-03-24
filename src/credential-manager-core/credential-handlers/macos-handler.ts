@@ -8,6 +8,8 @@ import {KeychainAuthEntry} from '../lib/types.js'
  * Uses the macOS security command-line tool to interact with the Keychain.
  */
 export class MacOSHandler {
+  private static readonly SECURITY_COMMAND_TIMEOUT_MS = 10_000
+
   private readonly scrubber = new Scrubber({
     patterns: [
       /-a\s+"[^"]*"/g, // Scrub account (-a flag)
@@ -26,7 +28,11 @@ export class MacOSHandler {
     try {
       const output = childProcess.execSync(
         `security find-generic-password -a "${account}" -s "${service}" -w`,
-        {encoding: 'utf8'},
+        {
+          encoding: 'utf8',
+          killSignal: 'SIGKILL',
+          timeout: MacOSHandler.SECURITY_COMMAND_TIMEOUT_MS,
+        },
       )
       const token = output.trim()
 
@@ -49,7 +55,11 @@ export class MacOSHandler {
    */
   public listAccounts(service: string): string[] {
     try {
-      const output = childProcess.execSync('security dump-keychain', {encoding: 'utf8'})
+      const output = childProcess.execSync('security dump-keychain', {
+        encoding: 'utf8',
+        killSignal: 'SIGKILL',
+        timeout: MacOSHandler.SECURITY_COMMAND_TIMEOUT_MS,
+      })
 
       // Expected output format:
       // keychain: "/path/to/keychain"
@@ -99,7 +109,11 @@ export class MacOSHandler {
     try {
       childProcess.execSync(
         `security delete-generic-password -a "${account}" -s "${service}"`,
-        {encoding: 'utf8'},
+        {
+          encoding: 'utf8',
+          killSignal: 'SIGKILL',
+          timeout: MacOSHandler.SECURITY_COMMAND_TIMEOUT_MS,
+        },
       )
     } catch (error) {
       const {message} = error as Error
@@ -118,7 +132,11 @@ export class MacOSHandler {
     try {
       childProcess.execSync(
         `security add-generic-password -U -a "${auth.account}" -s "${auth.service}" -w "${auth.token}"`,
-        {encoding: 'utf8'},
+        {
+          encoding: 'utf8',
+          killSignal: 'SIGKILL',
+          timeout: MacOSHandler.SECURITY_COMMAND_TIMEOUT_MS,
+        },
       )
     } catch (error) {
       const {message} = error as Error
