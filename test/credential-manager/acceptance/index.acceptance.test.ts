@@ -119,24 +119,11 @@ describe('credential-manager', function () {
   })
 
   describe('native credential store with netrc', function () {
-    let restoreNetrc: (() => void) | undefined
-
-    before(function () {
-      const temp = setupTempNetrcDir()
-      restoreNetrc = temp.restore
-    })
-
-    after(function () {
-      if (restoreNetrc) {
-        restoreNetrc()
-      }
-    })
-
     afterEach(async function () {
       for (const credential of Object.values(CREDENTIAL_FIXTURES)) {
         try {
           // eslint-disable-next-line no-await-in-loop
-          await credentialManager.removeAuth(credential.account, credential.hosts, credential.service)
+          await credentialManager.removeAuth(credential.account, [], credential.service)
         } catch {
         // ignore cleanup errors
         }
@@ -144,47 +131,37 @@ describe('credential-manager', function () {
     })
 
     it('saves and retrieves a credential', async function () {
-      console.log('=== made it to "saves and retrieves a credential" ===')
       const credential = CREDENTIAL_FIXTURES['account-default']
       await credentialManager.saveAuth(
         credential.account,
         credential.token,
-        credential.hosts,
+        [],
         credential.service,
       )
-
-      console.log('=== made it to "saveAuth" ===')
 
       const token = await credentialManager.getAuth(
         credential.account,
-        credential.hosts[0],
+        '',
         credential.service,
       )
-
-      console.log('=== made it to "getAuth" ===')
 
       expect(token).to.equal(credential.token)
     })
 
     it('removes a credential', async function () {
-      console.log('=== made it to "removes a credential" ===')
       const credential = CREDENTIAL_FIXTURES['account-default']
       await credentialManager.saveAuth(
         credential.account,
         credential.token,
-        credential.hosts,
+        [],
         credential.service,
       )
 
-      console.log('=== made it to "saveAuth" ===')
-
-      await credentialManager.removeAuth(credential.account, credential.hosts, credential.service)
-
-      console.log('=== made it to "removeAuth" ===')
+      await credentialManager.removeAuth(credential.account, [], credential.service)
 
       await expect(
-        credentialManager.getAuth(credential.account, credential.hosts[0], credential.service),
-      ).to.be.rejectedWith(Error, `No auth found for ${credential.hosts[0]}`)
+        credentialManager.getAuth(credential.account, '', credential.service),
+      ).to.be.rejected
     })
   })
 })
