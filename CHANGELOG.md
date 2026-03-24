@@ -1,4 +1,12 @@
 ## [12.1.1](https://github.com/heroku/heroku-cli-command/compare/v12.1.0...v12.1.1) (2025-09-30)
+## [12.3.0-beta.0](https://github.com/heroku/heroku-cli-command/compare/command-v12.2.0-beta.0...command-v12.3.0-beta.0) (2026-03-24)
+
+
+### Miscellaneous Chores
+
+* release 12.3.0 ([c1702d4](https://github.com/heroku/heroku-cli-command/commit/c1702d4091543a35e3d69c0c0856a6f6ae389f54))
+* release 12.3.0-beta.0 ([c90df23](https://github.com/heroku/heroku-cli-command/commit/c90df23fae204698018ed8ad05da6071c287c9ca))
+
 ## [12.2.0-beta.0](https://github.com/heroku/heroku-cli-command/compare/command-v12.1.2-beta.0...command-v12.2.0-beta.0) (2026-03-24)
 
 
