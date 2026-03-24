@@ -17,6 +17,7 @@ else
 fi
 
 if command -v which >/dev/null 2>&1; then
+  echo "=== which ==="
   echo "which is available at $(command -v which)"
 else
   echo "which not on PATH"
@@ -31,8 +32,9 @@ for cmd in gnome-keyring-daemon dbus-run-session; do
   fi
 done
 
-echo "=== apt: can libsecret-tools be installed? ==="
-if ! command -v apt-get >/dev/null 2>&1; then
-  echo "No apt-get"
-  exit 0
+echo "=== apt ==="
+if command -v apt-get >/dev/null 2>&1; then
+    echo "apt-get is available at $(command -v apt-get)"
+else
+    echo "apt-get not on PATH"
 fi
