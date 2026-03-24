@@ -119,6 +119,19 @@ describe('credential-manager', function () {
   })
 
   describe('native credential store with netrc', function () {
+    let restoreNetrc: (() => void) | undefined
+
+    before(function () {
+      const temp = setupTempNetrcDir()
+      restoreNetrc = temp.restore
+    })
+
+    after(function () {
+      if (restoreNetrc) {
+        restoreNetrc()
+      }
+    })
+    
     afterEach(async function () {
       for (const credential of Object.values(CREDENTIAL_FIXTURES)) {
         try {
