@@ -14,5 +14,7 @@ security list-keychains
 echo "=== default-keychain ==="
 security default-keychain
 
-echo "=== dump-keychain (first 4 lines) ==="
-security dump-keychain 2>&1 | head -4
+echo "=== save credential ==="
+security add-generic-password -U -a "test@example.com" -s "heroku-cli-test" -w "fake-token"
+
+exit 0
