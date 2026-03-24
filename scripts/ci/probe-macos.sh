@@ -16,3 +16,9 @@ security default-keychain
 
 echo "=== save credential ==="
 security add-generic-password -a "test@example.com" -s "heroku-cli-test" -w "fake-token"
+
+echo "=== get credential ==="
+security find-generic-password -a "test@example.com" -s "heroku-cli-test" -w
+
+echo "=== delete credential ==="
+security delete-generic-password -a "test@example.com" -s "heroku-cli-test"
