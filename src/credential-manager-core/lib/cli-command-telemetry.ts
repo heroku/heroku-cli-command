@@ -14,7 +14,7 @@ import {fileURLToPath} from 'node:url'
 import type {CredentialStore} from './credential-storage-selector.js'
 
 const DSN
-  = 'https://76530569188e7ee2961373f37951d916@o4508609692368896.ingest.us.sentry.io/4508767754846208'
+  = 'https://4eb3812769d649a09ae76ef3fcd03dbb@o4508609692368896.ingest.us.sentry.io/4511095245832192'
 
 const scrubber = new Scrubber({
   fields: [...HEROKU_FIELDS, ...GDPR_FIELDS, ...PCI_FIELDS],
@@ -30,6 +30,7 @@ export const credentialSentrySdk = {
 }
 
 let releaseCache: string | undefined
+let sentryClient: ReturnType<typeof Sentry.init> | undefined
 
 function readPackageVersion(): string {
   if (releaseCache !== undefined) {
@@ -68,13 +69,13 @@ function ensureCredentialSentryInitialized(): void {
     return
   }
 
-  if (credentialSentrySdk.getClient()) {
+  if (sentryClient || credentialSentrySdk.getClient()) {
     return
   }
 
   const isDev = process.env.IS_DEV_ENVIRONMENT === 'true'
 
-  credentialSentrySdk.init({
+  sentryClient = credentialSentrySdk.init({
     beforeSend(event) {
       const scrubbed
         = scrubber.scrub(event as unknown as Record<string, unknown>).data
