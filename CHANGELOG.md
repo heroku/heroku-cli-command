@@ -1,4 +1,25 @@
 ## [12.1.1](https://github.com/heroku/heroku-cli-command/compare/v12.1.0...v12.1.1) (2025-09-30)
+## [12.2.0-beta.0](https://github.com/heroku/heroku-cli-command/compare/command-v12.1.2-beta.0...command-v12.2.0-beta.0) (2026-03-24)
+
+
+### Features
+
+* add global --prompt flag for interactive command execution ([#269](https://github.com/heroku/heroku-cli-command/issues/269)) ([c73322b](https://github.com/heroku/heroku-cli-command/commit/c73322be0700709f8d2a809f9538bc6b06612db9))
+* add sentry reporting ([#297](https://github.com/heroku/heroku-cli-command/issues/297)) ([0d815d0](https://github.com/heroku/heroku-cli-command/commit/0d815d0660493bd16c4aab681ecacf2df416d9ba))
+* bring in heroku-credential-manager logic ([#296](https://github.com/heroku/heroku-cli-command/issues/296)) ([a167022](https://github.com/heroku/heroku-cli-command/commit/a16702295b0f8e505871a9b858437a7b9e1b8a43))
+* leverage the heroku credential manager for auth ([#291](https://github.com/heroku/heroku-cli-command/issues/291)) ([de1bf43](https://github.com/heroku/heroku-cli-command/commit/de1bf431094137669c092d2f568b32dc1ac065dd))
+
+
+### Bug Fixes
+
+* Add default help text hook so that display default app value in --help ([#268](https://github.com/heroku/heroku-cli-command/issues/268)) ([d45dc5c](https://github.com/heroku/heroku-cli-command/commit/d45dc5c5361ead501dc3d07c04b4e84121db85c0))
+* **deps:** bump lodash from 4.17.21 to 4.17.23 ([#255](https://github.com/heroku/heroku-cli-command/issues/255)) ([f056708](https://github.com/heroku/heroku-cli-command/commit/f056708bc5cd4858597afb95495cf3024791d578))
+* **deps:** bump the patch-dependencies group across 1 directory with 3 updates ([#260](https://github.com/heroku/heroku-cli-command/issues/260)) ([548fab1](https://github.com/heroku/heroku-cli-command/commit/548fab1f0becfe089e4956ac84ac1750e820316b))
+* exclude workflows-repo from eslint ([#286](https://github.com/heroku/heroku-cli-command/issues/286)) ([093706f](https://github.com/heroku/heroku-cli-command/commit/093706fb5f912848acce8eb4da9c414ad24c9442))
+* improve --prompt flag help text implementation ([#276](https://github.com/heroku/heroku-cli-command/issues/276)) ([f870d8b](https://github.com/heroku/heroku-cli-command/commit/f870d8b8f68ae78e8ab8ef9c4c9d49e7ae5f87e3))
+* remove extra newline from warning output ([#284](https://github.com/heroku/heroku-cli-command/issues/284)) ([94f6d94](https://github.com/heroku/heroku-cli-command/commit/94f6d946da772c852ed1589d1dcd72b4c507b527))
+* remove vulns and repeated warning headings (W-17068244) ([#233](https://github.com/heroku/heroku-cli-command/issues/233)) ([7edf773](https://github.com/heroku/heroku-cli-command/commit/7edf7730cb44af96f1475f32d2a4ae614ab43e27))
+
 ## [12.2.1](https://github.com/heroku/heroku-cli-command/compare/command-v12.2.0...command-v12.2.1) (2026-03-11)
 
 
