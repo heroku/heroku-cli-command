@@ -5,9 +5,6 @@
 ### Features
 
 * add global --prompt flag for interactive command execution ([#269](https://github.com/heroku/heroku-cli-command/issues/269)) ([c73322b](https://github.com/heroku/heroku-cli-command/commit/c73322be0700709f8d2a809f9538bc6b06612db9))
-* add sentry reporting ([#297](https://github.com/heroku/heroku-cli-command/issues/297)) ([0d815d0](https://github.com/heroku/heroku-cli-command/commit/0d815d0660493bd16c4aab681ecacf2df416d9ba))
-* bring in heroku-credential-manager logic ([#296](https://github.com/heroku/heroku-cli-command/issues/296)) ([a167022](https://github.com/heroku/heroku-cli-command/commit/a16702295b0f8e505871a9b858437a7b9e1b8a43))
-* leverage the heroku credential manager for auth ([#291](https://github.com/heroku/heroku-cli-command/issues/291)) ([de1bf43](https://github.com/heroku/heroku-cli-command/commit/de1bf431094137669c092d2f568b32dc1ac065dd))
 
 
 ### Bug Fixes
