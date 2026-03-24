@@ -32,7 +32,9 @@ jobs:
       - run: npm ci
       - name: unit tests
         run: npm test
-      - name: probe macOS for 'security' command
-        run: npm run probe:macos
+      - name: acceptance tests
+        env:
+          ACCEPTANCE_TESTS: 'true'
+        run: npm run test:acceptance
       - name: linting
         run: npm run lint
