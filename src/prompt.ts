@@ -1,5 +1,6 @@
 /* eslint-disable complexity */
-import {type Config, run} from '@oclif/core'
+import {type Config} from '@oclif/core/config'
+import {run} from '@oclif/core/run'
 import inquirer from 'inquirer'
 
 interface PromptOptions {
