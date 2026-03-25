@@ -91,8 +91,10 @@ describe('login with interactive', () => {
     .it('defaults to 30 days login', async ctx => {
       const cmd = new Command([], ctx.config)
       api
-        .post('/oauth/authorizations',
-          {description: /^Heroku CLI login from .*/, expires_in: 60 * 60 * 24 * 30, scope: ['global']})
+        .post(
+          '/oauth/authorizations',
+          {description: /^Heroku CLI login from .*/, expires_in: 60 * 60 * 24 * 30, scope: ['global']},
+        )
         .reply(401, {id: 'unauthorized', message: 'not authorized'})
 
       await cmd.heroku.login({method: 'interactive'})
@@ -105,8 +107,10 @@ describe('login with interactive', () => {
     .it('allows shorter logins', async ctx => {
       const cmd = new Command([], ctx.config)
       api
-        .post('/oauth/authorizations',
-          {description: /^Heroku CLI login from .*/, expires_in: 12345, scope: ['global']})
+        .post(
+          '/oauth/authorizations',
+          {description: /^Heroku CLI login from .*/, expires_in: 12_345, scope: ['global']},
+        )
         .reply(401, {id: 'unauthorized', message: 'not authorized'})
 
       await cmd.heroku.login({expiresIn: 12_345, method: 'interactive'})

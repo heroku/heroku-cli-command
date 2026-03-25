@@ -70,7 +70,6 @@ export async function promptAndRun(options: PromptOptions): Promise<void> {
       if (value) {
         userInputByFlag.set(name, true)
       }
-    // eslint-disable-next-line unicorn/consistent-destructuring
     } else if (options?.length > 0) {
       // eslint-disable-next-line no-await-in-loop
       const {value} = await inquirer.prompt([{

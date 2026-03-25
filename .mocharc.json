@@ -1,10 +1,8 @@
 {
-  "require": [
-    "ts-node/esm"
-  ],
+  "require": ["tsx"],
   "watch-extensions": ["ts"],
   "recursive": true,
   "reporter": "spec",
   "timeout": 15000,
-  "node-option": ["loader=ts-node/esm", "experimental-specifier-resolution=node"]
+  "node-option": ["import=tsx/esm"]
 }
