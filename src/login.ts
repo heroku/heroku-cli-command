@@ -1,5 +1,5 @@
-import {HTTP} from '@heroku/http-call'
 import * as Heroku from '@heroku-cli/schema'
+import {HTTP} from '@heroku/http-call'
 import {Interfaces, ux} from '@oclif/core'
 import ansis from 'ansis'
 import debug from 'debug'
@@ -90,27 +90,27 @@ export class Login {
 
       let auth
       switch (input) {
-      case 'b':
-      case 'browser': {
-        auth = await this.browser(opts.browser)
-        break
-      }
+        case 'b':
+        case 'browser': {
+          auth = await this.browser(opts.browser)
+          break
+        }
 
-      case 'i':
-      case 'interactive': {
-        auth = await this.interactive(previousEntry && previousEntry.login, opts.expiresIn)
-        break
-      }
+        case 'i':
+        case 'interactive': {
+          auth = await this.interactive(previousEntry && previousEntry.login, opts.expiresIn)
+          break
+        }
 
-      case 's':
-      case 'sso': {
-        auth = await this.sso()
-        break
-      }
+        case 's':
+        case 'sso': {
+          auth = await this.sso()
+          break
+        }
 
-      default: {
-        return this.login(opts)
-      }
+        default: {
+          return this.login(opts)
+        }
       }
 
       await this.saveToken(auth)
@@ -150,11 +150,9 @@ export class Login {
       // would unwittingly break an integration that they are depending on
         const d = await this.defaultToken()
         if (d === token) return
-        return Promise.all(
-          authorizations
-            .filter(a => a.access_token && a.access_token.token === this.heroku.auth)
-            .map(a => HTTP.delete(`${vars.apiUrl}/oauth/authorizations/${a.id}`, headers(token))),
-        )
+        return Promise.all(authorizations
+          .filter(a => a.access_token && a.access_token.token === this.heroku.auth)
+          .map(a => HTTP.delete(`${vars.apiUrl}/oauth/authorizations/${a.id}`, headers(token))))
       })
       .catch(error => {
         if (!error.http) throw error
@@ -252,6 +250,18 @@ export class Login {
     }
   }
 
+  private getLoginMethodFromPromptKey(key: string): 'browser' {
+    if (key === '\u0003') {
+      ux.error('Login cancelled by user', {exit: 130})
+    }
+
+    if (key.toLowerCase() === 'q') {
+      ux.error('Login cancelled by user')
+    }
+
+    return 'browser'
+  }
+
   private async interactive(login?: string, expiresIn?: number): Promise<NetrcEntry> {
     ux.stderr('heroku: Enter your login credentials\n')
     const emailQuestions: QuestionCollection = [{
@@ -298,13 +308,13 @@ export class Login {
 
   private async saveToken(entry: NetrcEntry) {
     const hosts = [vars.apiHost, vars.httpGitHost]
-    hosts.forEach(host => {
+    for (const host of hosts) {
       if (!netrc.machines[host]) netrc.machines[host] = {}
       netrc.machines[host].login = entry.login
       netrc.machines[host].password = entry.password
       delete netrc.machines[host].method
       delete netrc.machines[host].org
-    })
+    }
 
     if (netrc.machines._tokens) {
       (netrc.machines._tokens as any).forEach((token: any) => {
@@ -315,6 +325,11 @@ export class Login {
     }
 
     await netrc.save()
+  }
+
+  private showManualBrowserLoginUrl(url: string) {
+    ux.warn('If browser does not open, visit:')
+    ux.stderr(ansis.greenBright(url))
   }
 
   private async sso(): Promise<NetrcEntry> {
@@ -335,10 +350,8 @@ export class Login {
     // TODO: handle browser
     cliDebug(`opening browser to ${url}`)
     ux.stderr(`Opening browser to:\n${url}\n`)
-    ux.stderr(ansis.gray(
-      `If the browser fails to open or you're authenticating on a remote
-machine, please manually open the URL above in your browser.\n`,
-    ))
+    ux.stderr(ansis.gray(`If the browser fails to open or you're authenticating on a remote
+machine, please manually open the URL above in your browser.\n`))
     await open(url, {wait: false})
 
     const passwordQuestions: QuestionCollection = [{
@@ -355,22 +368,5 @@ machine, please manually open the URL above in your browser.\n`,
       login: account.email!,
       password,
     }
-  }
-
-  private showManualBrowserLoginUrl(url: string) {
-    ux.warn('If browser does not open, visit:')
-    ux.stderr(ansis.greenBright(url))
-  }
-
-  private getLoginMethodFromPromptKey(key: string): 'browser' {
-    if (key === '\u0003') {
-      ux.error('Login cancelled by user', {exit: 130})
-    }
-
-    if (key.toLowerCase() === 'q') {
-      ux.error('Login cancelled by user')
-    }
-
-    return 'browser'
   }
 }
