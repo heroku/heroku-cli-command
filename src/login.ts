@@ -77,11 +77,7 @@ export class Login {
           process.stdin.setRawMode(false)
           rl.close()
           ux.stdout('')
-          if (key.toLowerCase() === 'q') {
-            ux.error('Login cancelled by user')
-          }
-
-          input = 'browser'
+          input = this.getLoginMethodFromPromptKey(key)
         }
       }
 
@@ -364,5 +360,17 @@ machine, please manually open the URL above in your browser.\n`,
   private showManualBrowserLoginUrl(url: string) {
     ux.warn('If browser does not open, visit:')
     ux.stderr(ansis.greenBright(url))
+  }
+
+  private getLoginMethodFromPromptKey(key: string): 'browser' {
+    if (key === '\u0003') {
+      ux.error('Login cancelled by user', {exit: 130})
+    }
+
+    if (key.toLowerCase() === 'q') {
+      ux.error('Login cancelled by user')
+    }
+
+    return 'browser'
   }
 }
