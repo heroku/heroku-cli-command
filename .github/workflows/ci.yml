@@ -32,5 +32,21 @@ jobs:
       - run: npm ci
       - name: unit tests
         run: npm test
+      - name: acceptance tests (macOS/Windows)
+        if: runner.os != 'Linux'
+        env:
+          ACCEPTANCE_TESTS: 'true'
+        run: npm run test:acceptance
+      - name: acceptance tests (Linux)
+        if: runner.os == 'Linux'
+        env:
+          ACCEPTANCE_TESTS: 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsecret-tools gnome-keyring
+          dbus-run-session -- bash -c '
+            eval "$(echo -n "heroku-credential-manager-ci" | gnome-keyring-daemon --unlock --components=secrets 2>/dev/null)"
+            npm run test:acceptance
+          '
       - name: linting
         run: npm run lint
