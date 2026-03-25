@@ -32,7 +32,7 @@ export interface IOptions {
 }
 
 export interface IHerokuAPIErrorOptions {
-  app?: { id: string; name: string }
+  app?: {id: string; name: string}
   id?: string
   message?: string
   resource?: string
@@ -61,7 +61,7 @@ export class HerokuAPIError extends Errors.CLIError {
 export class APIClient {
   authPromise?: Promise<HTTP<any>>
   http: typeof HTTP
-  preauthPromises: { [k: string]: Promise<HTTP<any>> }
+  preauthPromises: {[k: string]: Promise<HTTP<any>>}
   private _auth?: string
   private readonly _login: Login
   private _particleboard!: ParticleboardClient
@@ -238,7 +238,7 @@ export class APIClient {
       static showWarnings<T>(response: HTTP<T>) {
         const warnings = response.headers['x-heroku-warning'] || response.headers['warning-message']
         if (Array.isArray(warnings))
-          warnings.forEach(warning => Errors.warn(warning.replace(/^\s*warning:?\s*/i, '')))
+          for (const warning of warnings) Errors.warn(warning.replace(/^\s*warning:?\s*/i, ''))
         else if (typeof warnings === 'string')
           Errors.warn(warnings.replace(/^\s*warning:?\s*/i, ''))
       }

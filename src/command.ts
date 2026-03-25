@@ -20,15 +20,12 @@ export abstract class Command extends Base {
       helpGroup: 'GLOBAL',
     }),
   }
-
   /**
    * Set this to false in a command class to disable the --prompt flag for that command
    */
   static promptFlagActive = true
-
-  allowArbitraryFlags: boolean = false
-
   _heroku!: APIClient
+  allowArbitraryFlags: boolean = false
 
   /**
    * Helper function to get baseFlags without the prompt flag
@@ -96,7 +93,7 @@ export abstract class Command extends Base {
       try {
         return await super.parse(options, argv)
       } catch (error) {
-        const {flags: nonExistentFlags} = error as {flags: string[]} & Errors.CLIError
+        const {flags: nonExistentFlags} = error as Errors.CLIError & {flags: string[]}
         const parsed = parser(this.argv)
         const nonExistentFlagsWithValues = {...parsed}
 

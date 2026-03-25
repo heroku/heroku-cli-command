@@ -1,6 +1,6 @@
 import debugModule from 'debug'
-import * as fs from 'fs'
-import {promisify} from 'util'
+import * as fs from 'node:fs'
+import {promisify} from 'node:util'
 
 let _debug: any
 function debug(...args: any[]) {
