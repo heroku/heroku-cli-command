@@ -184,7 +184,7 @@ export class Login {
       urlDisplayed = true
     }
 
-    ux.warn(`If browser does not open, visit ${ansis.greenBright(url)}`)
+    this.showManualBrowserLoginUrl(url)
     const cp = await open(url, {wait: false, ...(browser ? {app: {name: browser}} : {})})
     cp.on('error', err => {
       ux.warn(err)
@@ -359,5 +359,10 @@ machine, please manually open the URL above in your browser.\n`,
       login: account.email!,
       password,
     }
+  }
+
+  private showManualBrowserLoginUrl(url: string) {
+    ux.warn('If browser does not open, visit:')
+    ux.stderr(ansis.greenBright(url))
   }
 }

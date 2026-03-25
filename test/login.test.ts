@@ -1,4 +1,5 @@
-import {Config} from '@oclif/core'
+import {Config, ux} from '@oclif/core'
+import ansis from 'ansis'
 import {expect, fancy} from 'fancy-test'
 import inquirer from 'inquirer'
 import nock from 'nock'
@@ -7,6 +8,7 @@ import {fileURLToPath} from 'node:url'
 import * as sinon from 'sinon'
 
 import {Command as CommandBase} from '../src/command.js'
+import {Login} from '../src/login.js'
 import {restoreNetrcStub, stubNetrc} from './helpers/netrc-stub.js'
 
 class Command extends CommandBase {
@@ -121,5 +123,24 @@ describe('login with interactive', () => {
         .catch(error => {
           expect(error.message).to.contain('Cannot set an expiration longer than thirty days')
         })
+    })
+})
+
+describe('login with browser', () => {
+  test
+    .it('prints fallback URL on its own line', async ctx => {
+      const cmd = new Command([], ctx.config)
+      const login = new Login(ctx.config, cmd.heroku)
+      const warnStub = sinon.stub(ux, 'warn')
+      const stderrStub = sinon.stub(ux, 'stderr')
+      const url = 'https://cli-auth.heroku.com/auth/cli/browser/abc123?requestor=xyz'
+
+      const showManualBrowserLoginUrl = (login as any).showManualBrowserLoginUrl.bind(login)
+      showManualBrowserLoginUrl(url)
+
+      expect(warnStub.calledWithExactly('If browser does not open, visit:')).to.equal(true)
+      expect(warnStub.firstCall.args[0]).to.not.contain(url)
+      expect(stderrStub.calledWithExactly(ansis.greenBright(url))).to.equal(true)
+      sinon.assert.callOrder(warnStub, stderrStub)
     })
 })
