@@ -9,7 +9,7 @@
 
 ### Miscellaneous Chores
 
-* release 12.2.2 ([#307](https://github.com/heroku/heroku-cli-command/issues/307)) ([32f1aec](https://github.com/heroku/heroku-cli-command/commit/32f1aecf0111c97e739ec8a178a4e872b056d129))
+* adopt @heroku-cli/test-utils and modernize test setup ([#308](https://github.com/heroku/heroku-cli-command/issues/308)) ([db7be8e](https://github.com/heroku/heroku-cli-command/commit/db7be8eb0e84422e40240c5df5d063513dbe528f))
 
 ## [12.2.1](https://github.com/heroku/heroku-cli-command/compare/command-v12.2.0...command-v12.2.1) (2026-03-11)
 
