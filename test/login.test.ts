@@ -143,4 +143,14 @@ describe('login with browser', () => {
       expect(stderrStub.calledWithExactly(ansis.greenBright(url))).to.equal(true)
       sinon.assert.callOrder(warnStub, stderrStub)
     })
+
+  test
+    .it('treats ctrl-c keypress as cancel', async ctx => {
+      const cmd = new Command([], ctx.config)
+      const login = new Login(ctx.config, cmd.heroku)
+      const errorStub = sinon.stub(ux, 'error').throws(new Error('cancelled'))
+
+      expect(() => (login as any).getLoginMethodFromPromptKey('\u0003')).to.throw('cancelled')
+      expect(errorStub.calledWithExactly('Login cancelled by user', {exit: 130})).to.equal(true)
+    })
 })
