@@ -1,4 +1,4 @@
-import {Errors} from '@oclif/core'
+import {CLIError} from '@oclif/core/errors'
 import childProcess from 'node:child_process'
 
 import {vars} from './vars.js'
@@ -27,7 +27,7 @@ export class Git {
       })
     } catch (error) {
       if ((error as any).code === 'ENOENT') {
-        throw new Errors.CLIError('Git must be installed to use the Heroku CLI.  See instructions here: http://git-scm.com')
+        throw new CLIError('Git must be installed to use the Heroku CLI.  See instructions here: http://git-scm.com')
       }
 
       throw error

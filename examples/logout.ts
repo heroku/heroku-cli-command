@@ -1,4 +1,4 @@
-import {Errors} from '@oclif/core'
+import {handle} from '@oclif/core/errors'
 
 import {Command} from '../src/index.js'
 
@@ -10,4 +10,4 @@ class LogoutCommand extends Command {
 }
 
 (LogoutCommand.run([]) as any)
-  .catch(Errors.handle)
+  .catch(handle)

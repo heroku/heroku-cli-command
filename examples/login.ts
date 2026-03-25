@@ -1,4 +1,4 @@
-import {Errors} from '@oclif/core'
+import {handle} from '@oclif/core/errors'
 
 import {Command, flags} from '../src/index.js'
 
@@ -16,4 +16,4 @@ class LoginCommand extends Command {
 }
 
 (LoginCommand.run(process.argv.slice(2)) as any)
-  .catch(Errors.handle)
+  .catch(handle)

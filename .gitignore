@@ -9,3 +9,4 @@ yarn.lock
 .idea/
 coverage/
 .nyc_output/
+.claude/

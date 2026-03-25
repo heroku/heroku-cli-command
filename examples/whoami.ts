@@ -1,5 +1,6 @@
 import * as Heroku from '@heroku-cli/schema'
-import {Errors, ux} from '@oclif/core'
+import {handle} from '@oclif/core/errors'
+import {ux} from '@oclif/core/ux'
 
 import {Command} from '../src/index.js'
 
@@ -22,5 +23,4 @@ class StatusCommand extends Command {
 }
 
 (StatusCommand.run([]) as any)
-  .catch(Errors.handle)
-
+  .catch(handle)

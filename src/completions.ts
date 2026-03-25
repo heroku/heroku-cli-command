@@ -1,4 +1,6 @@
-import {Errors, Interfaces} from '@oclif/core'
+import type {Config} from '@oclif/core/interfaces'
+
+import {CLIError} from '@oclif/core/errors'
 import path from 'node:path'
 
 import {APIClient} from './api-client.js'
@@ -7,7 +9,7 @@ import {configRemote, getGitRemotes} from './git.js'
 
 export const oneDay = 60 * 60 * 24
 
-export const herokuGet = async (resource: string, ctx: {config: Interfaces.Config}): Promise<string[]> => {
+export const herokuGet = async (resource: string, ctx: {config: Config}): Promise<string[]> => {
   const heroku = new APIClient(ctx.config)
   let {body: resources} = await heroku.get<any>(`/${resource}`)
   if (typeof resources === 'string') resources = JSON.parse(resources)
@@ -16,7 +18,7 @@ export const herokuGet = async (resource: string, ctx: {config: Interfaces.Confi
 
 export const AppCompletion = {
   cacheDuration: oneDay,
-  async options(ctx: {config: Interfaces.Config}) {
+  async options(ctx: {config: Config}) {
     const apps = await herokuGet('apps', ctx)
     return apps
   },
@@ -27,7 +29,7 @@ export const AppAddonCompletion = {
   async cacheKey(ctx: {flags: {app: any}}) {
     return ctx.flags && ctx.flags.app ? `${ctx.flags.app}_addons` : ''
   },
-  async options(ctx: {config: Interfaces.Config; flags?: any}) {
+  async options(ctx: {config: Config; flags?: any}) {
     const addons = ctx.flags && ctx.flags.app ? await herokuGet(`apps/${ctx.flags.app}/addons`, ctx) : []
     return addons
   },
@@ -38,7 +40,7 @@ export const AppDynoCompletion = {
   async cacheKey(ctx: {flags: {app: any}}) {
     return ctx.flags && ctx.flags.app ? `${ctx.flags.app}_dynos` : ''
   },
-  async options(ctx: {config: Interfaces.Config; flags?: any}) {
+  async options(ctx: {config: Config; flags?: any}) {
     const dynos = ctx.flags && ctx.flags.app ? await herokuGet(`apps/${ctx.flags.app}/dynos`, ctx) : []
     return dynos
   },
@@ -64,7 +66,7 @@ export const BuildpackCompletion = {
 
 export const DynoSizeCompletion = {
   cacheDuration: oneDay * 90,
-  async options(ctx: {config: Interfaces.Config}) {
+  async options(ctx: {config: Config}) {
     const sizes = await herokuGet('dyno-sizes', ctx)
     return sizes
   },
@@ -81,7 +83,7 @@ export const FileCompletion = {
 
 export const PipelineCompletion = {
   cacheDuration: oneDay,
-  async options(ctx: {config: Interfaces.Config}) {
+  async options(ctx: {config: Config}) {
     const pipelines = await herokuGet('pipelines', ctx)
     return pipelines
   },
@@ -104,7 +106,7 @@ export const ProcessTypeCompletion = {
         // eslint-disable-next-line unicorn/prefer-native-coercion-functions
         .filter((t: boolean | string) => t) as string[]
     } catch (error) {
-      if (error instanceof Errors.CLIError && error.code !== 'ENOENT') throw error
+      if (error instanceof CLIError && error.code !== 'ENOENT') throw error
     }
 
     return types
@@ -115,7 +117,7 @@ export const ProcessTypeCompletion = {
 
 export const RegionCompletion = {
   cacheDuration: oneDay * 7,
-  async options(ctx: {config: Interfaces.Config}) {
+  async options(ctx: {config: Config}) {
     const regions = await herokuGet('regions', ctx)
     return regions
   },
@@ -148,7 +150,7 @@ export const ScopeCompletion = {
 
 export const SpaceCompletion = {
   cacheDuration: oneDay,
-  async options(ctx: {config: Interfaces.Config}) {
+  async options(ctx: {config: Config}) {
     const spaces = await herokuGet('spaces', ctx)
     return spaces
   },
@@ -156,7 +158,7 @@ export const SpaceCompletion = {
 
 export const StackCompletion = {
   cacheDuration: oneDay,
-  async options(ctx: {config: Interfaces.Config}) {
+  async options(ctx: {config: Config}) {
     const stacks = await herokuGet('stacks', ctx)
     return stacks
   },
@@ -172,7 +174,7 @@ export const StageCompletion = {
 
 export const TeamCompletion = {
   cacheDuration: oneDay,
-  async options(ctx: {config: Interfaces.Config}) {
+  async options(ctx: {config: Config}) {
     const teams = await herokuGet('teams', ctx)
     return teams
   },
