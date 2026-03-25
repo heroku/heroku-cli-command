@@ -2,11 +2,6 @@
 ## [12.2.2](https://github.com/heroku/heroku-cli-command/compare/command-v12.2.1...command-v12.2.2) (2026-03-25)
 
 
-### Features
-
-* leverage the heroku credential manager for auth ([#291](https://github.com/heroku/heroku-cli-command/issues/291)) ([de1bf43](https://github.com/heroku/heroku-cli-command/commit/de1bf431094137669c092d2f568b32dc1ac065dd))
-
-
 ### Bug Fixes
 
 * Ctrl-C cancels login process ([#305](https://github.com/heroku/heroku-cli-command/issues/305)) ([bea43c5](https://github.com/heroku/heroku-cli-command/commit/bea43c5df7e1bf218baa35a99fc7c40430986855))
