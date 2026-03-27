@@ -1,0 +1,104 @@
+import fs from 'node:fs'
+import {getCredentialHandler, getStorageConfig} from '../../../src/credential-manager-core/index.js'
+import {Netrc} from '../../../src/credential-manager-core/lib/netrc-parser.js'
+import {Context} from 'mocha'
+
+export type AcceptanceFixture = {
+  account: string,
+  hostForLookup: string,
+  hosts: string[],
+  service: string,
+  token: string,
+}
+
+export type NetrcSnapshot = {
+  netrcPath: string
+  restore: () => void
+}
+
+// These fixture values should never match real services/hosts
+export const HOST_NAME = 'acceptance.test.heroku.com'
+export const SERVICE_NAME = 'heroku-cli-acceptance-test'
+
+export const CREDENTIAL_FIXTURES = {
+  'account-default': {
+    account: 'test@example.com',
+    hosts: [HOST_NAME],
+    hostForLookup: HOST_NAME,
+    service: SERVICE_NAME,
+    token: 'test-token-12345',
+  },
+} as const satisfies Record<string, AcceptanceFixture>
+
+/**
+ * Skip the current suite or test unless ACCEPTANCE_TESTS=true.
+ */
+export function skipUnlessAcceptance(context: Context): void {
+  const value = process.env.ACCEPTANCE_TESTS?.trim().toLowerCase()
+  if (value !== 'true') {
+    context.skip()
+  }
+}
+
+/**
+ * Captures the current netrc file contents and returns a restore callback.
+ * If netrc existed, restore writes the original contents back.
+ * If netrc did not exist, restore removes any netrc created during the test.
+ */
+export function snapshotDefaultNetrc(): NetrcSnapshot {
+  const netrcPath = new Netrc().file
+  const hadExistingFile = fs.existsSync(netrcPath)
+  const originalContents = hadExistingFile ? fs.readFileSync(netrcPath) : undefined
+
+  let restored = false
+
+  return {
+    netrcPath,
+    restore() {
+      if (restored) return
+
+      if (hadExistingFile) {
+        if (!originalContents) {
+          throw new Error(`Original netrc contents were not found for ${netrcPath}`)
+        }
+
+        fs.writeFileSync(netrcPath, originalContents)
+      } else {
+        fs.rmSync(netrcPath, {force: true})
+      }
+
+      restored = true
+    },
+  }
+}
+
+/**
+ * Clears machine entries in the default netrc file between acceptance tests.
+ * Keeps the file itself, but removes TEST host entries to avoid cross-test leakage.
+ */
+export async function cleanupDefaultNetrc(hosts: string[]): Promise<void> {
+  const netrc = new Netrc()
+  await netrc.load()
+  for (const host of hosts) {
+    if (netrc.machines[host]) {
+      delete netrc.machines[host]
+    }
+  }
+
+  await netrc.save()
+}
+
+/**
+ * Removes all accounts for the provided TEST service from the platform-native credential store.
+ */
+export async function cleanupCredentialStore(service: string): Promise<void> {
+  const {credentialStore} = getStorageConfig()
+  if (!credentialStore) return
+
+  const handler = getCredentialHandler(credentialStore)
+  const accounts = [...new Set(handler.listAccounts(service))]
+
+  for (const account of accounts) {
+    handler.removeAuth(account, service)
+  }
+}

@@ -34,3 +34,22 @@ jobs:
         run: npm test
       - name: linting
         run: npm run lint
+
+  acceptance:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+        node-version: [20.x, 22.x]
+    env:
+      ACCEPTANCE_TESTS: 'true'
+    steps:
+      - uses: actions/checkout@v6
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+      - run: npm ci
+      - name: run smoke tests
+        run: npm run test:ci:smoke

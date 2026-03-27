@@ -7,7 +7,6 @@
   "dependencies": {
     "@heroku/js-blanket": "^1.0.0",
     "@heroku/http-call": "^5.4.0",
-    "@heroku/js-blanket": "^1.0.0",
     "@oclif/core": "^4.3.0",
     "@sentry/node": "^10.45.0",
     "ansis": "^4",
@@ -69,9 +68,10 @@
     "lint": "tsc -p test --noEmit && eslint .",
     "prepublishOnly": "npm run build",
     "prepare": "npm run build",
-    "test": "c8 --reporter=text-summary --check-coverage mocha --forbid-only \"test/**/*.test.ts\"",
+    "test": "c8 --reporter=text-summary --check-coverage mocha --forbid-only --ignore \"test/**/acceptance/**/*.test.ts\" \"test/**/*.test.ts\"",
     "test:file": "c8 mocha",
-    "test:local": "c8 mocha \"test/**/*.test.ts\"",
+    "test:local": "c8 mocha --ignore \"test/**/acceptance/**/*.test.ts\" \"test/**/*.test.ts\"",
+    "test:ci:smoke": "c8 mocha --forbid-only \"test/credential-manager/acceptance/smoke.acceptance.test.ts\"",
     "changelog": "conventional-changelog -p conventionalcommits -i CHANGELOG.md -s -r 0",
     "example": "sh examples/run.sh"
   },

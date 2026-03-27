@@ -25,8 +25,7 @@ export class WindowsHandler {
   public getAuth(account: string, service: string): string {
     try {
       const psCommand = `
-      [void]
-      [Windows.Security.Credentials.PasswordVault,Windows.Security.Credentials,ContentType=WindowsRuntime]
+      [void][Windows.Security.Credentials.PasswordVault,Windows.Security.Credentials,ContentType=WindowsRuntime]
       $vault = New-Object Windows.Security.Credentials.PasswordVault
       $credential = $vault.Retrieve("${service}", "${account}")
       $credential.Password
@@ -55,8 +54,7 @@ export class WindowsHandler {
   public listAccounts(service: string): string[] {
     try {
       const psCommand = `
-      [void]
-      [Windows.Security.Credentials.PasswordVault,Windows.Security.Credentials,ContentType=WindowsRuntime]
+      [void][Windows.Security.Credentials.PasswordVault,Windows.Security.Credentials,ContentType=WindowsRuntime]
       $vault = New-Object Windows.Security.Credentials.PasswordVault
       try {
         $creds = $vault.FindAllByResource("${service}")
