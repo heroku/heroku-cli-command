@@ -1,4 +1,5 @@
-import {Command} from '@oclif/core'
+
+import {Command} from '@oclif/core/command'
 import {expect, fancy} from 'fancy-test'
 
 import * as flags from '../../src/flags/index.js'

@@ -1,6 +1,8 @@
+import type {Config} from '@oclif/core/interfaces'
+
 import * as Heroku from '@heroku-cli/schema'
 import {HTTP} from '@heroku/http-call'
-import {Interfaces, ux} from '@oclif/core'
+import {ux} from '@oclif/core/ux'
 import ansis from 'ansis'
 import debug from 'debug'
 import inquirer, {QuestionCollection} from 'inquirer'
@@ -36,7 +38,7 @@ const headers = (token: string) => ({headers: {accept: 'application/vnd.heroku+j
 export class Login {
   loginHost = process.env.HEROKU_LOGIN_HOST || 'https://cli-auth.heroku.com'
 
-  constructor(private readonly config: Interfaces.Config, private readonly heroku: APIClient) {}
+  constructor(private readonly config: Config, private readonly heroku: APIClient) {}
 
   async login(opts: Login.Options = {}): Promise<void> {
     let loggedIn = false

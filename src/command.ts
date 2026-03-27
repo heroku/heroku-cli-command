@@ -1,8 +1,6 @@
-import {
-  Command as Base,
-  Errors,
-  Flags,
-} from '@oclif/core'
+import {Command as Base} from '@oclif/core/command'
+import * as Errors from '@oclif/core/errors'
+import * as Flags from '@oclif/core/flags'
 import parser from 'yargs-parser'
 import unparser from 'yargs-unparser'
 

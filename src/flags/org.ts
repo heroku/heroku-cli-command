@@ -1,4 +1,4 @@
-import {Flags} from '@oclif/core'
+import * as Flags from '@oclif/core/flags'
 
 export const org = Flags.custom({
   char: 'o',

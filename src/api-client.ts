@@ -1,5 +1,7 @@
+import type {Config} from '@oclif/core/interfaces'
+
 import {HTTP, HTTPError, HTTPRequestOptions} from '@heroku/http-call'
-import {Errors, Interfaces} from '@oclif/core'
+import {CLIError, warn} from '@oclif/core/errors'
 import debug from 'debug'
 import inquirer from 'inquirer'
 import {Netrc} from 'netrc-parser'
@@ -39,7 +41,7 @@ export interface IHerokuAPIErrorOptions {
   url?: string
 }
 
-export class HerokuAPIError extends Errors.CLIError {
+export class HerokuAPIError extends CLIError {
   body: IHerokuAPIErrorOptions
   http: HTTPError
 
@@ -67,7 +69,7 @@ export class APIClient {
   private _particleboard!: ParticleboardClient
   private _twoFactorMutex: Mutex<string> | undefined
 
-  constructor(protected config: Interfaces.Config, public options: IOptions = {}) {
+  constructor(protected config: Config, public options: IOptions = {}) {
     this.config = config
     this._login = new Login(this.config, this)
     if (options.required === undefined) options.required = true
@@ -127,15 +129,15 @@ export class APIClient {
           const now = Date.now()
 
           if (suspension > now) {
-            Errors.warn(`This ${resource} is delinquent with payment and we'll suspend it on ${new Date(suspension)}.`)
+            warn(`This ${resource} is delinquent with payment and we'll suspend it on ${new Date(suspension)}.`)
             delinquencyConfig.warning_shown = true
             return
           }
 
           if (deletion)
-            Errors.warn(`This ${resource} is delinquent with payment and we suspended it on ${new Date(suspension)}. If the ${resource} is still delinquent, we'll delete it on ${new Date(deletion)}.`)
+            warn(`This ${resource} is delinquent with payment and we suspended it on ${new Date(suspension)}. If the ${resource} is still delinquent, we'll delete it on ${new Date(deletion)}.`)
         } else if (deletion)
-          Errors.warn(`This ${resource} is delinquent with payment and we'll delete it on ${new Date(deletion)}.`)
+          warn(`This ${resource} is delinquent with payment and we'll delete it on ${new Date(deletion)}.`)
 
         delinquencyConfig.warning_shown = true
       }
@@ -238,9 +240,9 @@ export class APIClient {
       static showWarnings<T>(response: HTTP<T>) {
         const warnings = response.headers['x-heroku-warning'] || response.headers['warning-message']
         if (Array.isArray(warnings))
-          for (const warning of warnings) Errors.warn(warning.replace(/^\s*warning:?\s*/i, ''))
+          for (const warning of warnings) warn(warning.replace(/^\s*warning:?\s*/i, ''))
         else if (typeof warnings === 'string')
-          Errors.warn(warnings.replace(/^\s*warning:?\s*/i, ''))
+          warn(warnings.replace(/^\s*warning:?\s*/i, ''))
       }
 
       static trackRequestIds<T>(response: HTTP<T>) {
@@ -278,7 +280,7 @@ export class APIClient {
 
   get auth(): string | undefined {
     if (!this._auth) {
-      if (process.env.HEROKU_API_TOKEN && !process.env.HEROKU_API_KEY) Errors.warn('HEROKU_API_TOKEN is set but you probably meant HEROKU_API_KEY')
+      if (process.env.HEROKU_API_TOKEN && !process.env.HEROKU_API_KEY) warn('HEROKU_API_TOKEN is set but you probably meant HEROKU_API_KEY')
       this._auth = process.env.HEROKU_API_KEY
       if (!this._auth) {
         netrc.loadSync()
@@ -328,7 +330,7 @@ export class APIClient {
     try {
       await this._login.logout()
     } catch (error) {
-      if (error instanceof Errors.CLIError) Errors.warn(error)
+      if (error instanceof CLIError) warn(error)
     }
 
     delete netrc.machines['api.heroku.com']
