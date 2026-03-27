@@ -1,4 +1,5 @@
-import {Config, ux} from '@oclif/core'
+import {Config} from '@oclif/core/config'
+import {ux} from '@oclif/core/ux'
 import ansis from 'ansis'
 import {expect, fancy} from 'fancy-test'
 import inquirer from 'inquirer'

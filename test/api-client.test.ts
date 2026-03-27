@@ -1,4 +1,4 @@
-import {Config} from '@oclif/core'
+import {Config} from '@oclif/core/config'
 import debug from 'debug'
 import {expect, fancy} from 'fancy-test'
 import nock from 'nock'
@@ -218,7 +218,7 @@ describe('api_client', () => {
         const cmd = new Command([], ctx.config)
         await cmd.heroku.get('/account')
 
-        const stderrOutput = stderr.output.replace(/ *[»›] */g, '').replace(/ *\n */g, ' ')
+        const stderrOutput = stderr.output.replaceAll(/ *[»›] */g, '').replaceAll(/ *\n */g, ' ')
         expect(stderrOutput).to.include(`Warning: This account is delinquent with payment and we'll suspend it on ${suspensionTime}`)
         stderr.stop()
         particleboard.done()
@@ -245,7 +245,7 @@ describe('api_client', () => {
         const cmd = new Command([], ctx.config)
         await cmd.heroku.get('/account')
 
-        const stderrOutput = stderr.output.replace(/ *[»›] */g, '').replace(/ *\n */g, ' ')
+        const stderrOutput = stderr.output.replaceAll(/ *[»›] */g, '').replaceAll(/ *\n */g, ' ')
         expect(stderrOutput).to.include(`Warning: This account is delinquent with payment and we suspended it on ${suspensionTime}. If the account is still delinquent, we'll delete it on ${deletionTime}`)
         stderr.stop()
         particleboard.done()
@@ -274,7 +274,7 @@ describe('api_client', () => {
         const cmd = new Command([], ctx.config)
         await cmd.heroku.get('/account')
 
-        const stderrOutput = stderr.output.replace(/ *[»›] */g, '').replace(/ *\n */g, ' ')
+        const stderrOutput = stderr.output.replaceAll(/ *[»›] */g, '').replaceAll(/ *\n */g, ' ')
         expect(stderrOutput).to.include(`Warning: This account is delinquent with payment and we'll suspend it on ${suspensionTime}`)
         stderr.stop()
 
@@ -370,7 +370,7 @@ describe('api_client', () => {
         const cmd = new Command([], ctx.config)
         await cmd.heroku.get('/teams/my_team/members')
 
-        const stderrOutput = stderr.output.replace(/ *[»›] */g, '').replace(/ *\n */g, ' ')
+        const stderrOutput = stderr.output.replaceAll(/ *[»›] */g, '').replaceAll(/ *\n */g, ' ')
         expect(stderrOutput).to.include(`Warning: This team is delinquent with payment and we'll suspend it on ${suspensionTime}`)
         stderr.stop()
         particleboard.done()
@@ -397,7 +397,7 @@ describe('api_client', () => {
         const cmd = new Command([], ctx.config)
         await cmd.heroku.get('/teams/my_team/members')
 
-        const stderrOutput = stderr.output.replace(/ *[»›] */g, '').replace(/ *\n */g, ' ')
+        const stderrOutput = stderr.output.replaceAll(/ *[»›] */g, '').replaceAll(/ *\n */g, ' ')
         expect(stderrOutput).to.include(`Warning: This team is delinquent with payment and we suspended it on ${suspensionTime}. If the team is still delinquent, we'll delete it on ${deletionTime}`)
         stderr.stop()
         particleboard.done()
@@ -426,7 +426,7 @@ describe('api_client', () => {
         const cmd = new Command([], ctx.config)
         await cmd.heroku.get('/teams/my_team/members')
 
-        const stderrOutput = stderr.output.replace(/ *[»›] */g, '').replace(/ *\n */g, ' ')
+        const stderrOutput = stderr.output.replaceAll(/ *[»›] */g, '').replaceAll(/ *\n */g, ' ')
         expect(stderrOutput).to.include(`Warning: This team is delinquent with payment and we'll suspend it on ${suspensionTime}`)
         stderr.stop()
 
