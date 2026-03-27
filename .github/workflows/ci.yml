@@ -51,5 +51,16 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: npm
       - run: npm ci
-      - name: run smoke tests
+      - name: install libsecret-tools for Linux
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libsecret-tools gnome-keyring
+      - name: run smoke tests (macOS/Windows)
+        if: runner.os != 'Linux'
         run: npm run test:ci:smoke
+      - name: run smoke tests (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          dbus-run-session -- bash -c '
+            eval "$(echo -n "heroku-credential-manager-ci" | gnome-keyring-daemon --unlock --components=secrets)"
+            npm run test:ci:smoke
+          '

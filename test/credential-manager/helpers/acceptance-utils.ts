@@ -81,6 +81,7 @@ export async function cleanupDefaultNetrc(hosts: string[]): Promise<void> {
   await netrc.load()
   for (const host of hosts) {
     if (netrc.machines[host]) {
+      console.log(`removing ${host} in cleanupDefaultNetrc`)
       delete netrc.machines[host]
     }
   }
@@ -91,7 +92,7 @@ export async function cleanupDefaultNetrc(hosts: string[]): Promise<void> {
 /**
  * Removes all accounts for the provided TEST service from the platform-native credential store.
  */
-export async function cleanupCredentialStore(service: string): Promise<void> {
+export function cleanupCredentialStore(service: string): void {
   const {credentialStore} = getStorageConfig()
   if (!credentialStore) return
 
@@ -99,6 +100,7 @@ export async function cleanupCredentialStore(service: string): Promise<void> {
   const accounts = [...new Set(handler.listAccounts(service))]
 
   for (const account of accounts) {
+    console.log(`removing ${account} in cleanupCredentialStore`)
     handler.removeAuth(account, service)
   }
 }

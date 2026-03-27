@@ -80,16 +80,17 @@ describe('credential-manager acceptance smoke', function () {
       )
 
       await expect(
-				getAuth(CREDENTIAL.account, CREDENTIAL.hostForLookup, CREDENTIAL.service)
+				getAuth(CREDENTIAL.account, CREDENTIAL.hostForLookup, CREDENTIAL.service),
 			).to.be.rejectedWith(/No auth found|No credentials found/)
     })
   })
 
   describe('native credential store', function () {
-    afterEach(async function () {
-      await cleanupCredentialStore(CREDENTIAL.service)
+    afterEach(function () {
+      cleanupCredentialStore(CREDENTIAL.service)
     })
 
+  // We pass hosts as an empty array test the keychain-only path
     it('saves and retrieves', async function () {
       await saveAuth(
         CREDENTIAL.account,
@@ -122,7 +123,7 @@ describe('credential-manager acceptance smoke', function () {
       )
 
       await expect(
-				getAuth(CREDENTIAL.account, CREDENTIAL.hostForLookup, CREDENTIAL.service)
+				getAuth(CREDENTIAL.account, CREDENTIAL.hostForLookup, CREDENTIAL.service),
 			).to.be.rejectedWith(/No auth found|No credentials found/)
     })
   })
