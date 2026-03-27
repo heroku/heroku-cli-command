@@ -1,4 +1,5 @@
 import * as Heroku from '@heroku-cli/schema'
+import {HTTPError} from '@heroku/http-call'
 import {handle} from '@oclif/core/errors'
 import {ux} from '@oclif/core/ux'
 
@@ -15,8 +16,8 @@ class StatusCommand extends Command {
     try {
       const {body: account} = await this.heroku.get<Heroku.Account>('/account', {retryAuth: false})
       ux.stdout(account.email)
-    } catch (error: any) {
-      if (error.statusCode === 401) this.notloggedin()
+    } catch (error: unknown) {
+      if (error instanceof HTTPError && error.statusCode === 401) this.notloggedin()
       throw error
     }
   }
