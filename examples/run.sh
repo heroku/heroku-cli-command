@@ -13,4 +13,4 @@ if [ ! -f "examples/$COMMAND.ts" ]; then
   exit 1
 fi
 
-NODE_NO_WARNINGS=1 ./node_modules/.bin/tsx "examples/$COMMAND.ts" "$@" 
+NODE_NO_WARNINGS=1 npx tsx "examples/$COMMAND.ts" "$@" 
