@@ -27,5 +27,8 @@ class FavoritesCommand extends Command {
   }
 }
 
-(FavoritesCommand.run([]) as any)
-  .catch(handle)
+try {
+  await FavoritesCommand.run([])
+} catch (error: unknown) {
+  handle(error as Error)
+}

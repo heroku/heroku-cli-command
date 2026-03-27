@@ -22,5 +22,8 @@ class StatusCommand extends Command {
   }
 }
 
-(StatusCommand.run([]) as any)
-  .catch(handle)
+try {
+  await StatusCommand.run([])
+} catch (error: unknown) {
+  handle(error as Error)
+}

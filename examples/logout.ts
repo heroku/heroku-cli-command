@@ -9,5 +9,8 @@ class LogoutCommand extends Command {
   }
 }
 
-(LogoutCommand.run([]) as any)
-  .catch(handle)
+try {
+  await LogoutCommand.run([])
+} catch (error: unknown) {
+  handle(error as Error)
+}

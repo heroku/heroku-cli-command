@@ -15,5 +15,8 @@ class LoginCommand extends Command {
   }
 }
 
-(LoginCommand.run(process.argv.slice(2)) as any)
-  .catch(handle)
+try {
+  await LoginCommand.run(process.argv.slice(2))
+} catch (error: unknown) {
+  handle(error as Error)
+}
