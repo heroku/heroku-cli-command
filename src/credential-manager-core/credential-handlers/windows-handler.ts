@@ -117,6 +117,7 @@ export class WindowsHandler {
     try {
       try {
         const removeCommand = `
+        $ErrorActionPreference = 'Stop'
         [void][Windows.Security.Credentials.PasswordVault,Windows.Security.Credentials,ContentType=WindowsRuntime]
         $vault = New-Object Windows.Security.Credentials.PasswordVault
         $credential = $vault.Retrieve("${auth.service}", "${auth.account}")

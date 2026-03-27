@@ -74,7 +74,7 @@ export function snapshotDefaultNetrc(): NetrcSnapshot {
 
 /**
  * Clears machine entries in the default netrc file between acceptance tests.
- * Keeps the file itself, but removes TEST host entries to avoid cross-test leakage.
+ * Keeps the file itself, but removes test host entries to avoid cross-test leakage.
  */
 export async function cleanupDefaultNetrc(hosts: string[]): Promise<void> {
   const netrc = new Netrc()
@@ -90,17 +90,28 @@ export async function cleanupDefaultNetrc(hosts: string[]): Promise<void> {
 }
 
 /**
- * Removes all accounts for the provided TEST service from the platform-native credential store.
+ * Removes all accounts for the provided test service from the platform-native credential store.
  */
 export function cleanupCredentialStore(service: string): void {
-  const {credentialStore} = getStorageConfig()
-  if (!credentialStore) return
-
-  const handler = getCredentialHandler(credentialStore)
-  const accounts = [...new Set(handler.listAccounts(service))]
+  const {handler, accounts} = listCredentialStoreAccounts(service)
+  if (!handler) return
 
   for (const account of accounts) {
     console.log(`removing ${account} in cleanupCredentialStore`)
     handler.removeAuth(account, service)
   }
+}
+
+/**
+ * Lists all accounts for the provided test service from the platform-native credential store.
+ */
+export function listCredentialStoreAccounts(service: string) {
+  const {credentialStore} = getStorageConfig()
+
+  if (!credentialStore) return {accounts: []}
+
+  const handler = getCredentialHandler(credentialStore)
+  const accounts = handler.listAccounts(service)
+
+  return {handler, accounts}
 }

@@ -7,6 +7,7 @@ import {
   CREDENTIAL_FIXTURES,
   cleanupDefaultNetrc,
   cleanupCredentialStore,
+  listCredentialStoreAccounts,
   snapshotDefaultNetrc,
   skipUnlessAcceptance,
 } from '../helpers/acceptance-utils.js'
@@ -106,6 +107,28 @@ describe('credential-manager acceptance smoke', function () {
       )
 
       expect(token).to.equal(CREDENTIAL.token)
+    })
+
+    it('lists accounts', async function () {
+      const accountA = CREDENTIAL.account
+      const accountB = `second-${CREDENTIAL.account}`
+
+      await saveAuth(
+        accountA,
+        CREDENTIAL.token,
+        [],
+        CREDENTIAL.service,
+      )
+      await saveAuth(
+        accountB,
+        CREDENTIAL.token,
+        [],
+        CREDENTIAL.service,
+      )
+
+      const {accounts} = listCredentialStoreAccounts(CREDENTIAL.service)
+      expect(accounts).to.include(accountA)
+      expect(accounts).to.include(accountB)
     })
 
     it('removes', async function () {
