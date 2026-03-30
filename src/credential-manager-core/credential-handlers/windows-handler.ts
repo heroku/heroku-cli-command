@@ -129,7 +129,6 @@ export class WindowsHandler {
         childProcess.execSync(removeCommand, {encoding: 'utf8', shell: 'powershell', stdio: ['pipe', 'pipe', 'ignore']})
       } catch {
         // noop - item does not exist
-        console.log('NOOP - item does not exist')
       }
 
       const addCommand = `

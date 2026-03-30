@@ -5,7 +5,6 @@ import {Context} from 'mocha'
 
 export type AcceptanceFixture = {
   account: string,
-  hostForLookup: string,
   hosts: string[],
   service: string,
   token: string,
@@ -18,17 +17,92 @@ export type NetrcSnapshot = {
 
 // These fixture values should never match real services/hosts
 export const HOST_NAME = 'acceptance.test.heroku.com'
+export const ALTERNATE_HOST_NAME = 'acceptance.test.alt.heroku.com'
 export const SERVICE_NAME = 'heroku-cli-acceptance-test'
+export const ALTERNATE_SERVICE_NAME = 'heroku-cli-acceptance-test-alternate'
 
 export const CREDENTIAL_FIXTURES = {
   'account-default': {
     account: 'test@example.com',
     hosts: [HOST_NAME],
-    hostForLookup: HOST_NAME,
     service: SERVICE_NAME,
     token: 'test-token-12345',
   },
+  'account-multiple-hosts': {
+    account: 'test-multiple-hosts@example.com',
+    hosts: [HOST_NAME, ALTERNATE_HOST_NAME],
+    service: SERVICE_NAME,
+    token: 'test-token-multiple-hosts-12345',
+  },
+  'account-alternate-service': {
+    account: 'test-alternate-service@example.com',
+    hosts: [HOST_NAME],
+    service: ALTERNATE_SERVICE_NAME,
+    token: 'test-token-alternate-service-12345',
+  },
 } as const satisfies Record<string, AcceptanceFixture>
+
+/**
+ * Clears machine entries in the default netrc file between acceptance tests.
+ * Keeps the file itself, but removes test host entries to avoid cross-test leakage.
+ */
+export async function cleanupDefaultNetrc(): Promise<void> {
+  const hosts = getAllAcceptanceHosts()
+  const netrc = new Netrc()
+  await netrc.load()
+  for (const host of hosts) {
+    if (netrc.machines[host]) {
+      console.log(`removing ${host} in cleanupDefaultNetrc`)
+      delete netrc.machines[host]
+    }
+  }
+
+  await netrc.save()
+}
+
+/**
+ * Removes all accounts for the provided test service from the platform-native credential store.
+ */
+export function cleanupCredentialStore(): void {
+  const services = getAllAcceptanceServices()
+  for (const service of services) {
+  const {handler, accounts} = listCredentialStoreAccounts(service)
+  if (!handler) return
+
+  for (const account of accounts) {
+    console.log(`removing ${account} in cleanupCredentialStore`)
+    handler.removeAuth(account, service)
+  }
+}
+}
+
+/**
+ * Returns all unique hosts referenced by acceptance fixtures.
+ */
+export function getAllAcceptanceHosts(): string[] {
+  return [...new Set(Object.values(CREDENTIAL_FIXTURES).flatMap(fixture => fixture.hosts))]
+}
+
+/**
+ * Returns all unique services referenced by acceptance fixtures.
+ */
+export function getAllAcceptanceServices(): string[] {
+  return [...new Set(Object.values(CREDENTIAL_FIXTURES).map(fixture => fixture.service))]
+}
+
+/**
+ * Lists all accounts for the provided test service from the platform-native credential store.
+ */
+export function listCredentialStoreAccounts(service: string) {
+  const {credentialStore} = getStorageConfig()
+
+  if (!credentialStore) return {accounts: []}
+
+  const handler = getCredentialHandler(credentialStore)
+  const accounts = handler.listAccounts(service)
+
+  return {handler, accounts}
+}
 
 /**
  * Skip the current suite or test unless ACCEPTANCE_TESTS=true.
@@ -70,48 +144,4 @@ export function snapshotDefaultNetrc(): NetrcSnapshot {
       restored = true
     },
   }
-}
-
-/**
- * Clears machine entries in the default netrc file between acceptance tests.
- * Keeps the file itself, but removes test host entries to avoid cross-test leakage.
- */
-export async function cleanupDefaultNetrc(hosts: string[]): Promise<void> {
-  const netrc = new Netrc()
-  await netrc.load()
-  for (const host of hosts) {
-    if (netrc.machines[host]) {
-      console.log(`removing ${host} in cleanupDefaultNetrc`)
-      delete netrc.machines[host]
-    }
-  }
-
-  await netrc.save()
-}
-
-/**
- * Removes all accounts for the provided test service from the platform-native credential store.
- */
-export function cleanupCredentialStore(service: string): void {
-  const {handler, accounts} = listCredentialStoreAccounts(service)
-  if (!handler) return
-
-  for (const account of accounts) {
-    console.log(`removing ${account} in cleanupCredentialStore`)
-    handler.removeAuth(account, service)
-  }
-}
-
-/**
- * Lists all accounts for the provided test service from the platform-native credential store.
- */
-export function listCredentialStoreAccounts(service: string) {
-  const {credentialStore} = getStorageConfig()
-
-  if (!credentialStore) return {accounts: []}
-
-  const handler = getCredentialHandler(credentialStore)
-  const accounts = handler.listAccounts(service)
-
-  return {handler, accounts}
 }
