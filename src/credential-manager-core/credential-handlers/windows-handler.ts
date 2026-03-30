@@ -25,13 +25,14 @@ export class WindowsHandler {
   public getAuth(account: string, service: string): string {
     try {
       const psCommand = `
+      $ErrorActionPreference = 'Stop'
       [void][Windows.Security.Credentials.PasswordVault,Windows.Security.Credentials,ContentType=WindowsRuntime]
       $vault = New-Object Windows.Security.Credentials.PasswordVault
       $credential = $vault.Retrieve("${service}", "${account}")
       $credential.Password
     `
 
-      const output = childProcess.execSync(psCommand, {encoding: 'utf8', shell: 'powershell'})
+      const output = childProcess.execSync(psCommand, {encoding: 'utf8', shell: 'powershell', stdio: ['pipe', 'pipe', 'ignore']})
       const token = output.trim()
 
       if (!token) {
@@ -54,6 +55,7 @@ export class WindowsHandler {
   public listAccounts(service: string): string[] {
     try {
       const psCommand = `
+      $ErrorActionPreference = 'Stop'
       [void][Windows.Security.Credentials.PasswordVault,Windows.Security.Credentials,ContentType=WindowsRuntime]
       $vault = New-Object Windows.Security.Credentials.PasswordVault
       try {
@@ -65,8 +67,8 @@ export class WindowsHandler {
       }
     `
 
-      const output = childProcess.execSync(psCommand, {encoding: 'utf8', shell: 'powershell'})
-      console.log('output', output)
+      const output = childProcess.execSync(psCommand, {encoding: 'utf8', shell: 'powershell', stdio: ['pipe', 'pipe', 'ignore']})
+
       // Expected output format:
       // user1@example.com
       // user2@example.com
@@ -94,12 +96,13 @@ export class WindowsHandler {
   public removeAuth(account: string, service: string): void {
     try {
       const psCommand = `
+      $ErrorActionPreference = 'Stop'
       [void][Windows.Security.Credentials.PasswordVault,Windows.Security.Credentials,ContentType=WindowsRuntime]
       $vault = New-Object Windows.Security.Credentials.PasswordVault
       $credential = $vault.Retrieve("${service}", "${account}")
       $vault.Remove($credential)
     `
-      childProcess.execSync(psCommand, {encoding: 'utf8', shell: 'powershell'})
+      childProcess.execSync(psCommand, {encoding: 'utf8', shell: 'powershell', stdio: ['pipe', 'pipe', 'ignore']})
     } catch (error) {
       const {message} = error as Error
       throw new Error(`Failed to remove token from Windows Credential Manager: ${this.scrubError(message)}`)
@@ -123,12 +126,14 @@ export class WindowsHandler {
         $credential = $vault.Retrieve("${auth.service}", "${auth.account}")
         $vault.Remove($credential)
       `
-        childProcess.execSync(removeCommand, {encoding: 'utf8', shell: 'powershell'})
+        childProcess.execSync(removeCommand, {encoding: 'utf8', shell: 'powershell', stdio: ['pipe', 'pipe', 'ignore']})
       } catch {
         // noop - item does not exist
+        console.log('NOOP - item does not exist')
       }
 
       const addCommand = `
+      $ErrorActionPreference = 'Stop'
       [void][Windows.Security.Credentials.PasswordVault,Windows.Security.Credentials,ContentType=WindowsRuntime]
       $vault = New-Object Windows.Security.Credentials.PasswordVault
       $credential = New-Object Windows.Security.Credentials.PasswordCredential("${auth.service}", "${auth.account}", "${auth.token}")
