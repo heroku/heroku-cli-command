@@ -53,7 +53,9 @@ export class LinuxHandler {
         {encoding: 'utf8'},
       )
       console.log('=== list accounts output ===')
-      console.log(output)
+      console.log('---RAW START---')
+      console.log(JSON.stringify(output))
+      console.log('---RAW END---')
       // Expected output format:
       // [/org/freedesktop/secrets/collection/login/###]
       // label = Label Name
