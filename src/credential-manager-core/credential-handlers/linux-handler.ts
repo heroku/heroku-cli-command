@@ -48,14 +48,19 @@ export class LinuxHandler {
    */
   public listAccounts(service: string): string[] {
     try {
-      const output = childProcess.execSync(
-        `secret-tool search --all service "${service}"`,
+      // const output = childProcess.execSync(
+      //   `secret-tool search --all service "${service}"`,
+      //   {encoding: 'utf8'},
+      // )
+      const output = childProcess.spawnSync(
+        'secret-tool',
+        ['search', '--all', 'service', service],
         {encoding: 'utf8'},
       )
-      console.log('=== list accounts output ===')
-      console.log('---RAW START---')
-      console.log(JSON.stringify(output))
-      console.log('---RAW END---')
+      console.log('--- stdout ---')
+      console.log(JSON.stringify(output.stdout))
+      console.log('--- stderr ---')
+      console.log(JSON.stringify(output.stderr))
       // Expected output format:
       // [/org/freedesktop/secrets/collection/login/###]
       // label = Label Name
@@ -68,7 +73,7 @@ export class LinuxHandler {
       // (blank line between entries)
 
       const accounts: string[] = []
-      const lines = output.split('\n')
+      const lines = output.stdout?.split('\n') || []
 
       for (const line of lines) {
         if (line.startsWith('attribute.account = ')) {
