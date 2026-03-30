@@ -66,7 +66,7 @@ export class WindowsHandler {
     `
 
       const output = childProcess.execSync(psCommand, {encoding: 'utf8', shell: 'powershell'})
-
+      console.log('output', output)
       // Expected output format:
       // user1@example.com
       // user2@example.com

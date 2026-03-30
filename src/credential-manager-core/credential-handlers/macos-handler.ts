@@ -26,7 +26,10 @@ export class MacOSHandler {
     try {
       const output = childProcess.execSync(
         `security find-generic-password -a "${account}" -s "${service}" -w`,
-        {encoding: 'utf8'},
+        {
+          encoding: 'utf8',
+          stdio: ['ignore', 'pipe', 'ignore']
+        },
       )
       const token = output.trim()
 

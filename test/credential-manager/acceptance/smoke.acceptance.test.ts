@@ -91,7 +91,7 @@ describe('credential-manager acceptance smoke', function () {
       cleanupCredentialStore(CREDENTIAL.service)
     })
 
-  // We pass hosts as an empty array test the keychain-only path
+  // We pass hosts as an empty array to test the keychain-only path
     it('saves and retrieves', async function () {
       await saveAuth(
         CREDENTIAL.account,
@@ -127,6 +127,8 @@ describe('credential-manager acceptance smoke', function () {
       )
 
       const {accounts} = listCredentialStoreAccounts(CREDENTIAL.service)
+      console.log('accounts', accounts)
+      expect(accounts).to.have.lengthOf(2)
       expect(accounts).to.include(accountA)
       expect(accounts).to.include(accountB)
     })

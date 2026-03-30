@@ -52,7 +52,7 @@ export class LinuxHandler {
         `secret-tool search --all service "${service}"`,
         {encoding: 'utf8'},
       )
-
+      console.log('output', output)
       // Expected output format:
       // [/org/freedesktop/secrets/collection/login/###]
       // label = Label Name
