@@ -28,7 +28,7 @@ export class MacOSHandler {
         `security find-generic-password -a "${account}" -s "${service}" -w`,
         {
           encoding: 'utf8',
-          stdio: ['ignore', 'pipe', 'ignore']
+          stdio: ['pipe', 'pipe', 'ignore'],
         },
       )
       const token = output.trim()
@@ -52,7 +52,12 @@ export class MacOSHandler {
    */
   public listAccounts(service: string): string[] {
     try {
-      const output = childProcess.execSync('security dump-keychain', {encoding: 'utf8'})
+      const output = childProcess.execSync('security dump-keychain',
+        {
+          encoding: 'utf8',
+          stdio: ['pipe', 'pipe', 'ignore'],
+        },
+      )
 
       // Expected output format:
       // keychain: "/path/to/keychain"
@@ -102,7 +107,10 @@ export class MacOSHandler {
     try {
       childProcess.execSync(
         `security delete-generic-password -a "${account}" -s "${service}"`,
-        {encoding: 'utf8'},
+        {
+          encoding: 'utf8',
+          stdio: ['pipe', 'pipe', 'ignore'],
+        },
       )
     } catch (error) {
       const {message} = error as Error
@@ -121,7 +129,10 @@ export class MacOSHandler {
     try {
       childProcess.execSync(
         `security add-generic-password -U -a "${auth.account}" -s "${auth.service}" -w "${auth.token}"`,
-        {encoding: 'utf8'},
+        {
+          encoding: 'utf8',
+          stdio: ['pipe', 'pipe', 'ignore'],
+        },
       )
     } catch (error) {
       const {message} = error as Error
