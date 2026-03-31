@@ -138,7 +138,7 @@ export class WindowsHandler {
       $credential = New-Object Windows.Security.Credentials.PasswordCredential("${auth.service}", "${auth.account}", "${auth.token}")
       $vault.Add($credential)
     `
-      childProcess.execSync(addCommand, {encoding: 'utf8', shell: 'powershell'})
+      childProcess.execSync(addCommand, {encoding: 'utf8', shell: 'powershell', stdio: ['pipe', 'pipe', 'ignore']})
     } catch (error) {
       const {message} = error as Error
       throw new Error(`Failed to store token in Windows Credential Manager: ${this.scrubError(message)}`)
