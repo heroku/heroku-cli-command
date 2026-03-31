@@ -8,6 +8,7 @@
     "@heroku/js-blanket": "^1.0.0",
     "@heroku/http-call": "^5.4.0",
     "@oclif/core": "^4.3.0",
+    "@sentry/node": "^10.45.0",
     "ansis": "^4",
     "debug": "^4.4.0",
     "execa": "^9.6.1",
@@ -68,8 +69,9 @@
     "lint:fix": "eslint --fix",
     "prepublishOnly": "npm run build",
     "prepare": "npm run build",
-    "test": "c8 --all --check-coverage --reporter=lcov --reporter=text-summary mocha --forbid-only \"test/**/*.test.ts\"",
+    "test": "c8 --all --check-coverage --reporter=lcov --reporter=text-summary mocha --forbid-only \"test/**/*.test.ts\" --ignore \"test/**/acceptance/**/*.test.ts\"",
     "test:file": "c8 mocha",
+    "test:ci:acceptance": "c8 mocha --forbid-only \"test/credential-manager/acceptance/index.acceptance.test.ts\"",
     "example": "sh examples/run.sh"
   },
   "type": "module",
