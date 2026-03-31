@@ -15,7 +15,6 @@ export type NetrcSnapshot = {
   restore: () => void
 }
 
-// These fixture values should never match real services/hosts
 export const HOST_NAME = 'acceptance.test.heroku.com'
 export const ALTERNATE_HOST_NAME = 'acceptance.test.alt.heroku.com'
 export const SERVICE_NAME = 'heroku-cli-acceptance-test'
@@ -47,17 +46,20 @@ export const CREDENTIAL_FIXTURES = {
  * Keeps the file itself, but removes test host entries to avoid cross-test leakage.
  */
 export async function cleanupDefaultNetrc(): Promise<void> {
+  let changed = false
   const hosts = getAllAcceptanceHosts()
   const netrc = new Netrc()
   await netrc.load()
   for (const host of hosts) {
     if (netrc.machines[host]) {
-      console.log(`removing ${host} in cleanupDefaultNetrc`)
       delete netrc.machines[host]
+      changed = true
     }
   }
 
-  await netrc.save()
+  if (changed) {
+    await netrc.save()
+  }
 }
 
 /**
@@ -70,7 +72,6 @@ export function cleanupCredentialStore(): void {
   if (!handler) return
 
   for (const account of accounts) {
-    console.log(`removing ${account} in cleanupCredentialStore`)
     handler.removeAuth(account, service)
   }
 }
