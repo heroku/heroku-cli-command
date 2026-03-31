@@ -68,9 +68,9 @@
     "lint": "tsc -p test --noEmit && eslint .",
     "prepublishOnly": "npm run build",
     "prepare": "npm run build",
-    "test": "c8 --reporter=text-summary --check-coverage mocha --forbid-only --ignore \"test/**/acceptance/**/*.test.ts\" \"test/**/*.test.ts\"",
+    "test": "c8 --reporter=text-summary --check-coverage mocha --forbid-only \"test/**/*.test.ts\" --ignore \"test/**/acceptance/**/*.test.ts\"",
     "test:file": "c8 mocha",
-    "test:local": "c8 mocha --ignore \"test/**/acceptance/**/*.test.ts\" \"test/**/*.test.ts\"",
+    "test:local": "c8 mocha \"test/**/*.test.ts\" --ignore \"test/**/acceptance/**/*.test.ts\"",
     "test:ci:acceptance": "c8 mocha --forbid-only \"test/credential-manager/acceptance/index.acceptance.test.ts\"",
     "changelog": "conventional-changelog -p conventionalcommits -i CHANGELOG.md -s -r 0",
     "example": "sh examples/run.sh"
