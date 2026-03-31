@@ -57,65 +57,77 @@ describe('LinuxHandler', function () {
   })
 
   describe('listAccounts', function () {
-    it('should call execSync with the correct arguments to list accounts', function () {
-      execSyncStub.returns('')
+    it('should call spawnSync with the correct arguments to list accounts', function () {
+      spawnSyncStub.returns({
+        error: undefined,
+        status: 0,
+        stderr: '',
+      })
       handler.listAccounts('heroku-cli')
-      expect(execSyncStub.args[0][0]).to.contain('secret-tool search --all service "heroku-cli"')
+      expect(spawnSyncStub.calledOnce).to.be.true
+      expect(spawnSyncStub.args[0][0]).to.equal('secret-tool')
+      expect(spawnSyncStub.args[0][1]).to.deep.equal(['search', '--all', 'service', 'heroku-cli'])
     })
 
     it('should return an array of accounts when multiple credentials are found', function () {
-      const mockOutput = `
-[/org/freedesktop/secrets/collection/login/1]
-label = Heroku CLI
-secret = token1
-created = 2024-01-01 12:00:00
-modified = 2024-01-01 12:00:00
-schema = org.freedesktop.Secret.Generic
-attribute.service = heroku-cli
+      const mockStderr = `
 attribute.account = user1@example.com
-
-[/org/freedesktop/secrets/collection/login/2]
-label = Heroku CLI
-secret = token2
-created = 2024-01-01 12:00:00
-modified = 2024-01-01 12:00:00
-schema = org.freedesktop.Secret.Generic
 attribute.service = heroku-cli
 attribute.account = user2@example.com
+attribute.service = heroku-cli
 `
-      execSyncStub.returns(mockOutput)
+      spawnSyncStub.returns({
+        error: undefined,
+        status: 0,
+        stderr: mockStderr,
+      })
       const accounts = handler.listAccounts('heroku-cli')
 
       expect(accounts).to.deep.equal(['user1@example.com', 'user2@example.com'])
     })
 
     it('should return a single account when only one credential is found', function () {
-      const mockOutput = `
-[/org/freedesktop/secrets/collection/login/1]
-label = Heroku CLI
-secret = my-token
-created = 2024-01-01 12:00:00
-modified = 2024-01-01 12:00:00
-schema = org.freedesktop.Secret.Generic
-attribute.service = heroku-cli
+      const mockStderr = `
 attribute.account = test@example.com
+attribute.service = heroku-cli
 `
-      execSyncStub.returns(mockOutput)
+      spawnSyncStub.returns({
+        error: undefined,
+        status: 0,
+        stderr: mockStderr,
+      })
       const accounts = handler.listAccounts('heroku-cli')
 
       expect(accounts).to.deep.equal(['test@example.com'])
     })
 
     it('should return an empty array when no credentials are found', function () {
-      execSyncStub.returns('')
+      spawnSyncStub.returns({
+        error: undefined,
+        status: 0,
+        stderr: '',
+      })
       const accounts = handler.listAccounts('heroku-cli')
 
       expect(accounts).to.deep.equal([])
     })
 
     it('should throw an error when the search command fails', function () {
-      execSyncStub.throws(new Error('Permission denied'))
+      spawnSyncStub.returns({
+        error: undefined,
+        status: 1,
+        stderr: 'Permission denied',
+      })
       expect(() => handler.listAccounts('heroku-cli')).to.throw('Failed to list accounts in Linux keyring: Permission denied')
+    })
+
+    it('should throw an error when spawnSync encounters a system error', function () {
+      spawnSyncStub.returns({
+        error: new Error('ENOENT: secret-tool command not found'),
+        status: null,
+        stderr: '',
+      })
+      expect(() => handler.listAccounts('heroku-cli')).to.throw('Failed to list accounts in Linux keyring: ENOENT: secret-tool command not found')
     })
   })
 

@@ -48,28 +48,40 @@ export class LinuxHandler {
    */
   public listAccounts(service: string): string[] {
     try {
-      const output = childProcess.execSync(
-        `secret-tool search --all service "${service}"`,
+      const spawnResult = childProcess.spawnSync(
+        'secret-tool',
+        ['search', '--all', 'service', service],
         {encoding: 'utf8'},
       )
 
-      // Expected output format:
-      // [/org/freedesktop/secrets/collection/login/###]
-      // label = Label Name
-      // secret = secret-value
-      // created = 2024-01-01 12:00:00
-      // modified = 2024-01-01 12:00:00
-      // schema = org.freedesktop.Secret.Generic
-      // attribute.service = heroku-cli
-      // attribute.account = user@example.com
-      // (blank line between entries)
+      if (spawnResult.error) {
+        throw spawnResult.error
+      }
+
+      if (spawnResult.status !== 0) {
+        const stderr = spawnResult.stderr || 'Unknown error'
+        throw new Error(stderr)
+      }
+
+      /** Expected output format:
+        stdout:
+          label = Label Name
+          secret = secret-value
+          created = 2024-01-01 12:00:00
+          modified = 2024-01-01 12:00:00
+          schema = org.freedesktop.Secret.Generic
+        stderr:
+          attribute.service = heroku-cli
+          attribute.account = user@example.com
+      */
 
       const accounts: string[] = []
-      const lines = output.split('\n')
+      const lines = (spawnResult.stderr ?? '').split('\n')
 
       for (const line of lines) {
-        if (line.startsWith('attribute.account = ')) {
-          const account = line.slice('attribute.account = '.length).trim()
+        const match = line.trim().match(/^attribute\.account\s*=\s*(.+)$/)
+        if (match) {
+          const account = match[1].trim()
           if (account) {
             accounts.push(account)
           }
