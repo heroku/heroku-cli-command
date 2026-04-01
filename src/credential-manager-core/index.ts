@@ -36,11 +36,11 @@ export async function saveAuth(account: string, token: string, hosts: string[], 
     } catch (error) {
       const {message} = error as Error
       credDebug(message)
-      if (!process.env.KEYCHAIN_ERROR_WARN_OFF) {
+      if (process.env.HEROKU_KEYCHAIN_WARNINGS !== 'off') {
         ux.warn(heredoc(`
           Unable to save Heroku token to ${service}: ${message}.
           Token will be saved to the .netrc file instead.
-          To turn off this warning in the future, set KEYCHAIN_ERROR_WARN_OFF to true.
+          To turn off this warning in the future, set HEROKU_KEYCHAIN_WARNINGS to "off".
         `))
       }
 
@@ -92,11 +92,11 @@ export async function getAuth(account: string | undefined, host: string, service
     } catch (error) {
       const {message} = error as Error
       credDebug(message)
-      if (!process.env.KEYCHAIN_ERROR_WARN_OFF) {
+      if (process.env.HEROKU_KEYCHAIN_WARNINGS !== 'off') {
         ux.warn(heredoc(`
           Unable to retrieve Heroku token from ${service}: ${message}.
           Token will be retrieved from the .netrc file instead.
-          To turn off this warning in the future, set KEYCHAIN_ERROR_WARN_OFF to true.
+          To turn off this warning in the future, set HEROKU_KEYCHAIN_WARNINGS to "off".
         `))
       }
 
@@ -151,10 +151,10 @@ export async function removeAuth(account: string | undefined, hosts: string[], s
     } catch (error) {
       const {message} = error as Error
       credDebug(message)
-      if (!process.env.KEYCHAIN_ERROR_WARN_OFF) {
+      if (process.env.HEROKU_KEYCHAIN_WARNINGS !== 'off') {
         ux.warn(heredoc(`
           Unable to remove Heroku token from ${service}: ${message}.
-          To turn off this warning in the future, set KEYCHAIN_ERROR_WARN_OFF to true.
+          To turn off this warning in the future, set HEROKU_KEYCHAIN_WARNINGS to "off".
         `))
       }
 
