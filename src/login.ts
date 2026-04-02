@@ -1,15 +1,14 @@
 import type {Config} from '@oclif/core/interfaces'
+import type {QuestionCollection} from 'inquirer'
 
 import * as Heroku from '@heroku-cli/schema'
 import {HTTP} from '@heroku/http-call'
 import {ux} from '@oclif/core/ux'
 import ansis from 'ansis'
 import debug from 'debug'
-import inquirer, {QuestionCollection} from 'inquirer'
 import {Netrc} from 'netrc-parser'
-import * as os from 'node:os'
+import os from 'node:os'
 import * as readline from 'node:readline'
-import open from 'open'
 
 import {APIClient, HerokuAPIError} from './api-client.js'
 import {vars} from './vars.js'
@@ -17,7 +16,16 @@ import {vars} from './vars.js'
 const cliDebug = debug('heroku-cli-command')
 const hostname = os.hostname()
 const thirtyDays = 60 * 60 * 24 * 30
-const netrc = new Netrc()
+
+// Defer netrc instantiation to avoid eager file operations
+let _netrc: Netrc | undefined
+function getNetrc(): Netrc {
+  if (!_netrc) {
+    _netrc = new Netrc()
+  }
+
+  return _netrc
+}
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace Login {
@@ -51,6 +59,7 @@ export class Login {
       if (process.env.HEROKU_API_KEY) ux.error('Cannot log in with HEROKU_API_KEY set')
       if (opts.expiresIn && opts.expiresIn > thirtyDays) ux.error('Cannot set an expiration longer than thirty days')
 
+      const netrc = getNetrc()
       await netrc.load()
       const previousEntry = netrc.machines['api.heroku.com']
       let input: string | undefined = opts.method
@@ -181,6 +190,7 @@ export class Login {
     }
 
     this.showManualBrowserLoginUrl(url)
+    const open = (await import('open')).default
     const cp = await open(url, {wait: false, ...(browser ? {app: {name: browser}} : {})})
     cp.on('error', err => {
       ux.warn(err)
@@ -265,6 +275,7 @@ export class Login {
   }
 
   private async interactive(login?: string, expiresIn?: number): Promise<NetrcEntry> {
+    const inquirer = (await import('inquirer')).default
     ux.stderr('heroku: Enter your login credentials\n')
     const emailQuestions: QuestionCollection = [{
       default: login,
@@ -309,6 +320,7 @@ export class Login {
   }
 
   private async saveToken(entry: NetrcEntry) {
+    const netrc = getNetrc()
     const hosts = [vars.apiHost, vars.httpGitHost]
     for (const host of hosts) {
       if (!netrc.machines[host]) netrc.machines[host] = {}
@@ -335,6 +347,8 @@ export class Login {
   }
 
   private async sso(): Promise<NetrcEntry> {
+    const inquirer = (await import('inquirer')).default
+    const open = (await import('open')).default
     let url = process.env.SSO_URL
     let org = process.env.HEROKU_ORGANIZATION
     if (!url) {

@@ -1,7 +1,6 @@
 /* eslint-disable complexity */
 import {type Config} from '@oclif/core/config'
 import {run} from '@oclif/core/run'
-import inquirer from 'inquirer'
 
 interface PromptOptions {
   argv: string[]
@@ -15,6 +14,7 @@ interface PromptOptions {
  */
 export async function promptAndRun(options: PromptOptions): Promise<void> {
   const {argv, commandId, config} = options
+  const inquirer = (await import('inquirer')).default
 
   const commandMeta = config.findCommand(commandId)
   if (!commandMeta) return

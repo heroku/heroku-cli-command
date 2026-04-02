@@ -1,11 +1,8 @@
 import {Command as Base} from '@oclif/core/command'
-import * as Errors from '@oclif/core/errors'
+import {CLIError} from '@oclif/core/errors'
 import * as Flags from '@oclif/core/flags'
-import parser from 'yargs-parser'
-import unparser from 'yargs-unparser'
 
 import {APIClient, IOptions} from './api-client.js'
-import {promptAndRun} from './prompt.js'
 
 export abstract class Command extends Base {
   /**
@@ -69,6 +66,7 @@ export abstract class Command extends Base {
     const commandId = this.id
     if (!commandId) return
 
+    const {promptAndRun} = await import('./prompt.js')
     await promptAndRun({
       argv: this.argv,
       commandId,
@@ -91,7 +89,9 @@ export abstract class Command extends Base {
       try {
         return await super.parse(options, argv)
       } catch (error) {
-        const {flags: nonExistentFlags} = error as Errors.CLIError & {flags: string[]}
+        const parser = (await import('yargs-parser')).default
+        const unparser = (await import('yargs-unparser')).default
+        const {flags: nonExistentFlags} = error as CLIError & {flags: string[]}
         const parsed = parser(this.argv)
         const nonExistentFlagsWithValues = {...parsed}
 
@@ -109,9 +109,9 @@ export abstract class Command extends Base {
           }
         }
 
-        this.argv = unparser(parsed as unparser.Arguments)
+        this.argv = unparser(parsed as any)
         const result = await super.parse(options, argv)
-        result.nonExistentFlags = unparser(nonExistentFlagsWithValues as unparser.Arguments)
+        result.nonExistentFlags = unparser(nonExistentFlagsWithValues as any)
 
         for (let index = 0; index < result.nonExistentFlags.length; index++) {
           const positionalValue = result.nonExistentFlags[index]
