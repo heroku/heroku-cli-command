@@ -19,6 +19,7 @@ function getNetrc(): Netrc {
   if (!_netrc) {
     _netrc = new Netrc()
   }
+
   return _netrc
 }
 
