@@ -40,8 +40,7 @@ export async function saveAuth(account: string, token: string, hosts: string[], 
         ux.warn(heredoc(`
           Unable to save Heroku token to ${service}: ${message}.
           Token will be saved to the .netrc file instead.
-          To turn off this warning in the future, set HEROKU_KEYCHAIN_WARNINGS to "off".
-        `))
+          To turn off this warning in the future, set HEROKU_KEYCHAIN_WARNINGS to "off".`))
       }
 
       await reportCredentialStoreError(error, {
@@ -154,6 +153,7 @@ export async function removeAuth(account: string | undefined, hosts: string[], s
       if (process.env.HEROKU_KEYCHAIN_WARNINGS !== 'off') {
         ux.warn(heredoc(`
           Unable to remove Heroku token from ${service}: ${message}.
+          Token will be removed from the .netrc file instead.
           To turn off this warning in the future, set HEROKU_KEYCHAIN_WARNINGS to "off".
         `))
       }
