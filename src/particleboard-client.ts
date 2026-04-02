@@ -1,7 +1,7 @@
 import type {Config} from '@oclif/core/interfaces'
 
 import {HTTP, HTTPRequestOptions} from '@heroku/http-call'
-import * as url from 'node:url'
+import {URL} from 'node:url'
 
 import {RequestId, requestIdHeader} from './request-id.js'
 import {vars} from './vars.js'
@@ -24,7 +24,7 @@ export class ParticleboardClient {
 
   constructor(protected config: Config) {
     this.config = config
-    const particleboardUrl = new url.URL(vars.particleboardUrl)
+    const particleboardUrl = new URL(vars.particleboardUrl)
     const self = this as any
     const envParticleboardHeaders = JSON.parse(process.env.HEROKU_PARTICLEBOARD_HEADERS || '{}')
     const particleboardOpts = {

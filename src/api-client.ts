@@ -3,18 +3,26 @@ import type {Config} from '@oclif/core/interfaces'
 import {HTTP, HTTPError, HTTPRequestOptions} from '@heroku/http-call'
 import {CLIError, warn} from '@oclif/core/errors'
 import debug from 'debug'
-import inquirer from 'inquirer'
 import {Netrc} from 'netrc-parser'
 import * as url from 'node:url'
 
 import {Login} from './login.js'
 import {Mutex} from './mutex.js'
 import {IDelinquencyConfig, IDelinquencyInfo, ParticleboardClient} from './particleboard-client.js'
+import {prompter} from './prompter.js'
 import {RequestId, requestIdHeader} from './request-id.js'
 import {vars} from './vars.js'
 import {yubikey} from './yubikey.js'
 
-const netrc = new Netrc()
+// Defer netrc instantiation to avoid eager .netrc file operations at module load time
+let _netrc: Netrc | undefined
+function getNetrc(): Netrc {
+  if (!_netrc) {
+    _netrc = new Netrc()
+  }
+
+  return _netrc
+}
 
 export const ALLOWED_HEROKU_DOMAINS = Object.freeze(['heroku.com', 'herokai.com', 'herokuspace.com', 'herokudev.com'])
 export const LOCALHOST_DOMAINS = Object.freeze(['localhost', '127.0.0.1'])
@@ -283,6 +291,7 @@ export class APIClient {
       if (process.env.HEROKU_API_TOKEN && !process.env.HEROKU_API_KEY) warn('HEROKU_API_TOKEN is set but you probably meant HEROKU_API_KEY')
       this._auth = process.env.HEROKU_API_KEY
       if (!this._auth) {
+        const netrc = getNetrc()
         netrc.loadSync()
         this._auth = netrc.machines[vars.apiHost] && netrc.machines[vars.apiHost].password
       }
@@ -333,6 +342,7 @@ export class APIClient {
       if (error instanceof CLIError) warn(error)
     }
 
+    const netrc = getNetrc()
     delete netrc.machines['api.heroku.com']
     delete netrc.machines['git.heroku.com']
     await netrc.save()
@@ -368,7 +378,7 @@ export class APIClient {
     yubikey.enable()
     return this.twoFactorMutex.synchronize(async () => {
       try {
-        const {factor} = await inquirer.prompt([{
+        const {factor} = await prompter.prompt<{factor: string}>([{
           mask: '*',
           message: 'Two-factor code',
           name: 'factor',
