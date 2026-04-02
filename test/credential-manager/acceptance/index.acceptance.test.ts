@@ -201,7 +201,7 @@ describe('credential-manager acceptance', function () {
 
       const netrcToken = await getAuth('missing-account@example.com', CREDENTIAL.hosts[0], CREDENTIAL.service)
       expect(netrcToken).to.equal(CREDENTIAL.token)
-      expect(unwrap(stderr.output)).to.contain('Warning: Unable to save Heroku token to heroku-cli: Keychain error.')
+      expect(unwrap(stderr.output)).to.contain('Warning: Unable to save Heroku token to heroku-cli-acceptance-test.')
       expect(unwrap(stderr.output)).to.contain('Token will be saved to the .netrc file instead.')
       expect(unwrap(stderr.output)).to.contain('To turn off this warning in the future, set HEROKU_KEYCHAIN_WARNINGS to "off".')
 
