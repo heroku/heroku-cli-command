@@ -1,5 +1,4 @@
 import type {Config} from '@oclif/core/interfaces'
-import type {QuestionCollection} from 'inquirer'
 
 import * as Heroku from '@heroku-cli/schema'
 import {HTTP} from '@heroku/http-call'
@@ -11,6 +10,7 @@ import os from 'node:os'
 import * as readline from 'node:readline'
 
 import {APIClient, HerokuAPIError} from './api-client.js'
+import {prompter} from './prompter.js'
 import {vars} from './vars.js'
 
 const cliDebug = debug('heroku-cli-command')
@@ -275,23 +275,20 @@ export class Login {
   }
 
   private async interactive(login?: string, expiresIn?: number): Promise<NetrcEntry> {
-    const inquirer = (await import('inquirer')).default
     ux.stderr('heroku: Enter your login credentials\n')
-    const emailQuestions: QuestionCollection = [{
+    const {email} = await prompter.prompt<{email: string}>([{
       default: login,
       message: 'Email',
       name: 'email',
       type: 'input',
-    }]
-    const {email} = await inquirer.prompt<{email: string}>(emailQuestions)
+    }])
     login = email
 
-    const passwordQuestions: QuestionCollection = [{
+    const {password} = await prompter.prompt<{password: string}>([{
       message: 'Password',
       name: 'password',
       type: 'password',
-    }]
-    const {password} = await inquirer.prompt<{password: string}>(passwordQuestions)
+    }])
 
     let auth
     try {
@@ -306,12 +303,11 @@ export class Login {
         throw error
       }
 
-      const secondFactorQuestions: QuestionCollection = [{
+      const {secondFactor} = await prompter.prompt<{secondFactor: string}>([{
         message: 'Two-factor code',
         name: 'secondFactor',
         type: 'password',
-      }]
-      const {secondFactor} = await inquirer.prompt<{secondFactor: string}>(secondFactorQuestions)
+      }])
       auth = await this.createOAuthToken(login!, password, {expiresIn, secondFactor})
     }
 
@@ -347,18 +343,16 @@ export class Login {
   }
 
   private async sso(): Promise<NetrcEntry> {
-    const inquirer = (await import('inquirer')).default
     const open = (await import('open')).default
     let url = process.env.SSO_URL
     let org = process.env.HEROKU_ORGANIZATION
     if (!url) {
-      const orgQuestions: QuestionCollection = [{
+      const {orgName} = await prompter.prompt<{orgName: string}>([{
         default: org,
         message: 'Organization name',
         name: 'orgName',
         type: 'input',
-      }]
-      const {orgName} = await inquirer.prompt<{orgName: string}>(orgQuestions)
+      }])
       org = orgName
       url = `https://sso.heroku.com/saml/${encodeURIComponent(org!)}/init?cli=true`
     }
@@ -370,12 +364,11 @@ export class Login {
 machine, please manually open the URL above in your browser.\n`))
     await open(url, {wait: false})
 
-    const passwordQuestions: QuestionCollection = [{
+    const {password} = await prompter.prompt<{password: string}>([{
       message: 'Access token',
       name: 'password',
       type: 'password',
-    }]
-    const {password} = await inquirer.prompt<{password: string}>(passwordQuestions)
+    }])
     ux.action.start('Validating token')
     this.heroku.auth = password
     const {body: account} = await HTTP.get<Heroku.Account>(`${vars.apiUrl}/account`, headers(password))

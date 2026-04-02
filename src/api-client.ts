@@ -9,6 +9,7 @@ import * as url from 'node:url'
 import {Login} from './login.js'
 import {Mutex} from './mutex.js'
 import {IDelinquencyConfig, IDelinquencyInfo, ParticleboardClient} from './particleboard-client.js'
+import {prompter} from './prompter.js'
 import {RequestId, requestIdHeader} from './request-id.js'
 import {vars} from './vars.js'
 import {yubikey} from './yubikey.js'
@@ -377,8 +378,7 @@ export class APIClient {
     yubikey.enable()
     return this.twoFactorMutex.synchronize(async () => {
       try {
-        const inquirer = await import('inquirer')
-        const {factor} = await inquirer.default.prompt([{
+        const {factor} = await prompter.prompt<{factor: string}>([{
           mask: '*',
           message: 'Two-factor code',
           name: 'factor',
