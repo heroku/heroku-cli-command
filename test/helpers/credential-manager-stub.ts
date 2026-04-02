@@ -6,7 +6,11 @@ const DEFAULT_TOKEN = 'mypass'
 export function stubCredentialManager(token = DEFAULT_TOKEN) {
   setCredentialManagerProvider({
     async getAuth() {
-      return token
+      return {
+        account: 'test@example.com',
+        service: 'heroku-cli',
+        token,
+      }
     },
     async removeAuth() {},
     async saveAuth() {},

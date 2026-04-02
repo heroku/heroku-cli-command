@@ -61,6 +61,7 @@ export class APIClient {
   http: typeof HTTP
   preauthPromises: { [k: string]: Promise<HTTP<any>> }
   private _auth?: string
+  private _authAccount?: string
   /** In-flight dedupe for concurrent getAuth() calls before resolution completes. */
   private _storedAuthPromise?: Promise<string | undefined>
   /** After a failed read from storage, skip re-querying until state is reset (login/logout/auth setter). */
@@ -299,10 +300,11 @@ export class APIClient {
     if (!this._storedAuthPromise) {
       this._storedAuthPromise = (async (): Promise<string | undefined> => {
         try {
-          const token = await getStoredAuth(undefined, vars.apiHost)
-          this._auth = token
+          const storedAuth = await getStoredAuth(undefined, vars.apiHost)
+          this._auth = storedAuth.token
+          this._authAccount = storedAuth.account
           this._storedAuthResolvedAbsent = false
-          return token
+          return storedAuth.token
         } catch {
           this._storedAuthResolvedAbsent = true
           return undefined
@@ -322,6 +324,7 @@ export class APIClient {
   set auth(token: string | undefined) {
     delete this.authPromise
     this._auth = token
+    this._authAccount = undefined
     this.resetStoredAuthResolution()
   }
 
@@ -357,6 +360,7 @@ export class APIClient {
 
   async logout() {
     const token = await this.getAuth()
+    const account = this._authAccount
     try {
       await this._login.logout(token)
     } catch (error) {
@@ -364,8 +368,9 @@ export class APIClient {
     }
 
     this._auth = undefined
+    this._authAccount = undefined
     this.resetStoredAuthResolution()
-    await removeAuth(undefined, [vars.apiHost, vars.httpGitHost])
+    await removeAuth(account, [vars.apiHost, vars.httpGitHost])
   }
 
   patch<T>(url: string, options: APIClient.Options = {}) {
