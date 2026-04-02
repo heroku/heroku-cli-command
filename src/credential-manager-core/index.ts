@@ -7,7 +7,7 @@ import {WindowsHandler} from './credential-handlers/windows-handler.js'
 import {selectAccount} from './lib/account-selector.js'
 import {reportCredentialStoreError} from './lib/cli-command-telemetry.js'
 import {CredentialStore, getStorageConfig} from './lib/credential-storage-selector.js'
-import {NetrcAuthEntry} from './lib/types.js'
+import {KeychainAuthEntry, NetrcAuthEntry} from './lib/types.js'
 
 const credDebug = debug('heroku-credential-manager')
 
@@ -58,7 +58,7 @@ export async function saveAuth(account: string, token: string, hosts: string[], 
  * @returns Promise that resolves with the authentication token.
  * @throws Error if no credentials are found in either location.
  */
-export async function getAuth(account: string | undefined, host: string, service = SERVICE_NAME): Promise<string> {
+export async function getAuth(account: string | undefined, host: string, service = SERVICE_NAME): Promise<KeychainAuthEntry> {
   const config = getStorageConfig()
   const netrcHandler = new NetrcHandler()
 
@@ -67,14 +67,16 @@ export async function getAuth(account: string | undefined, host: string, service
       const handler = getCredentialHandler(config.credentialStore)
 
       if (account) {
-        return handler.getAuth(account, service)
+        const token = handler.getAuth(account, service)
+        return {account, service, token}
       }
 
       const accounts = handler.listAccounts(service)
       const selectedAccount = await selectAccount(accounts)
 
       if (selectedAccount) {
-        return handler.getAuth(selectedAccount, service)
+        const token = handler.getAuth(selectedAccount, service)
+        return {account: selectedAccount, service, token}
       }
 
       config.useNetrc = true
@@ -95,7 +97,11 @@ export async function getAuth(account: string | undefined, host: string, service
       throw new Error('No credentials found. Please log in.')
     }
 
-    return auth.password
+    return {
+      account: account ?? auth.login ?? '',
+      service,
+      token: auth.password,
+    }
   }
 
   throw new Error('No credentials found. Please log in.')
