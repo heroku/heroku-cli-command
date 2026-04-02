@@ -1,5 +1,6 @@
 import {expect, use} from 'chai'
 import chaiAsPromised from 'chai-as-promised'
+import {stderr} from 'stdout-stderr'
 
 import {getAuth, removeAuth, saveAuth} from '../../../src/credential-manager-core/index.js'
 
@@ -11,6 +12,7 @@ import {
   snapshotDefaultNetrc,
   skipUnlessAcceptance,
 } from '../helpers/acceptance-utils.js'
+import { unwrap } from '../../helpers/unwrap.js'
 
 use(chaiAsPromised)
 
@@ -190,6 +192,20 @@ describe('credential-manager acceptance', function () {
 
       await expect(getAuth(CREDENTIAL.account, CREDENTIAL.hosts[0], CREDENTIAL.service))
       .to.be.rejectedWith(/No auth found|No credentials found/)
+    })
+
+    it('saves to netrc when credential store fails', async function () {
+      await saveAuth(CREDENTIAL.account, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
+
+      stderr.start()
+
+      const netrcToken = await getAuth('missing-account@example.com', CREDENTIAL.hosts[0], CREDENTIAL.service)
+      expect(netrcToken).to.equal(CREDENTIAL.token)
+      expect(unwrap(stderr.output)).to.contain('Warning: Unable to save Heroku token to heroku-cli: Keychain error.')
+      expect(unwrap(stderr.output)).to.contain('Token will be saved to the .netrc file instead.')
+      expect(unwrap(stderr.output)).to.contain('To turn off this warning in the future, set HEROKU_KEYCHAIN_WARNINGS to "off".')
+
+      stderr.stop()
     })
 
     it('retrieves via netrc when credential store fails', async function () {
