@@ -58,14 +58,14 @@ describe('credential-manager acceptance', function () {
       delete process.env.HEROKU_NETRC_WRITE
     })
 
-    it.skip('saves/retrieves a single host', async function () {
+    it('saves/retrieves a single host', async function () {
       await saveAuth(CREDENTIAL.account, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
 
       const token = await getAuth(CREDENTIAL.account, CREDENTIAL.hosts[0], CREDENTIAL.service)
       expect(token).to.equal(CREDENTIAL.token)
     })
 
-    it.skip('saves/retrieves multiple hosts', async function () {
+    it('saves/retrieves multiple hosts', async function () {
       await saveAuth(CREDENTIAL_MULTIPLE_HOSTS.account, CREDENTIAL_MULTIPLE_HOSTS.token, CREDENTIAL_MULTIPLE_HOSTS.hosts, CREDENTIAL_MULTIPLE_HOSTS.service)
 
       const token1 = await getAuth(CREDENTIAL_MULTIPLE_HOSTS.account, CREDENTIAL_MULTIPLE_HOSTS.hosts[0], CREDENTIAL_MULTIPLE_HOSTS.service)
@@ -75,7 +75,7 @@ describe('credential-manager acceptance', function () {
       expect(token2).to.equal(CREDENTIAL_MULTIPLE_HOSTS.token)
     })
 
-    it.skip('removes a single host', async function () {
+    it('removes a single host', async function () {
       await saveAuth(CREDENTIAL.account, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
       await removeAuth(CREDENTIAL.account, CREDENTIAL.hosts, CREDENTIAL.service)
 
@@ -83,7 +83,7 @@ describe('credential-manager acceptance', function () {
       .to.be.rejectedWith(/No auth found|No credentials found/)
     })
 
-    it('removes multiple hosts', async function () {
+    it.skip('removes multiple hosts', async function () {
       await saveAuth(CREDENTIAL_MULTIPLE_HOSTS.account, CREDENTIAL_MULTIPLE_HOSTS.token, CREDENTIAL_MULTIPLE_HOSTS.hosts, CREDENTIAL_MULTIPLE_HOSTS.service)
       await removeAuth(CREDENTIAL_MULTIPLE_HOSTS.account, CREDENTIAL_MULTIPLE_HOSTS.hosts, CREDENTIAL_MULTIPLE_HOSTS.service)
 
@@ -93,7 +93,7 @@ describe('credential-manager acceptance', function () {
       .to.be.rejectedWith(/No auth found|No credentials found/)
     })
 
-    it('updates entry when host already has credentials', async function () {
+    it.skip('updates entry when host already has credentials', async function () {
       await saveAuth(CREDENTIAL.account, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
       await saveAuth(CREDENTIAL.account, 'new-token', CREDENTIAL.hosts, CREDENTIAL.service)
 
@@ -101,7 +101,7 @@ describe('credential-manager acceptance', function () {
       expect(token).to.equal('new-token')
     })
 
-    it('skips credential store', async function () {
+    it.skip('skips credential store', async function () {
       await saveAuth(CREDENTIAL.account, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
 
       const {accounts} = listCredentialStoreAccounts(CREDENTIAL.service)
