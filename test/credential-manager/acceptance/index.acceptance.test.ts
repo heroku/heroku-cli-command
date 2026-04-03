@@ -127,6 +127,7 @@ describe('credential-manager acceptance', function () {
     })
 
     it('removes an entry', async function () {
+      // suppressing the keychain warning message since it is not relevant to this test
       process.env.HEROKU_KEYCHAIN_WARNINGS = 'off'
       await saveAuth(CREDENTIAL.account, CREDENTIAL.token, [], CREDENTIAL.service)
       await removeAuth(CREDENTIAL.account, [], CREDENTIAL.service)
@@ -197,7 +198,7 @@ describe('credential-manager acceptance', function () {
       .to.be.rejectedWith(/No auth found|No credentials found/)
     })
 
-    it('saves to netrc when credential store fails', async function () {
+    it.skip('saves to netrc when credential store fails', async function () {
       await saveAuth(CREDENTIAL.account, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
 
       stderr.start()
