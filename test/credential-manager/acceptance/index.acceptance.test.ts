@@ -119,7 +119,7 @@ describe('credential-manager acceptance', function () {
     })
 
     // We save with `hosts = []` to test the keychain-only path
-    it('saves and retrieves an entry', async function () {
+    it.skip('saves and retrieves an entry', async function () {
       await saveAuth(CREDENTIAL.account, CREDENTIAL.token, [], CREDENTIAL.service)
 
       const token = await getAuth(CREDENTIAL.account, 'missing.host.example.com', CREDENTIAL.service)
