@@ -93,7 +93,7 @@ describe('credential-manager acceptance', function () {
       .to.be.rejectedWith(/No auth found|No credentials found/)
     })
 
-    it.skip('updates entry when host already has credentials', async function () {
+    it('updates entry when host already has credentials', async function () {
       await saveAuth(CREDENTIAL.account, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
       await saveAuth(CREDENTIAL.account, 'new-token', CREDENTIAL.hosts, CREDENTIAL.service)
 
@@ -101,7 +101,7 @@ describe('credential-manager acceptance', function () {
       expect(token).to.equal('new-token')
     })
 
-    it.skip('skips credential store', async function () {
+    it('skips credential store', async function () {
       await saveAuth(CREDENTIAL.account, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
 
       const {accounts} = listCredentialStoreAccounts(CREDENTIAL.service)
