@@ -1,6 +1,7 @@
 import * as Flags from '@oclif/core/flags'
 
 export {app, remote} from './app.js'
+export {noWrap} from './no-wrap.js'
 export {org} from './org.js'
 export {pipeline} from './pipeline.js'
 export {team} from './team.js'
