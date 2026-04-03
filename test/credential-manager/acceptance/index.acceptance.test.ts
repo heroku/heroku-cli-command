@@ -83,7 +83,7 @@ describe('credential-manager acceptance', function () {
       .to.be.rejectedWith(/No auth found|No credentials found/)
     })
 
-    it.skip('removes multiple hosts', async function () {
+    it('removes multiple hosts', async function () {
       await saveAuth(CREDENTIAL_MULTIPLE_HOSTS.account, CREDENTIAL_MULTIPLE_HOSTS.token, CREDENTIAL_MULTIPLE_HOSTS.hosts, CREDENTIAL_MULTIPLE_HOSTS.service)
       await removeAuth(CREDENTIAL_MULTIPLE_HOSTS.account, CREDENTIAL_MULTIPLE_HOSTS.hosts, CREDENTIAL_MULTIPLE_HOSTS.service)
 
@@ -127,12 +127,15 @@ describe('credential-manager acceptance', function () {
     })
 
     it('removes an entry', async function () {
+      process.env.HEROKU_KEYCHAIN_WARNINGS = 'off'
       await saveAuth(CREDENTIAL.account, CREDENTIAL.token, [], CREDENTIAL.service)
       await removeAuth(CREDENTIAL.account, [], CREDENTIAL.service)
 
       await expect(
 				getAuth(CREDENTIAL.account, 'missing.host.example.com', CREDENTIAL.service),
 			).to.be.rejectedWith(/No auth found|No credentials found/)
+
+      delete process.env.HEROKU_KEYCHAIN_WARNINGS
     })
 
     it('updates entry when account already has credentials', async function () {

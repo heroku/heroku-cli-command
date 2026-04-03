@@ -94,7 +94,7 @@ export async function getAuth(account: string | undefined, host: string, service
       if (process.env.HEROKU_KEYCHAIN_WARNINGS !== 'off') {
         ux.warn(heredoc(`
           Unable to retrieve Heroku token from ${service}.
-          Token will be retrieved from the .netrc file instead.
+          We will attempt to retrieve the token from the .netrc file instead.
           To turn off this warning in the future, set HEROKU_KEYCHAIN_WARNINGS to "off".
         `))
       }
