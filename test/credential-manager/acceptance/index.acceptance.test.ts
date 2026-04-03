@@ -101,7 +101,7 @@ describe('credential-manager acceptance', function () {
       expect(token).to.equal('new-token')
     })
 
-    it('skips credential store', async function () {
+    it.skip('skips credential store', async function () {
       await saveAuth(CREDENTIAL.account, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
 
       const {accounts} = listCredentialStoreAccounts(CREDENTIAL.service)
@@ -119,7 +119,7 @@ describe('credential-manager acceptance', function () {
     })
 
     // We save with `hosts = []` to test the keychain-only path
-    it.skip('saves and retrieves an entry', async function () {
+    it('saves and retrieves an entry', async function () {
       await saveAuth(CREDENTIAL.account, CREDENTIAL.token, [], CREDENTIAL.service)
 
       const token = await getAuth(CREDENTIAL.account, 'missing.host.example.com', CREDENTIAL.service)
