@@ -9,8 +9,9 @@ import {
   cleanupCredentialStore,
   cleanupDefaultNetrc,
   listCredentialStoreAccounts,
-  snapshotDefaultNetrc,
+  setupFakeCredentialStore,
   skipUnlessAcceptance,
+  snapshotDefaultNetrc,
 } from '../helpers/acceptance-utils.js'
 import { unwrap } from '../../helpers/unwrap.js'
 
@@ -198,18 +199,29 @@ describe('credential-manager acceptance', function () {
       .to.be.rejectedWith(/No auth found|No credentials found/)
     })
 
-    it.skip('saves to netrc when credential store fails', async function () {
-      await saveAuth(CREDENTIAL.account, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
+    it('saves to netrc when credential store fails', async function () {
+      // Set up fake credential store command for the current platform
+      const fakeSetup = setupFakeCredentialStore()
 
-      stderr.start()
+      if (!fakeSetup) {
+        // Skip if credential store not available on this platform
+        this.skip()
+      }
 
-      const netrcToken = await getAuth('missing-account@example.com', CREDENTIAL.hosts[0], CREDENTIAL.service)
-      expect(netrcToken).to.equal(CREDENTIAL.token)
-      expect(unwrap(stderr.output)).to.contain('Warning: Unable to save Heroku token to heroku-cli-acceptance-test.')
-      expect(unwrap(stderr.output)).to.contain('Token will be saved to the .netrc file instead.')
-      expect(unwrap(stderr.output)).to.contain('To turn off this warning in the future, set HEROKU_KEYCHAIN_WARNINGS to "off".')
+      try {
+        stderr.start()
+        await saveAuth(CREDENTIAL.account, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
+        stderr.stop()
 
-      stderr.stop()
+        expect(unwrap(stderr.output)).to.contain('Unable to save Heroku token to heroku-cli-acceptance-test.')
+        expect(unwrap(stderr.output)).to.contain('Token will be saved to the .netrc file instead.')
+        expect(unwrap(stderr.output)).to.contain('To turn off this warning in the future, set HEROKU_KEYCHAIN_WARNINGS to "off".')
+
+        const netrcToken = await getAuth('missing-account@example.com', CREDENTIAL.hosts[0], CREDENTIAL.service)
+        expect(netrcToken).to.equal(CREDENTIAL.token)
+      } finally {
+        fakeSetup.cleanup()
+      }
     })
 
     it('retrieves via netrc when credential store fails', async function () {
