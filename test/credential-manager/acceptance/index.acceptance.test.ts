@@ -213,9 +213,9 @@ describe('credential-manager acceptance', function () {
         await saveAuth(CREDENTIAL.account, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
         stderr.stop()
 
-        expect(unwrap(stderr.output)).to.contain('Unable to save Heroku token to heroku-cli-acceptance-test.')
-        expect(unwrap(stderr.output)).to.contain('Token will be saved to the .netrc file instead.')
-        expect(unwrap(stderr.output)).to.contain('To turn off this warning in the future, set HEROKU_KEYCHAIN_WARNINGS to "off".')
+        expect(unwrap(stderr.output)).to.contain('We can’t save the Heroku token to heroku-cli-acceptance-test.')
+        expect(unwrap(stderr.output)).to.contain('We\'ll save the token to the .netrc file instead.')
+        expect(unwrap(stderr.output)).to.contain('To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".')
 
         const netrcToken = await getAuth('missing-account@example.com', CREDENTIAL.hosts[0], CREDENTIAL.service)
         expect(netrcToken).to.equal(CREDENTIAL.token)

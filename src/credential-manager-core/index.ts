@@ -38,9 +38,9 @@ export async function saveAuth(account: string, token: string, hosts: string[], 
       credDebug(message)
       if (process.env.HEROKU_KEYCHAIN_WARNINGS !== 'off') {
         ux.warn(heredoc(`
-          Unable to save Heroku token to ${service}.
-          Token will be saved to the .netrc file instead.
-          To turn off this warning in the future, set HEROKU_KEYCHAIN_WARNINGS to "off".`))
+          We can’t save the Heroku token to ${service}.
+          We'll save the token to the .netrc file instead.
+          To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".`))
       }
 
       await reportCredentialStoreError(error, {
@@ -93,10 +93,9 @@ export async function getAuth(account: string | undefined, host: string, service
       credDebug(message)
       if (process.env.HEROKU_KEYCHAIN_WARNINGS !== 'off') {
         ux.warn(heredoc(`
-          Unable to retrieve Heroku token from ${service}.
-          We will attempt to retrieve the token from the .netrc file instead.
-          To turn off this warning in the future, set HEROKU_KEYCHAIN_WARNINGS to "off".
-        `))
+          We can’t retrieve the Heroku token from ${service}.
+          We'll try to retrieve the token from the .netrc file instead.
+          To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".`))
       }
 
       await reportCredentialStoreError(error, {
@@ -152,10 +151,9 @@ export async function removeAuth(account: string | undefined, hosts: string[], s
       credDebug(message)
       if (process.env.HEROKU_KEYCHAIN_WARNINGS !== 'off') {
         ux.warn(heredoc(`
-          Unable to remove Heroku token from ${service}.
-          Token will be removed from the .netrc file instead.
-          To turn off this warning in the future, set HEROKU_KEYCHAIN_WARNINGS to "off".
-        `))
+          We can’t remove the Heroku token from ${service}.
+          We'll remove the token from the .netrc file instead.
+          To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".`))
       }
 
       await reportCredentialStoreError(error, {
