@@ -1,4 +1,6 @@
+import {ux} from '@oclif/core'
 import debug from 'debug'
+import tsheredoc from 'tsheredoc'
 
 import {LinuxHandler} from './credential-handlers/linux-handler.js'
 import {MacOSHandler} from './credential-handlers/macos-handler.js'
@@ -10,6 +12,7 @@ import {CredentialStore, getStorageConfig} from './lib/credential-storage-select
 import {NetrcAuthEntry} from './lib/types.js'
 
 const credDebug = debug('heroku-credential-manager')
+const heredoc = tsheredoc.default
 
 const SERVICE_NAME = 'heroku-cli'
 
@@ -33,6 +36,13 @@ export async function saveAuth(account: string, token: string, hosts: string[], 
     } catch (error) {
       const {message} = error as Error
       credDebug(message)
+      if (process.env.HEROKU_KEYCHAIN_WARNINGS !== 'off') {
+        ux.warn(heredoc(`
+          We can’t save the Heroku token to ${service}.
+          We'll save the token to the .netrc file instead.
+          To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".`))
+      }
+
       await reportCredentialStoreError(error, {
         credentialStore: config.credentialStore,
         operation: 'saveAuth',
@@ -81,6 +91,13 @@ export async function getAuth(account: string | undefined, host: string, service
     } catch (error) {
       const {message} = error as Error
       credDebug(message)
+      if (process.env.HEROKU_KEYCHAIN_WARNINGS !== 'off') {
+        ux.warn(heredoc(`
+          We can’t retrieve the Heroku token from ${service}.
+          We'll try to retrieve the token from the .netrc file instead.
+          To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".`))
+      }
+
       await reportCredentialStoreError(error, {
         credentialStore: config.credentialStore,
         operation: 'getAuth',
@@ -132,6 +149,13 @@ export async function removeAuth(account: string | undefined, hosts: string[], s
     } catch (error) {
       const {message} = error as Error
       credDebug(message)
+      if (process.env.HEROKU_KEYCHAIN_WARNINGS !== 'off') {
+        ux.warn(heredoc(`
+          We can’t remove the Heroku token from ${service}.
+          We'll remove the token from the .netrc file instead.
+          To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".`))
+      }
+
       await reportCredentialStoreError(error, {
         credentialStore: config.credentialStore,
         operation: 'removeAuth',

@@ -1,5 +1,6 @@
 import {expect, use} from 'chai'
 import chaiAsPromised from 'chai-as-promised'
+import {stderr} from 'stdout-stderr'
 
 import {getAuth, removeAuth, saveAuth} from '../../../src/credential-manager-core/index.js'
 
@@ -8,9 +9,11 @@ import {
   cleanupCredentialStore,
   cleanupDefaultNetrc,
   listCredentialStoreAccounts,
-  snapshotDefaultNetrc,
+  setupFakeCredentialStore,
   skipUnlessAcceptance,
+  snapshotDefaultNetrc,
 } from '../helpers/acceptance-utils.js'
+import { unwrap } from '../../helpers/unwrap.js'
 
 use(chaiAsPromised)
 
@@ -125,12 +128,16 @@ describe('credential-manager acceptance', function () {
     })
 
     it('removes an entry', async function () {
+      // suppressing the keychain warning message since it is not relevant to this test
+      process.env.HEROKU_KEYCHAIN_WARNINGS = 'off'
       await saveAuth(CREDENTIAL.account, CREDENTIAL.token, [], CREDENTIAL.service)
       await removeAuth(CREDENTIAL.account, [], CREDENTIAL.service)
 
       await expect(
 				getAuth(CREDENTIAL.account, 'missing.host.example.com', CREDENTIAL.service),
 			).to.be.rejectedWith(/No auth found|No credentials found/)
+
+      delete process.env.HEROKU_KEYCHAIN_WARNINGS
     })
 
     it('updates entry when account already has credentials', async function () {
@@ -190,6 +197,31 @@ describe('credential-manager acceptance', function () {
 
       await expect(getAuth(CREDENTIAL.account, CREDENTIAL.hosts[0], CREDENTIAL.service))
       .to.be.rejectedWith(/No auth found|No credentials found/)
+    })
+
+    it('saves to netrc when credential store fails', async function () {
+      // Set up fake credential store command for the current platform
+      const fakeSetup = setupFakeCredentialStore()
+
+      if (!fakeSetup) {
+        // Skip if credential store not available on this platform
+        this.skip()
+      }
+
+      try {
+        stderr.start()
+        await saveAuth(CREDENTIAL.account, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
+        stderr.stop()
+
+        expect(unwrap(stderr.output)).to.contain('We can’t save the Heroku token to heroku-cli-acceptance-test.')
+        expect(unwrap(stderr.output)).to.contain('We\'ll save the token to the .netrc file instead.')
+        expect(unwrap(stderr.output)).to.contain('To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".')
+
+        const netrcToken = await getAuth('missing-account@example.com', CREDENTIAL.hosts[0], CREDENTIAL.service)
+        expect(netrcToken).to.equal(CREDENTIAL.token)
+      } finally {
+        fakeSetup.cleanup()
+      }
     })
 
     it('retrieves via netrc when credential store fails', async function () {

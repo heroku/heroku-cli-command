@@ -1,7 +1,10 @@
+import {Context} from 'mocha'
+import {execSync} from 'node:child_process'
 import fs from 'node:fs'
+import path from 'node:path'
+
 import {getCredentialHandler, getStorageConfig} from '../../../src/credential-manager-core/index.js'
 import {Netrc} from '../../../src/credential-manager-core/lib/netrc-parser.js'
-import {Context} from 'mocha'
 
 export type AcceptanceFixture = {
   account: string,
@@ -21,6 +24,12 @@ export const SERVICE_NAME = 'heroku-cli-acceptance-test'
 export const ALTERNATE_SERVICE_NAME = 'heroku-cli-acceptance-test-alternate'
 
 export const CREDENTIAL_FIXTURES = {
+  'account-alternate-service': {
+    account: 'test-alternate-service@example.com',
+    hosts: [HOST_NAME],
+    service: ALTERNATE_SERVICE_NAME,
+    token: 'test-token-alternate-service-12345',
+  },
   'account-default': {
     account: 'test@example.com',
     hosts: [HOST_NAME],
@@ -32,12 +41,6 @@ export const CREDENTIAL_FIXTURES = {
     hosts: [HOST_NAME, ALTERNATE_HOST_NAME],
     service: SERVICE_NAME,
     token: 'test-token-multiple-hosts-12345',
-  },
-  'account-alternate-service': {
-    account: 'test-alternate-service@example.com',
-    hosts: [HOST_NAME],
-    service: ALTERNATE_SERVICE_NAME,
-    token: 'test-token-alternate-service-12345',
   },
 } as const satisfies Record<string, AcceptanceFixture>
 
@@ -68,13 +71,13 @@ export async function cleanupDefaultNetrc(): Promise<void> {
 export function cleanupCredentialStore(): void {
   const services = getAllAcceptanceServices()
   for (const service of services) {
-  const {handler, accounts} = listCredentialStoreAccounts(service)
-  if (!handler) return
+    const {accounts, handler} = listCredentialStoreAccounts(service)
+    if (!handler) return
 
-  for (const account of accounts) {
-    handler.removeAuth(account, service)
+    for (const account of accounts) {
+      handler.removeAuth(account, service)
+    }
   }
-}
 }
 
 /**
@@ -102,7 +105,7 @@ export function listCredentialStoreAccounts(service: string) {
   const handler = getCredentialHandler(credentialStore)
   const accounts = handler.listAccounts(service)
 
-  return {handler, accounts}
+  return {accounts, handler}
 }
 
 /**
@@ -144,5 +147,168 @@ export function snapshotDefaultNetrc(): NetrcSnapshot {
 
       restored = true
     },
+  }
+}
+
+export type FakeCredentialStoreSetup = {
+  cleanup: () => void
+  originalPath: string
+  tmpDir: string
+}
+
+/**
+ * Creates a fake credential store command that always fails.
+ * Used for testing credential store fallback behavior.
+ *
+ * The fake command is placed in a temporary directory that is prepended to PATH,
+ * ensuring it's found before the real command.
+ *
+ * @param commandName - The command to fake (e.g., 'secret-tool', 'security', 'powershell')
+ * @param scriptContent - The script content for the fake command
+ * @returns An object with the original PATH and a cleanup function to restore state
+ */
+function setupFakeCommand(commandName: string, scriptContent: string): FakeCredentialStoreSetup {
+  // Create a temporary directory for our fake command
+  const tmpPrefix = process.platform === 'win32' ? process.env.TEMP || String.raw`C:\temp` : '/tmp'
+  const tmpDir = fs.mkdtempSync(path.join(tmpPrefix, 'keyring-test-'))
+  const fakeCommand = path.join(tmpDir, commandName)
+
+  // Create a fake command that always fails
+  fs.writeFileSync(fakeCommand, scriptContent, {mode: 0o755})
+
+  // Prepend our temp directory to PATH so our fake command is found first
+  const originalPath = process.env.PATH || ''
+  const pathSeparator = process.platform === 'win32' ? ';' : ':'
+  process.env.PATH = `${tmpDir}${pathSeparator}${originalPath}`
+
+  return {
+    cleanup() {
+      // Restore PATH
+      process.env.PATH = originalPath
+
+      // Remove temporary directory
+      try {
+        fs.rmSync(tmpDir, {force: true, recursive: true})
+      } catch {
+        // Best effort cleanup
+      }
+    },
+    originalPath,
+    tmpDir,
+  }
+}
+
+/**
+ * Creates a fake secret-tool executable that always fails.
+ * Used for testing credential store fallback behavior on Linux.
+ *
+ * The fake secret-tool is placed in a temporary directory that is prepended to PATH,
+ * ensuring it's found before the real secret-tool.
+ *
+ * @returns An object with the original PATH and a cleanup function to restore state
+ */
+export function setupFakeSecretTool(): FakeCredentialStoreSetup {
+  return setupFakeCommand('secret-tool', '#!/bin/bash\nexit 1\n')
+}
+
+/**
+ * Creates a fake security command that always fails.
+ * Used for testing credential store fallback behavior on macOS.
+ *
+ * The fake security command is placed in a temporary directory that is prepended to PATH,
+ * ensuring it's found before the real security command.
+ *
+ * @returns An object with the original PATH and a cleanup function to restore state
+ */
+export function setupFakeSecurity(): FakeCredentialStoreSetup {
+  return setupFakeCommand('security', '#!/bin/bash\nexit 1\n')
+}
+
+/**
+ * Creates a fake powershell command that always fails.
+ * Used for testing credential store fallback behavior on Windows.
+ *
+ * The fake powershell command is placed in a temporary directory that is prepended to PATH,
+ * ensuring it's found before the real powershell command.
+ *
+ * @returns An object with the original PATH and a cleanup function to restore state
+ */
+export function setupFakePowerShell(): FakeCredentialStoreSetup {
+  const scriptContent = process.platform === 'win32'
+    ? '@echo off\r\nexit /b 1\r\n'
+    : '#!/bin/bash\nexit 1\n'
+
+  const commandName = process.platform === 'win32' ? 'powershell.exe' : 'powershell'
+  return setupFakeCommand(commandName, scriptContent)
+}
+
+/**
+ * Sets up a fake credential store command appropriate for the current platform.
+ * - Linux: fake secret-tool
+ * - macOS: fake security
+ * - Windows: fake powershell
+ *
+ * @returns An object with the original PATH and a cleanup function to restore state, or undefined if platform is not supported
+ */
+export function setupFakeCredentialStore(): FakeCredentialStoreSetup | undefined {
+  switch (process.platform) {
+  case 'darwin': {
+    if (!isSecurityAvailable()) return undefined
+    return setupFakeSecurity()
+  }
+
+  case 'linux': {
+    if (!isSecretToolAvailable()) return undefined
+    return setupFakeSecretTool()
+  }
+
+  case 'win32': {
+    if (!isPowerShellAvailable()) return undefined
+    return setupFakePowerShell()
+  }
+
+  default: {
+    return undefined
+  }
+  }
+}
+
+/**
+ * Checks if secret-tool is available on the system.
+ * @returns true if secret-tool is available, false otherwise
+ */
+export function isSecretToolAvailable(): boolean {
+  try {
+    execSync('which secret-tool', {encoding: 'utf8', stdio: 'pipe'})
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Checks if security command is available on the system (macOS).
+ * @returns true if security is available, false otherwise
+ */
+export function isSecurityAvailable(): boolean {
+  try {
+    execSync('which security', {encoding: 'utf8', stdio: 'pipe'})
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Checks if powershell is available on the system (Windows).
+ * @returns true if powershell is available, false otherwise
+ */
+export function isPowerShellAvailable(): boolean {
+  try {
+    const command = process.platform === 'win32' ? 'where powershell' : 'which powershell'
+    execSync(command, {encoding: 'utf8', stdio: 'pipe'})
+    return true
+  } catch {
+    return false
   }
 }
