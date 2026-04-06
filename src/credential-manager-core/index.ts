@@ -90,7 +90,6 @@ export async function getAuth(account: string | undefined, host: string, service
       config.useNetrc = true
     } catch (error) {
       const {message} = error as Error
-      console.log('error message', message)
       credDebug(message)
       if (process.env.HEROKU_KEYCHAIN_WARNINGS !== 'off') {
         ux.warn(heredoc(`

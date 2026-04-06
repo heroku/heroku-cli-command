@@ -7,15 +7,19 @@ import {MacOSHandler, Netrc} from '../../../src/credential-manager-core/index.js
 import {
   ALTERNATE_HOST_NAME,
   ALTERNATE_SERVICE_NAME,
-  HOST_NAME,
-  SERVICE_NAME,
   cleanupCredentialStore,
   cleanupDefaultNetrc,
   getAllAcceptanceHosts,
   getAllAcceptanceServices,
+  HOST_NAME,
+  isPowerShellAvailable,
+  isSecretToolAvailable,
+  isSecurityAvailable,
   listCredentialStoreAccounts,
-  snapshotDefaultNetrc,
+  SERVICE_NAME,
+  setupFakeCredentialStore,
   skipUnlessAcceptance,
+  snapshotDefaultNetrc,
 } from './acceptance-utils.js'
 
 describe('acceptance utils', function () {
@@ -231,6 +235,48 @@ describe('acceptance utils', function () {
       expect(readFileSyncStub.notCalled).to.equal(true)
       expect(writeFileSyncStub.notCalled).to.equal(true)
       expect(rmSyncStub.calledOnceWithExactly(netrcPath, {force: true})).to.equal(true)
+    })
+  })
+
+  // Integration-style tests that don't require stubbing ES modules
+  describe('isSecretToolAvailable', function () {
+    it('returns a boolean', function () {
+      const result = isSecretToolAvailable()
+      expect(typeof result).to.equal('boolean')
+    })
+  })
+
+  describe('isSecurityAvailable', function () {
+    it('returns a boolean', function () {
+      const result = isSecurityAvailable()
+      expect(typeof result).to.equal('boolean')
+    })
+  })
+
+  describe('isPowerShellAvailable', function () {
+    it('returns a boolean', function () {
+      const result = isPowerShellAvailable()
+      expect(typeof result).to.equal('boolean')
+    })
+  })
+
+  describe('setupFakeCredentialStore', function () {
+    it('returns undefined or a setup object with cleanup', function () {
+      const setup = setupFakeCredentialStore()
+
+      if (setup) {
+        expect(setup).to.have.property('cleanup')
+        expect(setup).to.have.property('originalPath')
+        expect(setup).to.have.property('tmpDir')
+        expect(typeof setup.cleanup).to.equal('function')
+        expect(typeof setup.originalPath).to.equal('string')
+        expect(typeof setup.tmpDir).to.equal('string')
+
+        // Cleanup after test
+        setup.cleanup()
+      } else {
+        expect(setup).to.equal(undefined)
+      }
     })
   })
 })
