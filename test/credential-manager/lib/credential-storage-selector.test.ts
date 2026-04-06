@@ -2,7 +2,7 @@ import {expect} from 'chai'
 import childProcess from 'node:child_process'
 import sinon from 'sinon'
 
-import {CredentialStore, getStorageConfig} from '../../../src/credential-manager-core/lib/credential-storage-selector.js'
+import {CredentialStore, getStorageConfig, getStorageConfigForRemoval} from '../../../src/credential-manager-core/lib/credential-storage-selector.js'
 
 describe('credential-storage-selector', function () {
   describe('getStorageConfig', function () {
@@ -78,6 +78,37 @@ describe('credential-storage-selector', function () {
 
       expect(result.credentialStore).to.be.null
       expect(result.useNetrc).to.be.true
+    })
+  })
+
+  describe('getStorageConfigForRemoval', function () {
+    let platformStub: sinon.SinonStub
+
+    beforeEach(function () {
+      platformStub = sinon.stub(process, 'platform')
+      const env = {...process.env}
+      sinon.stub(process, 'env').value(env)
+      delete env.HEROKU_NETRC_WRITE
+    })
+
+    afterEach(function () {
+      sinon.restore()
+    })
+
+    it('ignores HEROKU_NETRC_WRITE and returns native store on darwin', function () {
+      platformStub.value('darwin')
+      process.env.HEROKU_NETRC_WRITE = 'TRUE'
+
+      const result = getStorageConfigForRemoval()
+
+      expect(result.credentialStore).to.equal(CredentialStore.MacOSKeychain)
+      expect(result.useNetrc).to.be.true
+    })
+
+    it('matches platform defaults when HEROKU_NETRC_WRITE is unset', function () {
+      platformStub.value('darwin')
+
+      expect(getStorageConfigForRemoval()).to.deep.equal(getStorageConfig())
     })
   })
 })

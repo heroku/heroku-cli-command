@@ -1,5 +1,5 @@
 import fs from 'node:fs'
-import {getCredentialHandler, getStorageConfig} from '../../../src/credential-manager-core/index.js'
+import {getCredentialHandler, getStorageConfig, getStorageConfigForRemoval} from '../../../src/credential-manager-core/index.js'
 import {Netrc} from '../../../src/credential-manager-core/lib/netrc-parser.js'
 import {Context} from 'mocha'
 
@@ -62,19 +62,30 @@ export async function cleanupDefaultNetrc(): Promise<void> {
   }
 }
 
+function listCredentialStoreAccountsForRemoval(service: string) {
+  const {credentialStore} = getStorageConfigForRemoval()
+
+  if (!credentialStore) return {handler: undefined, accounts: [] as string[]}
+
+  const handler = getCredentialHandler(credentialStore)
+  const accounts = handler.listAccounts(service)
+
+  return {handler, accounts}
+}
+
 /**
  * Removes all accounts for the provided test service from the platform-native credential store.
  */
 export function cleanupCredentialStore(): void {
   const services = getAllAcceptanceServices()
   for (const service of services) {
-  const {handler, accounts} = listCredentialStoreAccounts(service)
-  if (!handler) return
+    const {handler, accounts} = listCredentialStoreAccountsForRemoval(service)
+    if (!handler) return
 
-  for (const account of accounts) {
-    handler.removeAuth(account, service)
+    for (const account of accounts) {
+      handler.removeAuth(account, service)
+    }
   }
-}
 }
 
 /**

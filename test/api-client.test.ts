@@ -10,7 +10,14 @@ import {stderr} from 'stdout-stderr'
 import {Command as CommandBase} from '../src/command.js'
 import {setCredentialManagerProvider} from '../src/credential-manager.js'
 import {RequestId, requestIdHeader} from '../src/request-id.js'
+import type {KeychainAuthEntry} from '../src/credential-manager-core/lib/types.js'
 import {restoreCredentialManagerStub, stubCredentialManager} from './helpers/credential-manager-stub.js'
+
+const stubEntry = (token: string, account = 'test@example.com'): KeychainAuthEntry => ({
+  account,
+  service: 'heroku-cli',
+  token,
+})
 
 class Command extends CommandBase {
   async run() {}
@@ -66,7 +73,7 @@ describe('api_client', () => {
         setCredentialManagerProvider({
           async getAuth() {
             getCalls++
-            return 'single-fetch-token'
+            return stubEntry('single-fetch-token')
           },
           async removeAuth() {},
           async saveAuth() {},
@@ -88,7 +95,7 @@ describe('api_client', () => {
             await new Promise(r => {
               setImmediate(r)
             })
-            return 'concurrent-token'
+            return stubEntry('concurrent-token')
           },
           async removeAuth() {},
           async saveAuth() {},
@@ -128,7 +135,7 @@ describe('api_client', () => {
         setCredentialManagerProvider({
           async getAuth() {
             getCalls++
-            return 'never'
+            return stubEntry('never')
           },
           async removeAuth() {},
           async saveAuth() {},
@@ -147,8 +154,8 @@ describe('api_client', () => {
         setCredentialManagerProvider({
           async getAuth() {
             getCalls++
-            if (getCalls === 1) return 'before-logout'
-            return 'after-logout'
+            if (getCalls === 1) return stubEntry('before-logout')
+            return stubEntry('after-logout')
           },
           async removeAuth() {},
           async saveAuth() {},
@@ -194,7 +201,11 @@ describe('api_client', () => {
       removeAuthCalls.length = 0
       setCredentialManagerProvider({
         async getAuth() {
-          return 'logout-test-token'
+          return {
+            account: undefined,
+            service: 'heroku-cli',
+            token: 'logout-test-token',
+          } as unknown as KeychainAuthEntry
         },
         async removeAuth(account: string | undefined, hosts: string[]) {
           removeAuthCalls.push({account, hosts})

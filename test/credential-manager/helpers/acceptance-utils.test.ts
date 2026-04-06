@@ -112,12 +112,15 @@ describe('acceptance utils', function () {
       removeAuthStub = sinon.stub(MacOSHandler.prototype, 'removeAuth')
     })
 
-    it('is a no-op when credential store is disabled', function () {
+    it('still runs keychain cleanup when HEROKU_NETRC_WRITE is true and accounts exist', function () {
       process.env.HEROKU_NETRC_WRITE = 'true'
+      listAccountsStub.withArgs(SERVICE_NAME).returns(['test@example.com'])
+      listAccountsStub.withArgs(ALTERNATE_SERVICE_NAME).returns([])
 
-      expect(() => cleanupCredentialStore()).to.not.throw()
-      expect(listAccountsStub.notCalled).to.equal(true)
-      expect(removeAuthStub.notCalled).to.equal(true)
+      cleanupCredentialStore()
+
+      expect(listAccountsStub.calledTwice).to.equal(true)
+      expect(removeAuthStub.calledOnceWithExactly('test@example.com', SERVICE_NAME)).to.equal(true)
     })
 
     it('removes all accounts for all fixture services', function () {

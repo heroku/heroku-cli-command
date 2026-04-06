@@ -6,7 +6,7 @@ import {NetrcHandler} from './credential-handlers/netrc-handler.js'
 import {WindowsHandler} from './credential-handlers/windows-handler.js'
 import {selectAccount} from './lib/account-selector.js'
 import {reportCredentialStoreError} from './lib/cli-command-telemetry.js'
-import {CredentialStore, getStorageConfig} from './lib/credential-storage-selector.js'
+import {CredentialStore, getStorageConfig, getStorageConfigForRemoval} from './lib/credential-storage-selector.js'
 import {KeychainAuthEntry, NetrcAuthEntry} from './lib/types.js'
 
 const credDebug = debug('heroku-credential-manager')
@@ -116,7 +116,7 @@ export async function getAuth(account: string | undefined, host: string, service
  * @returns Promise that resolves when credentials are removed
  */
 export async function removeAuth(account: string | undefined, hosts: string[], service = SERVICE_NAME): Promise<void> {
-  const config = getStorageConfig()
+  const config = getStorageConfigForRemoval()
   const netrcHandler = new NetrcHandler()
 
   if (config.credentialStore) {
@@ -177,7 +177,7 @@ export {MacOSHandler} from './credential-handlers/macos-handler.js'
 export {NetrcHandler} from './credential-handlers/netrc-handler.js'
 export {WindowsHandler} from './credential-handlers/windows-handler.js'
 export {selectAccount} from './lib/account-selector.js'
-export {CredentialStore, getStorageConfig} from './lib/credential-storage-selector.js'
+export {CredentialStore, getStorageConfig, getStorageConfigForRemoval} from './lib/credential-storage-selector.js'
 export type {StorageConfig} from './lib/credential-storage-selector.js'
 export {Netrc, parse} from './lib/netrc-parser.js'
 export type {

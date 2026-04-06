@@ -14,34 +14,11 @@ export type StorageConfig = {
 }
 
 /**
- * Determines whether to use OS-native credential storage, .netrc file, or both.
- *
- * @returns Object containing storage configuration
- *
- * @example
- * ```typescript
- * const config = getStorageConfig()
- * if (config.credentialStore === CredentialStore.MacOSKeychain) {
- *   // Use macOS handler
- * }
- * if (config.useNetrc) {
- *   // Also use netrc handler
- * }
- * ```
+ * Storage layout for this OS when not forcing netrc-only via HEROKU_NETRC_WRITE.
+ * Used internally and for logout/removal so all backends are cleared.
  */
-export function getStorageConfig(): StorageConfig {
-  const {env, platform} = process
-  const {HEROKU_NETRC_WRITE} = env
-
-  // Forces the use of the .netrc file only
-  if (HEROKU_NETRC_WRITE?.toLowerCase() === 'true') {
-    return {
-      credentialStore: null,
-      useNetrc: true,
-    }
-  }
-
-  switch (platform) {
+function getPlatformStorageConfig(): StorageConfig {
+  switch (process.platform) {
   case 'darwin': {
     return {
       credentialStore: CredentialStore.MacOSKeychain,
@@ -79,6 +56,45 @@ export function getStorageConfig(): StorageConfig {
     }
   }
   }
+}
+
+/**
+ * Determines whether to use OS-native credential storage, .netrc file, or both.
+ *
+ * @returns Object containing storage configuration
+ *
+ * @example
+ * ```typescript
+ * const config = getStorageConfig()
+ * if (config.credentialStore === CredentialStore.MacOSKeychain) {
+ *   // Use macOS handler
+ * }
+ * if (config.useNetrc) {
+ *   // Also use netrc handler
+ * }
+ * ```
+ */
+export function getStorageConfig(): StorageConfig {
+  const {HEROKU_NETRC_WRITE} = process.env
+
+  // Forces the use of the .netrc file only
+  if (HEROKU_NETRC_WRITE?.toLowerCase() === 'true') {
+    return {
+      credentialStore: null,
+      useNetrc: true,
+    }
+  }
+
+  return getPlatformStorageConfig()
+}
+
+/**
+ * Storage config for removing credentials (logout). Ignores HEROKU_NETRC_WRITE so
+ * tokens are cleared from both the OS store and .netrc when the platform normally
+ * uses both — otherwise netrc-only logout can leave Keychain (etc.) populated.
+ */
+export function getStorageConfigForRemoval(): StorageConfig {
+  return getPlatformStorageConfig()
 }
 
 /**

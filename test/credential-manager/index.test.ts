@@ -109,9 +109,9 @@ describe('credential-manager', function () {
       const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuth').returns('keychain-token')
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
 
-      const token = await credentialManager.getAuth('user@example.com', 'api.heroku.com')
+      const auth = await credentialManager.getAuth('user@example.com', 'api.heroku.com')
 
-      expect(token).to.equal('keychain-token')
+      expect(auth.token).to.equal('keychain-token')
       expect(macosStub.calledOnce).to.be.true
       expect(macosStub.firstCall.args[0]).to.equal('user@example.com')
       expect(macosStub.firstCall.args[1]).to.equal('heroku-cli')
@@ -123,12 +123,12 @@ describe('credential-manager', function () {
       const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuth')
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth').resolves({login: 'user@example.com', password: 'netrc-token'})
 
-      const token = await credentialManager.getAuth('user@example.com', 'api.heroku.com')
+      const auth = await credentialManager.getAuth('user@example.com', 'api.heroku.com')
 
       expect(macosStub.notCalled).to.be.true
       expect(netrcStub.calledOnce).to.be.true
       expect(netrcStub.firstCall.args[0]).to.equal('api.heroku.com')
-      expect(token).to.equal('netrc-token')
+      expect(auth.token).to.equal('netrc-token')
     })
 
     it('should fall back to netrc if credential store fails', async function () {
@@ -136,9 +136,9 @@ describe('credential-manager', function () {
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
       netrcStub.resolves({login: 'user@example.com', password: 'netrc-token'})
 
-      const token = await credentialManager.getAuth('user@example.com', 'api.heroku.com')
+      const auth = await credentialManager.getAuth('user@example.com', 'api.heroku.com')
 
-      expect(token).to.equal('netrc-token')
+      expect(auth.token).to.equal('netrc-token')
       expect(macosStub.calledOnce).to.be.true
       expect(netrcStub.calledOnce).to.be.true
       expect(netrcStub.firstCall.args[0]).to.equal('api.heroku.com')
@@ -171,14 +171,14 @@ describe('credential-manager', function () {
       const getAuthStub = sinon.stub(MacOSHandler.prototype, 'getAuth').returns('keychain-token')
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
 
-      const token = await credentialManager.getAuth(undefined, 'api.heroku.com')
+      const auth = await credentialManager.getAuth(undefined, 'api.heroku.com')
 
       expect(listAccountsStub.calledOnce).to.be.true
       expect(listAccountsStub.firstCall.args[0]).to.equal('heroku-cli')
       expect(getAuthStub.calledOnce).to.be.true
       expect(getAuthStub.firstCall.args[0]).to.equal('user@example.com')
       expect(netrcStub.notCalled).to.be.true
-      expect(token).to.equal('keychain-token')
+      expect(auth.token).to.equal('keychain-token')
     })
 
     it('should use the selected account when an account is not provided and multiple accounts are found', async function () {
@@ -187,14 +187,14 @@ describe('credential-manager', function () {
       const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuth').returns('keychain-token')
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
 
-      const token = await credentialManager.getAuth(undefined, 'api.heroku.com')
+      const auth = await credentialManager.getAuth(undefined, 'api.heroku.com')
 
       expect(listAccountsStub.calledOnce).to.be.true
       expect(promptStub.calledOnce).to.be.true
       expect(macosStub.calledOnce).to.be.true
       expect(macosStub.firstCall.args[0]).to.equal('user2@example.com')
       expect(netrcStub.notCalled).to.be.true
-      expect(token).to.equal('keychain-token')
+      expect(auth.token).to.equal('keychain-token')
     })
 
     it('should fall back to netrc when an account is not provided and no accounts are found', async function () {
@@ -203,11 +203,11 @@ describe('credential-manager', function () {
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
       netrcStub.resolves({login: 'user@example.com', password: 'netrc-token'})
 
-      const token = await credentialManager.getAuth(undefined, 'api.heroku.com')
+      const auth = await credentialManager.getAuth(undefined, 'api.heroku.com')
 
       expect(macosStub.notCalled).to.be.true
       expect(netrcStub.calledOnce).to.be.true
-      expect(token).to.equal('netrc-token')
+      expect(auth.token).to.equal('netrc-token')
     })
 
     it('should fall back to netrc when an account is not provided and listAccounts fails', async function () {
@@ -216,11 +216,11 @@ describe('credential-manager', function () {
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
       netrcStub.resolves({login: 'user@example.com', password: 'netrc-token'})
 
-      const token = await credentialManager.getAuth(undefined, 'api.heroku.com')
+      const auth = await credentialManager.getAuth(undefined, 'api.heroku.com')
 
       expect(macosStub.notCalled).to.be.true
       expect(netrcStub.calledOnce).to.be.true
-      expect(token).to.equal('netrc-token')
+      expect(auth.token).to.equal('netrc-token')
     })
 
     it('should retrieve from credential store with custom service name', async function () {
@@ -248,14 +248,14 @@ describe('credential-manager', function () {
       expect(netrcStub.firstCall.args[0]).to.deep.equal(['api.heroku.com'])
     })
 
-    it('should remove from netrc-only when credential store is disabled', async function () {
+    it('should remove from credential store and netrc even when HEROKU_NETRC_WRITE is true', async function () {
       process.env.HEROKU_NETRC_WRITE = 'TRUE'
       const macosStub = sinon.stub(MacOSHandler.prototype, 'removeAuth')
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'removeAuthForHosts').resolves()
 
       await credentialManager.removeAuth('user@example.com', ['api.heroku.com'])
 
-      expect(macosStub.notCalled).to.be.true
+      expect(macosStub.calledOnce).to.be.true
       expect(netrcStub.calledOnce).to.be.true
     })
 
