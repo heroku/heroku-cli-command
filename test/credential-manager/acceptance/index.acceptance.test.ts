@@ -199,6 +199,18 @@ describe('credential-manager acceptance', function () {
       .to.be.rejectedWith(/No auth found|No credentials found/)
     })
 
+    it('removes native store when logout runs with HEROKU_NETRC_WRITE after dual-path login', async function () {
+      delete process.env.HEROKU_NETRC_WRITE
+      await saveAuth(CREDENTIAL.account, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
+
+      process.env.HEROKU_NETRC_WRITE = 'TRUE'
+      await removeAuth(CREDENTIAL.account, CREDENTIAL.hosts, CREDENTIAL.service)
+      delete process.env.HEROKU_NETRC_WRITE
+
+      await expect(getAuth(CREDENTIAL.account, CREDENTIAL.hosts[0], CREDENTIAL.service))
+      .to.be.rejectedWith(/No auth found|No credentials found/)
+    })
+
     it('saves to netrc when credential store fails', async function () {
       // Set up fake credential store command for the current platform
       const fakeSetup = setupFakeCredentialStore()

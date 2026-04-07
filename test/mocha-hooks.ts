@@ -6,6 +6,7 @@ import {stubCredentialManager} from './helpers/credential-manager-stub.js'
 /** Mirrors @heroku-cli/test-utils initCliTest (not a devDependency here to avoid cycle with this package). */
 export const mochaHooks = {
   beforeEach(done: () => void) {
+    process.env.NODE_ENV = 'test'
     process.env.TS_NODE_PROJECT = resolve('test/tsconfig.json')
     Object.assign(globalThis, {columns: '120'})
     nock.disableNetConnect()
