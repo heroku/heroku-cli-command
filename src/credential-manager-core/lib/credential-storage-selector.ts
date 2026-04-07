@@ -82,6 +82,32 @@ export function getStorageConfig(): StorageConfig {
 }
 
 /**
+ * Native credential backend for this platform (Keychain, Secret Service, Windows vault).
+ * Ignores HEROKU_NETRC_WRITE so logout can clear credentials written before that mode was used.
+ */
+export function getNativeCredentialStore(): CredentialStore | null {
+  const {platform} = process
+
+  switch (platform) {
+  case 'darwin': {
+    return CredentialStore.MacOSKeychain
+  }
+
+  case 'linux': {
+    return hasSecretTool() ? CredentialStore.LinuxSecretService : null
+  }
+
+  case 'win32': {
+    return CredentialStore.WindowsCredentialManager
+  }
+
+  default: {
+    return null
+  }
+  }
+}
+
+/**
  * Determines whether the secret-tool command is accessible.
  *
  * @returns True if secret-tool is installed and accessible, false otherwise
