@@ -330,6 +330,13 @@ export class APIClient {
     this.resetStoredAuthResolution()
   }
 
+  /**
+   * Last resolved API token (cache). To load from credential manager/env, use {@link getAuth}.
+   */
+  get auth(): string | undefined {
+    return this._auth
+  }
+
   get defaults(): typeof HTTP.defaults {
     return this.http.defaults
   }
