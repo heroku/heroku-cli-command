@@ -138,6 +138,7 @@ export async function removeAuth(account: string | undefined, hosts: string[], s
       if (!account) {
         throw new Error('Undefined account provided for removal')
       }
+
       handler.removeAuth(account, service)
     } catch (error) {
       const {message} = error as Error
@@ -197,4 +198,4 @@ export type {
   MachineToken,
   Token,
 } from './lib/netrc-parser.js'
-export type {KeychainAuthEntry, NetrcAuthEntry, AuthEntry} from './lib/types.js'
+export type {AuthEntry, KeychainAuthEntry, NetrcAuthEntry} from './lib/types.js'

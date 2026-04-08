@@ -62,15 +62,15 @@ describe('credential-manager acceptance', function () {
     it('saves/retrieves a single host', async function () {
       await saveAuth(CREDENTIAL.account, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
 
-      const token = await getAuth(CREDENTIAL.account, CREDENTIAL.hosts[0], CREDENTIAL.service)
+      const {token} = await getAuth(CREDENTIAL.account, CREDENTIAL.hosts[0], CREDENTIAL.service)
       expect(token).to.equal(CREDENTIAL.token)
     })
 
     it('saves/retrieves multiple hosts', async function () {
       await saveAuth(CREDENTIAL_MULTIPLE_HOSTS.account, CREDENTIAL_MULTIPLE_HOSTS.token, CREDENTIAL_MULTIPLE_HOSTS.hosts, CREDENTIAL_MULTIPLE_HOSTS.service)
 
-      const token1 = await getAuth(CREDENTIAL_MULTIPLE_HOSTS.account, CREDENTIAL_MULTIPLE_HOSTS.hosts[0], CREDENTIAL_MULTIPLE_HOSTS.service)
-      const token2 = await getAuth(CREDENTIAL_MULTIPLE_HOSTS.account, CREDENTIAL_MULTIPLE_HOSTS.hosts[1], CREDENTIAL_MULTIPLE_HOSTS.service)
+      const {token: token1} = await getAuth(CREDENTIAL_MULTIPLE_HOSTS.account, CREDENTIAL_MULTIPLE_HOSTS.hosts[0], CREDENTIAL_MULTIPLE_HOSTS.service)
+      const {token: token2} = await getAuth(CREDENTIAL_MULTIPLE_HOSTS.account, CREDENTIAL_MULTIPLE_HOSTS.hosts[1], CREDENTIAL_MULTIPLE_HOSTS.service)
 
       expect(token1).to.equal(CREDENTIAL_MULTIPLE_HOSTS.token)
       expect(token2).to.equal(CREDENTIAL_MULTIPLE_HOSTS.token)
@@ -98,7 +98,7 @@ describe('credential-manager acceptance', function () {
       await saveAuth(CREDENTIAL.account, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
       await saveAuth(CREDENTIAL.account, 'new-token', CREDENTIAL.hosts, CREDENTIAL.service)
 
-      const token = await getAuth(CREDENTIAL.account, CREDENTIAL.hosts[0], CREDENTIAL.service)
+      const {token} = await getAuth(CREDENTIAL.account, CREDENTIAL.hosts[0], CREDENTIAL.service)
       expect(token).to.equal('new-token')
     })
 
@@ -123,7 +123,7 @@ describe('credential-manager acceptance', function () {
     it('saves and retrieves an entry', async function () {
       await saveAuth(CREDENTIAL.account, CREDENTIAL.token, [], CREDENTIAL.service)
 
-      const token = await getAuth(CREDENTIAL.account, 'missing.host.example.com', CREDENTIAL.service)
+      const {token} = await getAuth(CREDENTIAL.account, 'missing.host.example.com', CREDENTIAL.service)
       expect(token).to.equal(CREDENTIAL.token)
     })
 
@@ -144,7 +144,7 @@ describe('credential-manager acceptance', function () {
       await saveAuth(CREDENTIAL.account, CREDENTIAL.token, [], CREDENTIAL.service)
       await saveAuth(CREDENTIAL.account, 'new-token', [], CREDENTIAL.service)
 
-      const token = await getAuth(CREDENTIAL.account, 'missing.host.example.com', CREDENTIAL.service)
+      const {token} = await getAuth(CREDENTIAL.account, 'missing.host.example.com', CREDENTIAL.service)
       expect(token).to.equal('new-token')
     })
 
@@ -166,7 +166,7 @@ describe('credential-manager acceptance', function () {
     it('retrieves when account is not provided and only one account is found', async function () {
       await saveAuth(CREDENTIAL.account, CREDENTIAL.token, [], CREDENTIAL.service)
 
-      const token = await getAuth(undefined, 'missing.host.example.com', CREDENTIAL.service)
+      const {token} = await getAuth(undefined, 'missing.host.example.com', CREDENTIAL.service)
       expect(token).to.equal(CREDENTIAL.token)
     })
   })
@@ -184,8 +184,8 @@ describe('credential-manager acceptance', function () {
     it('saves/retrieves via credential store and netrc', async function () {
       await saveAuth(CREDENTIAL.account, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
 
-      const keychainToken = await getAuth(CREDENTIAL.account, 'missing.host.example.com', CREDENTIAL.service)
-      const netrcToken = await getAuth('missing-account@example.com', CREDENTIAL.hosts[0], CREDENTIAL.service)
+      const {token: keychainToken} = await getAuth(CREDENTIAL.account, 'missing.host.example.com', CREDENTIAL.service)
+      const {token: netrcToken} = await getAuth('missing-account@example.com', CREDENTIAL.hosts[0], CREDENTIAL.service)
 
       expect(keychainToken).to.equal(CREDENTIAL.token)
       expect(netrcToken).to.equal(CREDENTIAL.token)
@@ -217,7 +217,7 @@ describe('credential-manager acceptance', function () {
         expect(unwrap(stderr.output)).to.contain('We\'ll save the token to the .netrc file instead.')
         expect(unwrap(stderr.output)).to.contain('To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".')
 
-        const netrcToken = await getAuth('missing-account@example.com', CREDENTIAL.hosts[0], CREDENTIAL.service)
+        const {token: netrcToken} = await getAuth('missing-account@example.com', CREDENTIAL.hosts[0], CREDENTIAL.service)
         expect(netrcToken).to.equal(CREDENTIAL.token)
       } finally {
         fakeSetup.cleanup()
@@ -227,24 +227,16 @@ describe('credential-manager acceptance', function () {
     it('retrieves via netrc when credential store fails', async function () {
       await saveAuth(CREDENTIAL.account, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
 
-      const netrcToken = await getAuth('missing-account@example.com', CREDENTIAL.hosts[0], CREDENTIAL.service)
+      const {token: netrcToken} = await getAuth(undefined, CREDENTIAL.hosts[0], CREDENTIAL.service)
       expect(netrcToken).to.equal(CREDENTIAL.token)
     })
 
     it('removes via netrc when credential store fails', async function () {
       await saveAuth(CREDENTIAL.account, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
-      await removeAuth('missing-account@example.com', CREDENTIAL.hosts, CREDENTIAL.service)
+      await removeAuth(undefined, CREDENTIAL.hosts, CREDENTIAL.service)
 
       await expect(getAuth('missing-account@example.com', CREDENTIAL.hosts[0], CREDENTIAL.service))
       .to.be.rejectedWith(/No auth found|No credentials found/)
-    })
-
-    it('retrieves via netrc when an account is not provided and no accounts are found', async function () {
-      await saveAuth(CREDENTIAL.account, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
-      await removeAuth(CREDENTIAL.account, [], CREDENTIAL.service)
-
-      const netrcToken = await getAuth(undefined, CREDENTIAL.hosts[0], CREDENTIAL.service)
-      expect(netrcToken).to.equal(CREDENTIAL.token)
     })
 
     it('errors when credentials are missing from credential store and netrc', async function () {

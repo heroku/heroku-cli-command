@@ -8,7 +8,6 @@ export function stubCredentialManager(token = DEFAULT_TOKEN) {
     async getAuth() {
       return {
         account: 'test@example.com',
-        service: 'heroku-cli',
         token,
       }
     },

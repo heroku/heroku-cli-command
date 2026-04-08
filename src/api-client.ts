@@ -330,9 +330,6 @@ export class APIClient {
     this.resetStoredAuthResolution()
   }
 
-  /**
-   * Last resolved API token (cache). To load from credential manager/env, use {@link getAuth}.
-   */
   get auth(): string | undefined {
     return this._auth
   }
@@ -374,6 +371,7 @@ export class APIClient {
     } catch (error) {
       if (error instanceof Errors.CLIError) Errors.warn(error)
     }
+
     this.setAuthEntry(undefined)
     await removeAuth(entry?.account, [vars.apiHost, vars.httpGitHost])
   }
