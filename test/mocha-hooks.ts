@@ -14,7 +14,7 @@ export const mochaHooks = {
       nock.enableNetConnect()
     }
 
-    // Command.init() awaits getAuth(); without a stub, Windows CI can hit the real Credential Manager
+    // Without a stub, Windows CI can hit the real Credential Manager on getAuth()
     // (multiple accounts → inquirer) and hang. Tests that need a custom provider override in their own beforeEach.
     stubCredentialManager()
 

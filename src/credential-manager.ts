@@ -6,11 +6,11 @@ import {
   getAuth as realGetAuth,
   removeAuth as realRemoveAuth,
   saveAuth as realSaveAuth,
-  type KeychainAuthEntry,
+  type AuthEntry,
 } from './credential-manager-core/index.js'
 
 export interface CredentialManagerProvider {
-  getAuth: (account: string | undefined, host: string, service?: string) => Promise<KeychainAuthEntry>
+  getAuth: (account: string | undefined, host: string, service?: string) => Promise<AuthEntry>
   removeAuth: (account: string | undefined, hosts: string[], service?: string) => Promise<void>
   saveAuth: (account: string, token: string, hosts: string[], service?: string) => Promise<void>
 }
@@ -29,7 +29,7 @@ export async function getAuth(
   account: string | undefined,
   host: string,
   service?: string,
-): Promise<KeychainAuthEntry> {
+): Promise<AuthEntry> {
   return provider.getAuth(account, host, service)
 }
 
@@ -49,3 +49,5 @@ export async function saveAuth(
 ): Promise<void> {
   return provider.saveAuth(account, token, hosts, service)
 }
+
+export type {AuthEntry} from './credential-manager-core/index.js'

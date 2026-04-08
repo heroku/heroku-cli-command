@@ -1,4 +1,4 @@
-import {getAuth as getStoredAuth, removeAuth} from './credential-manager.js'
+import {getAuth as getStoredAuth, removeAuth, type AuthEntry} from './credential-manager.js'
 import {HTTP, HTTPError, HTTPRequestOptions} from '@heroku/http-call'
 import {Errors, Interfaces} from '@oclif/core'
 import debug from 'debug'
@@ -61,9 +61,9 @@ export class APIClient {
   http: typeof HTTP
   preauthPromises: { [k: string]: Promise<HTTP<any>> }
   private _auth?: string
-  private _authAccount?: string
-  /** In-flight dedupe for concurrent getAuth() calls before resolution completes. */
-  private _storedAuthPromise?: Promise<string | undefined>
+  private _account?: string
+  /** In-flight dedupe for concurrent getAuthEntry() calls before resolution completes. */
+  private _storedAuthPromise?: Promise<AuthEntry | undefined>
   /** After a failed read from storage, skip re-querying until state is reset (login/logout/auth setter). */
   private _storedAuthResolvedAbsent = false
   private readonly _login: Login
@@ -288,23 +288,29 @@ export class APIClient {
   }
 
   async getAuth(): Promise<string | undefined> {
-    if (this._auth) return this._auth
+    const authEntry = await this.getAuthEntry()
+    return authEntry?.token
+  }
+
+  async getAuthEntry(): Promise<AuthEntry | undefined> {
+    if (this._auth) return {account: this._account, token: this._auth}
     if (process.env.HEROKU_API_TOKEN && !process.env.HEROKU_API_KEY) Errors.warn('HEROKU_API_TOKEN is set but you probably meant HEROKU_API_KEY')
     if (process.env.HEROKU_API_KEY) {
+      this._account = undefined
       this._auth = process.env.HEROKU_API_KEY
-      return this._auth
+      return {account: this._account, token: this._auth}
     }
 
     if (this._storedAuthResolvedAbsent) return undefined
 
     if (!this._storedAuthPromise) {
-      this._storedAuthPromise = (async (): Promise<string | undefined> => {
+      this._storedAuthPromise = (async (): Promise<AuthEntry | undefined> => {
         try {
-          const storedAuth = await getStoredAuth(undefined, vars.apiHost)
-          this._auth = storedAuth.token
-          this._authAccount = storedAuth.account
+          const {token, account} = await getStoredAuth(undefined, vars.apiHost)
+          this._auth = token
+          this._account = account
           this._storedAuthResolvedAbsent = false
-          return storedAuth.token
+          return {account: this._account, token: this._auth}
         } catch {
           this._storedAuthResolvedAbsent = true
           return undefined
@@ -317,14 +323,10 @@ export class APIClient {
     return this._storedAuthPromise
   }
 
-  get auth(): string | undefined {
-    return this._auth
-  }
-
-  set auth(token: string | undefined) {
+  setAuthEntry(entry: AuthEntry | undefined) {
     delete this.authPromise
-    this._auth = token
-    this._authAccount = undefined
+    this._auth = entry?.token
+    this._account = entry?.account
     this.resetStoredAuthResolution()
   }
 
@@ -359,18 +361,14 @@ export class APIClient {
   }
 
   async logout() {
-    const token = await this.getAuth()
-    const account = this._authAccount
+    const entry = await this.getAuthEntry()
     try {
-      await this._login.logout(token)
+      await this._login.logout(entry?.token)
     } catch (error) {
       if (error instanceof Errors.CLIError) Errors.warn(error)
     }
-
-    this._auth = undefined
-    this._authAccount = undefined
-    this.resetStoredAuthResolution()
-    await removeAuth(account, [vars.apiHost, vars.httpGitHost])
+    this.setAuthEntry(undefined)
+    await removeAuth(entry?.account, [vars.apiHost, vars.httpGitHost])
   }
 
   patch<T>(url: string, options: APIClient.Options = {}) {

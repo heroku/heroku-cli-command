@@ -124,7 +124,7 @@ export class Login {
   }
 
   async logout(token?: string) {
-    const resolvedToken = token ?? this.heroku.auth
+    const resolvedToken = token ?? await this.heroku.getAuth()
     if (!resolvedToken) return cliDebug('no credentials to logout')
     const requests: Promise<any>[] = []
     // for SSO logins we delete the session since those do not show up in
@@ -208,10 +208,10 @@ export class Login {
 
     const auth = await fetchAuth()
     if (auth.error) ux.error(auth.error)
-    this.heroku.auth = auth.access_token
     ux.action.start('Logging in')
     const {body: account} = await HTTP.get<Heroku.Account>(`${vars.apiUrl}/account`, headers(auth.access_token))
     ux.action.stop()
+    this.heroku.setAuthEntry({account: account.email, token: auth.access_token})
     return {
       login: account.email!,
       password: auth.access_token,
@@ -244,7 +244,7 @@ export class Login {
   }
 
   private async defaultToken(): Promise<string | undefined> {
-    const token = this.heroku.auth
+    const token = await this.heroku.getAuth()
     if (!token) return
     try {
       const {body: authorization} = await HTTP.get<Heroku.OAuthAuthorization>(`${vars.apiUrl}/oauth/authorizations/~`, headers(token))
@@ -297,7 +297,7 @@ export class Login {
       auth = await this.createOAuthToken(login!, password, {expiresIn, secondFactor})
     }
 
-    this.heroku.auth = auth.password
+    this.heroku.setAuthEntry({account: auth.login, token: auth.password})
     return auth
   }
 
@@ -336,9 +336,9 @@ machine, please manually open the URL above in your browser.\n`,
     }]
     const {password} = await inquirer.prompt<{password: string}>(passwordQuestions)
     ux.action.start('Validating token')
-    this.heroku.auth = password
     const {body: account} = await HTTP.get<Heroku.Account>(`${vars.apiUrl}/account`, headers(password))
     ux.action.stop()
+    this.heroku.setAuthEntry({account: account.email, token: password})
     return {
       login: account.email!,
       password,
