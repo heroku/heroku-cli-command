@@ -9,7 +9,7 @@ import {WindowsHandler} from './credential-handlers/windows-handler.js'
 import {selectAccount} from './lib/account-selector.js'
 import {reportCredentialStoreError} from './lib/cli-command-telemetry.js'
 import {CredentialStore, getNativeCredentialStore, getStorageConfig} from './lib/credential-storage-selector.js'
-import {NetrcAuthEntry} from './lib/types.js'
+import {AuthEntry, NetrcAuthEntry} from './lib/types.js'
 
 const credDebug = debug('heroku-credential-manager')
 const heredoc = tsheredoc.default
@@ -65,10 +65,10 @@ export async function saveAuth(account: string, token: string, hosts: string[], 
  * @param account - User's account (email), or undefined to search for account
  * @param host - Hostname for netrc lookup (e.g., 'api.heroku.com')
  * @param service - Service name (defaults to 'heroku-cli')
- * @returns Promise that resolves with the authentication token.
+ * @returns Promise that resolves with the authentication account and token.
  * @throws Error if no credentials are found in either location.
  */
-export async function getAuth(account: string | undefined, host: string, service = SERVICE_NAME): Promise<string> {
+export async function getAuth(account: string | undefined, host: string, service = SERVICE_NAME): Promise<AuthEntry> {
   const config = getStorageConfig()
   const netrcHandler = new NetrcHandler()
 
@@ -77,14 +77,16 @@ export async function getAuth(account: string | undefined, host: string, service
       const handler = getCredentialHandler(config.credentialStore)
 
       if (account) {
-        return handler.getAuth(account, service)
+        const token = handler.getAuth(account, service)
+        return {account, token}
       }
 
       const accounts = handler.listAccounts(service)
       const selectedAccount = await selectAccount(accounts)
 
       if (selectedAccount) {
-        return handler.getAuth(selectedAccount, service)
+        const token = handler.getAuth(selectedAccount, service)
+        return {account: selectedAccount, token}
       }
 
       config.useNetrc = true
@@ -112,7 +114,7 @@ export async function getAuth(account: string | undefined, host: string, service
       throw new Error('No credentials found. Please log in.')
     }
 
-    return auth.password
+    return {account: auth.login, token: auth.password}
   }
 
   throw new Error('No credentials found. Please log in.')
@@ -122,7 +124,7 @@ export async function getAuth(account: string | undefined, host: string, service
  * Removes authentication credentials from the platform native store (when present) and .netrc.
  * Uses {@link getNativeCredentialStore} so HEROKU_NETRC_WRITE does not skip Keychain/vault cleanup after a mixed login.
  *
- * @param account - User's account (email), or undefined to search for account
+ * @param account - User's account (email)
  * @param hosts - Hostname(s) for netrc storage (e.g., ['api.heroku.com'])
  * @param service - Service name (defaults to 'heroku-cli')
  * @returns Promise that resolves when credentials are removed
@@ -136,18 +138,11 @@ export async function removeAuth(account: string | undefined, hosts: string[], s
     try {
       const handler = getCredentialHandler(nativeStore)
 
-      if (account) {
-        handler.removeAuth(account, service)
-      } else {
-        const accounts = handler.listAccounts(service)
-        const selectedAccount = await selectAccount(accounts)
-
-        if (selectedAccount) {
-          handler.removeAuth(selectedAccount, service)
-        } else {
-          config.useNetrc = true
-        }
+      if (!account) {
+        throw new Error('Undefined account provided for removal')
       }
+
+      handler.removeAuth(account, service)
     } catch (error) {
       const {message} = error as Error
       credDebug(message)
@@ -206,4 +201,4 @@ export type {
   MachineToken,
   Token,
 } from './lib/netrc-parser.js'
-export type {KeychainAuthEntry, NetrcAuthEntry} from './lib/types.js'
+export type {AuthEntry, KeychainAuthEntry, NetrcAuthEntry} from './lib/types.js'

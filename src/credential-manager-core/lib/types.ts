@@ -8,3 +8,8 @@ export type KeychainAuthEntry = {
   service: string
   token: string
 }
+
+export type AuthEntry = {
+  account: string | undefined
+  token: string | undefined
+}
