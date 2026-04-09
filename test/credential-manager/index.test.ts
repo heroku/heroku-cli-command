@@ -117,10 +117,9 @@ describe('credential-manager', function () {
       const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuth').returns('keychain-token')
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
 
-      const {account, token} = await credentialManager.getAuth('user@example.com', 'api.heroku.com')
+      const auth = await credentialManager.getAuth('user@example.com', 'api.heroku.com')
 
-      expect(token).to.equal('keychain-token')
-      expect(account).to.equal('user@example.com')
+      expect(auth).to.deep.equal({account: 'user@example.com', token: 'keychain-token'})
       expect(macosStub.calledOnce).to.be.true
       expect(macosStub.firstCall.args[0]).to.equal('user@example.com')
       expect(macosStub.firstCall.args[1]).to.equal('heroku-cli')
@@ -132,13 +131,12 @@ describe('credential-manager', function () {
       const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuth')
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth').resolves({login: 'user@example.com', password: 'netrc-token'})
 
-      const {account, token} = await credentialManager.getAuth('user@example.com', 'api.heroku.com')
+      const auth = await credentialManager.getAuth('user@example.com', 'api.heroku.com')
 
       expect(macosStub.notCalled).to.be.true
       expect(netrcStub.calledOnce).to.be.true
       expect(netrcStub.firstCall.args[0]).to.equal('api.heroku.com')
-      expect(token).to.equal('netrc-token')
-      expect(account).to.equal('user@example.com')
+      expect(auth).to.deep.equal({account: 'user@example.com', token: 'netrc-token'})
     })
 
     it('should fall back to netrc if credential store fails', async function () {
@@ -148,13 +146,12 @@ describe('credential-manager', function () {
 
       stderr.start()
 
-      const {account, token} = await credentialManager.getAuth('user@example.com', 'api.heroku.com')
+      const auth = await credentialManager.getAuth('user@example.com', 'api.heroku.com')
 
-      expect(token).to.equal('netrc-token')
-      expect(account).to.equal('user@example.com')
       expect(macosStub.calledOnce).to.be.true
       expect(netrcStub.calledOnce).to.be.true
       expect(netrcStub.firstCall.args[0]).to.equal('api.heroku.com')
+      expect(auth).to.deep.equal({account: 'user@example.com', token: 'netrc-token'})
       expect(unwrap(stderr.output)).to.contain('Warning: We can’t retrieve the Heroku token from heroku-cli.')
       expect(unwrap(stderr.output)).to.contain('We\'ll try to retrieve the token from the .netrc file instead.')
       expect(unwrap(stderr.output)).to.contain('To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".')
@@ -203,14 +200,13 @@ describe('credential-manager', function () {
       const getAuthStub = sinon.stub(MacOSHandler.prototype, 'getAuth').returns('keychain-token')
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
 
-      const {account, token} = await credentialManager.getAuth(undefined, 'api.heroku.com')
+      const auth = await credentialManager.getAuth(undefined, 'api.heroku.com')
 
       expect(listAccountsStub.calledOnce).to.be.true
       expect(listAccountsStub.firstCall.args[0]).to.equal('heroku-cli')
       expect(getAuthStub.calledOnce).to.be.true
       expect(netrcStub.notCalled).to.be.true
-      expect(token).to.equal('keychain-token')
-      expect(account).to.equal('user@example.com')
+      expect(auth).to.deep.equal({account: 'user@example.com', token: 'keychain-token'})
     })
 
     it('should use the selected account when an account is not provided and multiple accounts are found', async function () {
@@ -219,14 +215,13 @@ describe('credential-manager', function () {
       const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuth').returns('keychain-token')
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
 
-      const {account, token} = await credentialManager.getAuth(undefined, 'api.heroku.com')
+      const auth = await credentialManager.getAuth(undefined, 'api.heroku.com')
 
       expect(listAccountsStub.calledOnce).to.be.true
       expect(promptStub.calledOnce).to.be.true
       expect(macosStub.calledOnce).to.be.true
       expect(netrcStub.notCalled).to.be.true
-      expect(token).to.equal('keychain-token')
-      expect(account).to.equal('user2@example.com')
+      expect(auth).to.deep.equal({account: 'user2@example.com', token: 'keychain-token'})
     })
 
     it('should fall back to netrc when an account is not provided and no accounts are found', async function () {
@@ -235,12 +230,11 @@ describe('credential-manager', function () {
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
       netrcStub.resolves({login: 'user@example.com', password: 'netrc-token'})
 
-      const {account, token} = await credentialManager.getAuth(undefined, 'api.heroku.com')
+      const auth = await credentialManager.getAuth(undefined, 'api.heroku.com')
 
       expect(macosStub.notCalled).to.be.true
       expect(netrcStub.calledOnce).to.be.true
-      expect(token).to.equal('netrc-token')
-      expect(account).to.equal('user@example.com')
+      expect(auth).to.deep.equal({account: 'user@example.com', token: 'netrc-token'})
     })
 
     it('should fall back to netrc when an account is not provided and listAccounts fails', async function () {
@@ -251,12 +245,11 @@ describe('credential-manager', function () {
 
       stderr.start()
 
-      const {account, token} = await credentialManager.getAuth(undefined, 'api.heroku.com')
+      const auth = await credentialManager.getAuth(undefined, 'api.heroku.com')
 
       expect(macosStub.notCalled).to.be.true
       expect(netrcStub.calledOnce).to.be.true
-      expect(token).to.equal('netrc-token')
-      expect(account).to.equal('user@example.com')
+      expect(auth).to.deep.equal({account: 'user@example.com', token: 'netrc-token'})
       expect(unwrap(stderr.output)).to.contain('Warning: We can’t retrieve the Heroku token from heroku-cli.')
       expect(unwrap(stderr.output)).to.contain('We\'ll try to retrieve the token from the .netrc file instead.')
       expect(unwrap(stderr.output)).to.contain('To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".')
@@ -268,8 +261,9 @@ describe('credential-manager', function () {
       const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuth').returns('keychain-token')
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
 
-      await credentialManager.getAuth('user@example.com', 'api.heroku.com', 'custom-service')
+      const auth = await credentialManager.getAuth('user@example.com', 'api.heroku.com', 'custom-service')
 
+      expect(auth).to.deep.equal({account: 'user@example.com', token: 'keychain-token'})
       expect(macosStub.args[0][1]).to.equal('custom-service')
       expect(netrcStub.notCalled).to.be.true
     })
