@@ -239,11 +239,27 @@ describe('credential-manager acceptance', function () {
     it('retrieves via netrc when credential store fails', async function () {
       await saveAuth(CREDENTIAL.account, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
 
-      const {token: netrcToken} = await getAuth(undefined, CREDENTIAL.hosts[0], CREDENTIAL.service)
+      const {token: netrcToken} = await getAuth('missing-account@example.com', CREDENTIAL.hosts[0], CREDENTIAL.service)
       expect(netrcToken).to.equal(CREDENTIAL.token)
     })
 
     it('removes via netrc when credential store fails', async function () {
+      await saveAuth(CREDENTIAL.account, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
+      await removeAuth('missing-account@example.com', CREDENTIAL.hosts, CREDENTIAL.service)
+
+      await expect(getAuth('missing-account@example.com', CREDENTIAL.hosts[0], CREDENTIAL.service))
+      .to.be.rejectedWith(/No auth found|No credentials found/)
+    })
+
+    it('retrieves via netrc when account is undefined and no accounts are found', async function () {
+      await saveAuth(CREDENTIAL.account, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
+      await removeAuth(CREDENTIAL.account, [], CREDENTIAL.service)
+
+      const netrcToken = await getAuth(undefined, CREDENTIAL.hosts[0], CREDENTIAL.service)
+      expect(netrcToken).to.equal(CREDENTIAL.token)
+    })
+
+    it('removes via netrc when account is undefined', async function () {
       await saveAuth(CREDENTIAL.account, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
       await removeAuth(undefined, CREDENTIAL.hosts, CREDENTIAL.service)
 

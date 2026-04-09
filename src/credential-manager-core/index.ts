@@ -137,6 +137,7 @@ export async function removeAuth(account: string | undefined, hosts: string[], s
   if (nativeStore) {
     try {
       const handler = getCredentialHandler(nativeStore)
+
       if (!account) {
         throw new Error('Undefined account provided for removal')
       }

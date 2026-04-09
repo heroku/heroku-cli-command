@@ -316,22 +316,6 @@ describe('credential-manager', function () {
       stderr.stop()
     })
 
-    it('should continue to netrc if account is undefined', async function () {
-      const macosStub = sinon.stub(MacOSHandler.prototype, 'removeAuth')
-      const netrcStub = sinon.stub(NetrcHandler.prototype, 'removeAuthForHosts').resolves()
-
-      stderr.start()
-      await credentialManager.removeAuth(undefined, ['api.heroku.com'])
-
-      expect(macosStub.notCalled).to.be.true
-      expect(netrcStub.calledOnce).to.be.true
-      expect(unwrap(stderr.output)).to.contain('Warning: We can’t remove the Heroku token from heroku-cli.')
-      expect(unwrap(stderr.output)).to.contain('We\'ll remove the token from the .netrc file instead.')
-      expect(unwrap(stderr.output)).to.contain('To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".')
-
-      stderr.stop()
-    })
-
     it('should remove from credential store once and netrc once for multiple hosts', async function () {
       const macosStub = sinon.stub(MacOSHandler.prototype, 'removeAuth')
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'removeAuthForHosts').resolves()
@@ -360,6 +344,22 @@ describe('credential-manager', function () {
       await credentialManager.removeAuth('user@example.com', ['api.heroku.com'], 'custom-service')
 
       expect(macosStub.args[0][1]).to.equal('custom-service')
+    })
+
+    it('should continue to netrc if account is undefined', async function () {
+      const macosStub = sinon.stub(MacOSHandler.prototype, 'removeAuth')
+      const netrcStub = sinon.stub(NetrcHandler.prototype, 'removeAuthForHosts').resolves()
+
+      stderr.start()
+      await credentialManager.removeAuth(undefined, ['api.heroku.com'])
+
+      expect(macosStub.notCalled).to.be.true
+      expect(netrcStub.calledOnce).to.be.true
+      expect(unwrap(stderr.output)).to.contain('Warning: We can’t remove the Heroku token from heroku-cli.')
+      expect(unwrap(stderr.output)).to.contain('We\'ll remove the token from the .netrc file instead.')
+      expect(unwrap(stderr.output)).to.contain('To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".')
+
+      stderr.stop()
     })
   })
 
