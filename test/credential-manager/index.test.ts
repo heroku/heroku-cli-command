@@ -289,14 +289,14 @@ describe('credential-manager', function () {
       expect(netrcStub.firstCall.args[0]).to.deep.equal(['api.heroku.com'])
     })
 
-    it('should remove from netrc-only when credential store is disabled', async function () {
+    it('should still remove from native store when HEROKU_NETRC_WRITE disables save path', async function () {
       process.env.HEROKU_NETRC_WRITE = 'TRUE'
       const macosStub = sinon.stub(MacOSHandler.prototype, 'removeAuth')
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'removeAuthForHosts').resolves()
 
       await credentialManager.removeAuth('user@example.com', ['api.heroku.com'])
 
-      expect(macosStub.notCalled).to.be.true
+      expect(macosStub.calledOnce).to.be.true
       expect(netrcStub.calledOnce).to.be.true
     })
 

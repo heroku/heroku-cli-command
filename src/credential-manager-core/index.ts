@@ -8,7 +8,7 @@ import {NetrcHandler} from './credential-handlers/netrc-handler.js'
 import {WindowsHandler} from './credential-handlers/windows-handler.js'
 import {selectAccount} from './lib/account-selector.js'
 import {reportCredentialStoreError} from './lib/cli-command-telemetry.js'
-import {CredentialStore, getStorageConfig} from './lib/credential-storage-selector.js'
+import {CredentialStore, getNativeCredentialStore, getStorageConfig} from './lib/credential-storage-selector.js'
 import {AuthEntry, NetrcAuthEntry} from './lib/types.js'
 
 const credDebug = debug('heroku-credential-manager')
@@ -121,7 +121,8 @@ export async function getAuth(account: string | undefined, host: string, service
 }
 
 /**
- * Removes authentication credentials from the native credential store (if available) and .netrc file.
+ * Removes authentication credentials from the platform native store (when present) and .netrc.
+ * Uses {@link getNativeCredentialStore} so HEROKU_NETRC_WRITE does not skip Keychain/vault cleanup after a mixed login.
  *
  * @param account - User's account (email)
  * @param hosts - Hostname(s) for netrc storage (e.g., ['api.heroku.com'])
@@ -131,10 +132,11 @@ export async function getAuth(account: string | undefined, host: string, service
 export async function removeAuth(account: string | undefined, hosts: string[], service = SERVICE_NAME): Promise<void> {
   const config = getStorageConfig()
   const netrcHandler = new NetrcHandler()
+  const nativeStore = getNativeCredentialStore()
 
-  if (config.credentialStore) {
+  if (nativeStore) {
     try {
-      const handler = getCredentialHandler(config.credentialStore)
+      const handler = getCredentialHandler(nativeStore)
       if (!account) {
         throw new Error('Undefined account provided for removal')
       }
@@ -151,7 +153,7 @@ export async function removeAuth(account: string | undefined, hosts: string[], s
       }
 
       await reportCredentialStoreError(error, {
-        credentialStore: config.credentialStore,
+        credentialStore: nativeStore,
         operation: 'removeAuth',
       })
     }
@@ -189,7 +191,7 @@ export {MacOSHandler} from './credential-handlers/macos-handler.js'
 export {NetrcHandler} from './credential-handlers/netrc-handler.js'
 export {WindowsHandler} from './credential-handlers/windows-handler.js'
 export {selectAccount} from './lib/account-selector.js'
-export {CredentialStore, getStorageConfig} from './lib/credential-storage-selector.js'
+export {CredentialStore, getNativeCredentialStore, getStorageConfig} from './lib/credential-storage-selector.js'
 export type {StorageConfig} from './lib/credential-storage-selector.js'
 export {Netrc, parse} from './lib/netrc-parser.js'
 export type {

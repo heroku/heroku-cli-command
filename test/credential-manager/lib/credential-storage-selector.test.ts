@@ -2,7 +2,7 @@ import {expect} from 'chai'
 import childProcess from 'node:child_process'
 import sinon from 'sinon'
 
-import {CredentialStore, getStorageConfig} from '../../../src/credential-manager-core/lib/credential-storage-selector.js'
+import {CredentialStore, getNativeCredentialStore, getStorageConfig} from '../../../src/credential-manager-core/lib/credential-storage-selector.js'
 
 describe('credential-storage-selector', function () {
   describe('getStorageConfig', function () {
@@ -78,6 +78,58 @@ describe('credential-storage-selector', function () {
 
       expect(result.credentialStore).to.be.null
       expect(result.useNetrc).to.be.true
+    })
+  })
+
+  describe('getNativeCredentialStore', function () {
+    let platformStub: sinon.SinonStub
+
+    beforeEach(function () {
+      platformStub = sinon.stub(process, 'platform')
+      const env = {...process.env}
+      sinon.stub(process, 'env').value(env)
+      delete env.HEROKU_NETRC_WRITE
+    })
+
+    afterEach(function () {
+      sinon.restore()
+    })
+
+    it('returns macOS Keychain on darwin even when HEROKU_NETRC_WRITE is true', function () {
+      platformStub.value('darwin')
+      process.env.HEROKU_NETRC_WRITE = 'TRUE'
+
+      expect(getNativeCredentialStore()).to.equal(CredentialStore.MacOSKeychain)
+      expect(getStorageConfig().credentialStore).to.be.null
+    })
+
+    it('returns Windows store on win32 regardless of HEROKU_NETRC_WRITE', function () {
+      platformStub.value('win32')
+      process.env.HEROKU_NETRC_WRITE = 'TRUE'
+
+      expect(getNativeCredentialStore()).to.equal(CredentialStore.WindowsCredentialManager)
+    })
+
+    it('returns Linux Secret Service when secret-tool exists', function () {
+      platformStub.value('linux')
+      const execSyncStub = sinon.stub(childProcess, 'execSync')
+      execSyncStub.returns(Buffer.from('/usr/bin/secret-tool\n'))
+
+      expect(getNativeCredentialStore()).to.equal(CredentialStore.LinuxSecretService)
+    })
+
+    it('returns null on linux when secret-tool is missing', function () {
+      platformStub.value('linux')
+      const execSyncStub = sinon.stub(childProcess, 'execSync')
+      execSyncStub.throws(new Error('secret-tool not found'))
+
+      expect(getNativeCredentialStore()).to.be.null
+    })
+
+    it('returns null on unsupported platforms', function () {
+      platformStub.value('freebsd')
+
+      expect(getNativeCredentialStore()).to.be.null
     })
   })
 })
