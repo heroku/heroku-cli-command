@@ -6,7 +6,10 @@ const DEFAULT_TOKEN = 'mypass'
 export function stubCredentialManager(token = DEFAULT_TOKEN) {
   setCredentialManagerProvider({
     async getAuth() {
-      return token
+      return {
+        account: 'test@example.com',
+        token,
+      }
     },
     async removeAuth() {},
     async saveAuth() {},
