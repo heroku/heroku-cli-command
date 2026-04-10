@@ -1,13 +1,15 @@
 import {getAuth as getStoredAuth, removeAuth, type AuthEntry} from './credential-manager.js'
+import type {Config} from '@oclif/core/interfaces'
+
 import {HTTP, HTTPError, HTTPRequestOptions} from '@heroku/http-call'
-import {Errors, Interfaces} from '@oclif/core'
+import {CLIError, warn} from '@oclif/core/errors'
 import debug from 'debug'
-import inquirer from 'inquirer'
 import * as url from 'node:url'
 
 import {Login} from './login.js'
 import {Mutex} from './mutex.js'
 import {IDelinquencyConfig, IDelinquencyInfo, ParticleboardClient} from './particleboard-client.js'
+import {prompter} from './prompter.js'
 import {RequestId, requestIdHeader} from './request-id.js'
 import {vars} from './vars.js'
 import {yubikey} from './yubikey.js'
@@ -30,14 +32,14 @@ export interface IOptions {
 }
 
 export interface IHerokuAPIErrorOptions {
-  app?: { id: string; name: string }
+  app?: {id: string; name: string}
   id?: string
   message?: string
   resource?: string
   url?: string
 }
 
-export class HerokuAPIError extends Errors.CLIError {
+export class HerokuAPIError extends CLIError {
   body: IHerokuAPIErrorOptions
   http: HTTPError
 
@@ -59,7 +61,7 @@ export class HerokuAPIError extends Errors.CLIError {
 export class APIClient {
   authPromise?: Promise<HTTP<any>>
   http: typeof HTTP
-  preauthPromises: { [k: string]: Promise<HTTP<any>> }
+  preauthPromises: {[k: string]: Promise<HTTP<any>>}
   private _auth?: string
   private _account?: string
   /** In-flight dedupe for concurrent getAuthEntry() calls before resolution completes. */
@@ -70,7 +72,7 @@ export class APIClient {
   private _particleboard!: ParticleboardClient
   private _twoFactorMutex: Mutex<string> | undefined
 
-  constructor(protected config: Interfaces.Config, public options: IOptions = {}) {
+  constructor(protected config: Config, public options: IOptions = {}) {
     this.config = config
     this._login = new Login(this.config, this)
     if (options.required === undefined) options.required = true
@@ -130,15 +132,15 @@ export class APIClient {
           const now = Date.now()
 
           if (suspension > now) {
-            Errors.warn(`This ${resource} is delinquent with payment and we'll suspend it on ${new Date(suspension)}.`)
+            warn(`This ${resource} is delinquent with payment and we'll suspend it on ${new Date(suspension)}.`)
             delinquencyConfig.warning_shown = true
             return
           }
 
           if (deletion)
-            Errors.warn(`This ${resource} is delinquent with payment and we suspended it on ${new Date(suspension)}. If the ${resource} is still delinquent, we'll delete it on ${new Date(deletion)}.`)
+            warn(`This ${resource} is delinquent with payment and we suspended it on ${new Date(suspension)}. If the ${resource} is still delinquent, we'll delete it on ${new Date(deletion)}.`)
         } else if (deletion)
-          Errors.warn(`This ${resource} is delinquent with payment and we'll delete it on ${new Date(deletion)}.`)
+          warn(`This ${resource} is delinquent with payment and we'll delete it on ${new Date(deletion)}.`)
 
         delinquencyConfig.warning_shown = true
       }
@@ -244,9 +246,9 @@ export class APIClient {
       static showWarnings<T>(response: HTTP<T>) {
         const warnings = response.headers['x-heroku-warning'] || response.headers['warning-message']
         if (Array.isArray(warnings))
-          warnings.forEach(warning => Errors.warn(warning.replace(/^\s*warning:?\s*/i, '')))
+          for (const warning of warnings) warn(warning.replace(/^\s*warning:?\s*/i, ''))
         else if (typeof warnings === 'string')
-          Errors.warn(warnings.replace(/^\s*warning:?\s*/i, ''))
+          warn(warnings.replace(/^\s*warning:?\s*/i, ''))
       }
 
       static trackRequestIds<T>(response: HTTP<T>) {
@@ -294,7 +296,7 @@ export class APIClient {
 
   async getAuthEntry(): Promise<AuthEntry | undefined> {
     if (this._auth) return {account: this._account, token: this._auth}
-    if (process.env.HEROKU_API_TOKEN && !process.env.HEROKU_API_KEY) Errors.warn('HEROKU_API_TOKEN is set but you probably meant HEROKU_API_KEY')
+    if (process.env.HEROKU_API_TOKEN && !process.env.HEROKU_API_KEY) warn('HEROKU_API_TOKEN is set but you probably meant HEROKU_API_KEY')
     if (process.env.HEROKU_API_KEY) {
       this._account = undefined
       this._auth = process.env.HEROKU_API_KEY
@@ -369,7 +371,7 @@ export class APIClient {
     try {
       await this._login.logout(entry?.token)
     } catch (error) {
-      if (error instanceof Errors.CLIError) Errors.warn(error)
+      if (error instanceof CLIError) warn(error)
     }
 
     this.setAuthEntry(undefined)
@@ -406,7 +408,7 @@ export class APIClient {
     yubikey.enable()
     return this.twoFactorMutex.synchronize(async () => {
       try {
-        const {factor} = await inquirer.prompt([{
+        const {factor} = await prompter.prompt<{factor: string}>([{
           mask: '*',
           message: 'Two-factor code',
           name: 'factor',

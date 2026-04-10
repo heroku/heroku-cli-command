@@ -1,4 +1,4 @@
-import {ux} from '@oclif/core'
+import {ux} from '@oclif/core/ux'
 import * as url from 'node:url'
 
 import {ALLOWED_HEROKU_DOMAINS, LOCALHOST_DOMAINS} from './api-client.js'

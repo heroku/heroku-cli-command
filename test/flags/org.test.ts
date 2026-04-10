@@ -1,4 +1,5 @@
-import {Command, ux} from '@oclif/core'
+import {Command} from '@oclif/core/command'
+import {ux} from '@oclif/core/ux'
 import {expect, fancy} from 'fancy-test'
 
 import * as flags from '../../src/flags/index.js'
@@ -6,6 +7,7 @@ import * as flags from '../../src/flags/index.js'
 describe('required', () => {
   class OrgCommand extends Command {
     static flags = {org: flags.org({required: true})}
+
     async run() {
       const {flags} = await this.parse(this.constructor as any)
       ux.stdout(flags.org)
@@ -38,6 +40,7 @@ describe('required', () => {
 describe('optional', () => {
   class OrgCommand extends Command {
     static flags = {org: flags.org()}
+
     async run() {
       const {flags} = await this.parse(this.constructor as any)
       ux.stdout(flags.org)
@@ -64,6 +67,7 @@ describe('optional', () => {
     .it('reads HEROKU_ORGANIZATION', async ctx => {
       class OrgCommand extends Command {
         static flags = {org: flags.org()}
+
         async run() {
           const {flags} = await this.parse(this.constructor as any)
           ux.stdout(flags.org)
