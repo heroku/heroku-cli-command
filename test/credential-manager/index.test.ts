@@ -93,7 +93,7 @@ describe('credential-manager', function () {
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'saveAuthForHosts').throws(new Error('Netrc error'))
 
       await expect(credentialManager.saveAuth('user@example.com', 'test-token', ['api.heroku.com']))
-      .to.be.rejectedWith(Error, 'Netrc error')
+        .to.be.rejectedWith(Error, 'Netrc error')
       expect(macosStub.calledOnce).to.be.true
       expect(netrcStub.calledOnce).to.be.true
     })

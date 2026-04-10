@@ -1,3 +1,5 @@
+import type {ErrorEvent} from '@sentry/node'
+
 import {
   GDPR_FIELDS,
   HEROKU_FIELDS,
@@ -5,7 +7,6 @@ import {
   PII_PATTERNS,
   Scrubber,
 } from '@heroku/js-blanket'
-import type {ErrorEvent} from '@sentry/node'
 import * as Sentry from '@sentry/node'
 import {readFileSync} from 'node:fs'
 import {dirname, join} from 'node:path'

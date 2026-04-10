@@ -36,9 +36,7 @@ describe('WindowsHandler', function () {
     })
 
     it('should scrub sensitive data from error messages', function () {
-      const err = new Error(
-        'Command failed: $vault.Retrieve("heroku-cli", "test@example.com")',
-      )
+      const err = new Error('Command failed: $vault.Retrieve("heroku-cli", "test@example.com")')
       execSyncStub.throws(err)
 
       try {
@@ -108,9 +106,7 @@ user2@example.com
     })
 
     it('should scrub sensitive data from error messages', function () {
-      const err = new Error(
-        'Command failed: $vault.Retrieve("heroku-cli", "test@example.com")',
-      )
+      const err = new Error('Command failed: $vault.Retrieve("heroku-cli", "test@example.com")')
       execSyncStub.throws(err)
 
       try {
@@ -156,9 +152,7 @@ user2@example.com
     it('should scrub sensitive data from error messages', function () {
       execSyncStub.onFirstCall().returns('')
 
-      const err = new Error(
-        'Command failed: New-Object Windows.Security.Credentials.PasswordCredential("heroku-cli", "test@example.com", "mytoken")',
-      )
+      const err = new Error('Command failed: New-Object Windows.Security.Credentials.PasswordCredential("heroku-cli", "test@example.com", "mytoken")')
       execSyncStub.onSecondCall().throws(err)
 
       const authMock = {

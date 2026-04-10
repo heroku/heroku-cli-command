@@ -1,4 +1,3 @@
-import {saveAuth} from './credential-manager.js'
 import type {Config} from '@oclif/core/interfaces'
 
 import * as Heroku from '@heroku-cli/schema'
@@ -10,6 +9,7 @@ import os from 'node:os'
 import * as readline from 'node:readline'
 
 import {APIClient, HerokuAPIError} from './api-client.js'
+import {saveAuth} from './credential-manager.js'
 import {prompter} from './prompter.js'
 import {vars} from './vars.js'
 
@@ -95,11 +95,11 @@ export class Login {
           break
         }
 
-      case 'i':
-      case 'interactive': {
-        auth = await this.interactive(undefined, opts.expiresIn)
-        break
-      }
+        case 'i':
+        case 'interactive': {
+          auth = await this.interactive(undefined, opts.expiresIn)
+          break
+        }
 
         case 's':
         case 'sso': {
@@ -152,8 +152,7 @@ export class Login {
         if (d === resolvedToken) return
         return Promise.all(authorizations
           .filter(a => a.access_token && a.access_token.token === resolvedToken)
-          .map(a => HTTP.delete(`${vars.apiUrl}/oauth/authorizations/${a.id}`, headers(resolvedToken))),
-        )
+          .map(a => HTTP.delete(`${vars.apiUrl}/oauth/authorizations/${a.id}`, headers(resolvedToken))))
       })
       .catch(error => {
         if (!error.http) throw error

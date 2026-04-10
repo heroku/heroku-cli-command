@@ -1,4 +1,3 @@
-import {getAuth as getStoredAuth, removeAuth, type AuthEntry} from './credential-manager.js'
 import type {Config} from '@oclif/core/interfaces'
 
 import {HTTP, HTTPError, HTTPRequestOptions} from '@heroku/http-call'
@@ -6,6 +5,7 @@ import {CLIError, warn} from '@oclif/core/errors'
 import debug from 'debug'
 import * as url from 'node:url'
 
+import {type AuthEntry, getAuth as getStoredAuth, removeAuth} from './credential-manager.js'
 import {Login} from './login.js'
 import {Mutex} from './mutex.js'
 import {IDelinquencyConfig, IDelinquencyInfo, ParticleboardClient} from './particleboard-client.js'
@@ -62,14 +62,14 @@ export class APIClient {
   authPromise?: Promise<HTTP<any>>
   http: typeof HTTP
   preauthPromises: {[k: string]: Promise<HTTP<any>>}
-  private _auth?: string
   private _account?: string
+  private _auth?: string
+  private readonly _login: Login
+  private _particleboard!: ParticleboardClient
   /** In-flight dedupe for concurrent getAuthEntry() calls before resolution completes. */
   private _storedAuthPromise?: Promise<AuthEntry | undefined>
   /** After a failed read from storage, skip re-querying until state is reset (login/logout/auth setter). */
   private _storedAuthResolvedAbsent = false
-  private readonly _login: Login
-  private _particleboard!: ParticleboardClient
   private _twoFactorMutex: Mutex<string> | undefined
 
   constructor(protected config: Config, public options: IOptions = {}) {
@@ -284,54 +284,6 @@ export class APIClient {
     }
   }
 
-  private resetStoredAuthResolution(): void {
-    this._storedAuthPromise = undefined
-    this._storedAuthResolvedAbsent = false
-  }
-
-  async getAuth(): Promise<string | undefined> {
-    const authEntry = await this.getAuthEntry()
-    return authEntry?.token
-  }
-
-  async getAuthEntry(): Promise<AuthEntry | undefined> {
-    if (this._auth) return {account: this._account, token: this._auth}
-    if (process.env.HEROKU_API_TOKEN && !process.env.HEROKU_API_KEY) warn('HEROKU_API_TOKEN is set but you probably meant HEROKU_API_KEY')
-    if (process.env.HEROKU_API_KEY) {
-      this._account = undefined
-      this._auth = process.env.HEROKU_API_KEY
-      return {account: this._account, token: this._auth}
-    }
-
-    if (this._storedAuthResolvedAbsent) return undefined
-
-    if (!this._storedAuthPromise) {
-      this._storedAuthPromise = (async (): Promise<AuthEntry | undefined> => {
-        try {
-          const {token, account} = await getStoredAuth(undefined, vars.apiHost)
-          this._auth = token
-          this._account = account
-          this._storedAuthResolvedAbsent = false
-          return {account: this._account, token: this._auth}
-        } catch {
-          this._storedAuthResolvedAbsent = true
-          return undefined
-        } finally {
-          this._storedAuthPromise = undefined
-        }
-      })()
-    }
-
-    return this._storedAuthPromise
-  }
-
-  setAuthEntry(entry: AuthEntry | undefined) {
-    delete this.authPromise
-    this._auth = entry?.token
-    this._account = entry?.account
-    this.resetStoredAuthResolution()
-  }
-
   get auth(): string | undefined {
     return this._auth
   }
@@ -360,6 +312,42 @@ export class APIClient {
 
   get<T>(url: string, options: APIClient.Options = {}) {
     return this.http.get<T>(url, options)
+  }
+
+  async getAuth(): Promise<string | undefined> {
+    const authEntry = await this.getAuthEntry()
+    return authEntry?.token
+  }
+
+  async getAuthEntry(): Promise<AuthEntry | undefined> {
+    if (this._auth) return {account: this._account, token: this._auth}
+    if (process.env.HEROKU_API_TOKEN && !process.env.HEROKU_API_KEY) warn('HEROKU_API_TOKEN is set but you probably meant HEROKU_API_KEY')
+    if (process.env.HEROKU_API_KEY) {
+      this._account = undefined
+      this._auth = process.env.HEROKU_API_KEY
+      return {account: this._account, token: this._auth}
+    }
+
+    if (this._storedAuthResolvedAbsent) return undefined
+
+    if (!this._storedAuthPromise) {
+      this._storedAuthPromise = (async (): Promise<AuthEntry | undefined> => {
+        try {
+          const {account, token} = await getStoredAuth(undefined, vars.apiHost)
+          this._auth = token
+          this._account = account
+          this._storedAuthResolvedAbsent = false
+          return {account: this._account, token: this._auth}
+        } catch {
+          this._storedAuthResolvedAbsent = true
+          return undefined
+        } finally {
+          this._storedAuthPromise = undefined
+        }
+      })()
+    }
+
+    return this._storedAuthPromise
   }
 
   login(opts: Login.Options = {}) {
@@ -400,6 +388,13 @@ export class APIClient {
     return this.http.request<T>(url, options)
   }
 
+  setAuthEntry(entry: AuthEntry | undefined) {
+    delete this.authPromise
+    this._auth = entry?.token
+    this._account = entry?.account
+    this.resetStoredAuthResolution()
+  }
+
   stream(url: string, options: APIClient.Options = {}) {
     return this.http.stream(url, options)
   }
@@ -421,5 +416,10 @@ export class APIClient {
         throw error
       }
     })
+  }
+
+  private resetStoredAuthResolution(): void {
+    this._storedAuthPromise = undefined
+    this._storedAuthResolvedAbsent = false
   }
 }

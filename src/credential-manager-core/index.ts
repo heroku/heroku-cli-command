@@ -173,17 +173,17 @@ export async function removeAuth(account: string | undefined, hosts: string[], s
  */
 export function getCredentialHandler(store: CredentialStore) {
   switch (store) {
-  case CredentialStore.LinuxSecretService: {
-    return new LinuxHandler()
-  }
+    case CredentialStore.LinuxSecretService: {
+      return new LinuxHandler()
+    }
 
-  case CredentialStore.MacOSKeychain: {
-    return new MacOSHandler()
-  }
+    case CredentialStore.MacOSKeychain: {
+      return new MacOSHandler()
+    }
 
-  case CredentialStore.WindowsCredentialManager: {
-    return new WindowsHandler()
-  }
+    case CredentialStore.WindowsCredentialManager: {
+      return new WindowsHandler()
+    }
   }
 }
 

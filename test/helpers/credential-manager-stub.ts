@@ -1,5 +1,5 @@
-import {setCredentialManagerProvider} from '../../src/credential-manager.js'
 import * as real from '../../src/credential-manager-core/index.js'
+import {setCredentialManagerProvider} from '../../src/credential-manager.js'
 
 const DEFAULT_TOKEN = 'mypass'
 

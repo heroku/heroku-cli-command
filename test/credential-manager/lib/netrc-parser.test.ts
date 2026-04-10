@@ -1,5 +1,5 @@
 import {expect} from 'chai'
-import {ExecaError, execa} from 'execa'
+import {execa, ExecaError} from 'execa'
 import fs from 'fs-extra'
 
 import {Netrc} from '../../../src/credential-manager-core/lib/netrc-parser.js'
@@ -101,7 +101,8 @@ machine ray login demo password mypassword
       f,
       `machine api.dickeyxxx.com # foo
   login jeff@foo.com
-  password myapikey`)
+  password myapikey`,
+    )
     const netrc = new Netrc(f)
     netrc.loadSync()
 

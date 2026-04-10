@@ -158,8 +158,8 @@ describe('acceptance utils', function () {
     it('removes all known fixture hosts', async function () {
       loadStub.callsFake(async function (this: Netrc) {
         this.machines = {
-          [HOST_NAME]: {login: 'test@example.com', password: 'test-token'},
           [ALTERNATE_HOST_NAME]: {login: 'test-alt@example.com', password: 'test-token-alt'},
+          [HOST_NAME]: {login: 'test@example.com', password: 'test-token'},
           'unrelated.host.test': {login: 'unrelated@example.com', password: 'unrelated-token'},
         }
       })

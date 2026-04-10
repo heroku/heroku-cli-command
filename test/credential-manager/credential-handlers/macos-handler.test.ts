@@ -36,9 +36,7 @@ describe('MacOSHandler', function () {
     })
 
     it('should scrub sensitive data from error messages', function () {
-      const err = new Error(
-        'Command failed: security find-generic-password -a "test@example.com" -s "heroku-cli" -w',
-      )
+      const err = new Error('Command failed: security find-generic-password -a "test@example.com" -s "heroku-cli" -w')
       execSyncStub.throws(err)
 
       try {
@@ -168,9 +166,7 @@ attributes:
     })
 
     it('should scrub sensitive data from error messages', function () {
-      const err = new Error(
-        'Command failed: security delete-generic-password -a "user@example.com" -s "heroku-cli"',
-      )
+      const err = new Error('Command failed: security delete-generic-password -a "user@example.com" -s "heroku-cli"')
       execSyncStub.throws(err)
 
       try {
@@ -216,9 +212,7 @@ attributes:
         token: 'mytoken',
       }
 
-      const err = new Error(
-        `Command failed: security add-generic-password -U -a "${authMock.account}" -s "${authMock.service}" -w "${authMock.token}"`,
-      )
+      const err = new Error(`Command failed: security add-generic-password -U -a "${authMock.account}" -s "${authMock.service}" -w "${authMock.token}"`)
       execSyncStub.throws(err)
 
       try {
