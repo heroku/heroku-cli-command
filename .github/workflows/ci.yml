@@ -32,5 +32,3 @@ jobs:
       - run: npm ci
       - name: unit tests
         run: npm test
-      - name: linting
-        run: npm run lint

@@ -1,4 +1,4 @@
-import {Flags} from '@oclif/core'
+import * as Flags from '@oclif/core/flags'
 
 export const pipeline = Flags.custom({
   char: 'p',

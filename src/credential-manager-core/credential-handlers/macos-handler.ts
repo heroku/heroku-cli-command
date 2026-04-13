@@ -52,7 +52,8 @@ export class MacOSHandler {
    */
   public listAccounts(service: string): string[] {
     try {
-      const output = childProcess.execSync('security dump-keychain',
+      const output = childProcess.execSync(
+        'security dump-keychain',
         {
           encoding: 'utf8',
           stdio: ['pipe', 'pipe', 'ignore'],

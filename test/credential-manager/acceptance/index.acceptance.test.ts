@@ -3,17 +3,16 @@ import chaiAsPromised from 'chai-as-promised'
 import {stderr} from 'stdout-stderr'
 
 import {getAuth, removeAuth, saveAuth} from '../../../src/credential-manager-core/index.js'
-
+import {unwrap} from '../../helpers/unwrap.js'
 import {
-  CREDENTIAL_FIXTURES,
   cleanupCredentialStore,
   cleanupDefaultNetrc,
+  CREDENTIAL_FIXTURES,
   listCredentialStoreAccounts,
   setupFakeCredentialStore,
   skipUnlessAcceptance,
   snapshotDefaultNetrc,
 } from '../helpers/acceptance-utils.js'
-import { unwrap } from '../../helpers/unwrap.js'
 
 use(chaiAsPromised)
 
@@ -82,7 +81,7 @@ describe('credential-manager acceptance', function () {
       await removeAuth(CREDENTIAL.account, CREDENTIAL.hosts, CREDENTIAL.service)
 
       await expect(getAuth(CREDENTIAL.account, CREDENTIAL.hosts[0], CREDENTIAL.service))
-      .to.be.rejectedWith(/No auth found|No credentials found/)
+        .to.be.rejectedWith(/No auth found|No credentials found/)
     })
 
     it('removes multiple hosts', async function () {
@@ -90,9 +89,9 @@ describe('credential-manager acceptance', function () {
       await removeAuth(CREDENTIAL_MULTIPLE_HOSTS.account, CREDENTIAL_MULTIPLE_HOSTS.hosts, CREDENTIAL_MULTIPLE_HOSTS.service)
 
       await expect(getAuth(CREDENTIAL_MULTIPLE_HOSTS.account, CREDENTIAL_MULTIPLE_HOSTS.hosts[0], CREDENTIAL_MULTIPLE_HOSTS.service))
-      .to.be.rejectedWith(/No auth found|No credentials found/)
+        .to.be.rejectedWith(/No auth found|No credentials found/)
       await expect(getAuth(CREDENTIAL_MULTIPLE_HOSTS.account, CREDENTIAL_MULTIPLE_HOSTS.hosts[1], CREDENTIAL_MULTIPLE_HOSTS.service))
-      .to.be.rejectedWith(/No auth found|No credentials found/)
+        .to.be.rejectedWith(/No auth found|No credentials found/)
     })
 
     it('updates entry when host already has credentials', async function () {
@@ -134,9 +133,7 @@ describe('credential-manager acceptance', function () {
       await saveAuth(CREDENTIAL.account, CREDENTIAL.token, [], CREDENTIAL.service)
       await removeAuth(CREDENTIAL.account, [], CREDENTIAL.service)
 
-      await expect(
-				getAuth(CREDENTIAL.account, 'missing.host.example.com', CREDENTIAL.service),
-			).to.be.rejectedWith(/No auth found|No credentials found/)
+      await expect(getAuth(CREDENTIAL.account, 'missing.host.example.com', CREDENTIAL.service)).to.be.rejectedWith(/No auth found|No credentials found/)
 
       delete process.env.HEROKU_KEYCHAIN_WARNINGS
     })
@@ -198,7 +195,7 @@ describe('credential-manager acceptance', function () {
       await removeAuth(CREDENTIAL.account, CREDENTIAL.hosts, CREDENTIAL.service)
 
       await expect(getAuth(CREDENTIAL.account, CREDENTIAL.hosts[0], CREDENTIAL.service))
-      .to.be.rejectedWith(/No auth found|No credentials found/)
+        .to.be.rejectedWith(/No auth found|No credentials found/)
     })
 
     it('removes native store when logout runs with HEROKU_NETRC_WRITE after dual-path login', async function () {
@@ -210,7 +207,7 @@ describe('credential-manager acceptance', function () {
       delete process.env.HEROKU_NETRC_WRITE
 
       await expect(getAuth(CREDENTIAL.account, CREDENTIAL.hosts[0], CREDENTIAL.service))
-      .to.be.rejectedWith(/No auth found|No credentials found/)
+        .to.be.rejectedWith(/No auth found|No credentials found/)
     })
 
     it('saves to netrc when credential store fails', async function () {
@@ -250,7 +247,7 @@ describe('credential-manager acceptance', function () {
       await removeAuth('missing-account@example.com', CREDENTIAL.hosts, CREDENTIAL.service)
 
       await expect(getAuth('missing-account@example.com', CREDENTIAL.hosts[0], CREDENTIAL.service))
-      .to.be.rejectedWith(/No auth found|No credentials found/)
+        .to.be.rejectedWith(/No auth found|No credentials found/)
     })
 
     it('retrieves via netrc when account is undefined and no accounts are found', async function () {
@@ -266,12 +263,12 @@ describe('credential-manager acceptance', function () {
       await removeAuth(undefined, CREDENTIAL.hosts, CREDENTIAL.service)
 
       await expect(getAuth('missing-account@example.com', CREDENTIAL.hosts[0], CREDENTIAL.service))
-      .to.be.rejectedWith(/No auth found|No credentials found/)
+        .to.be.rejectedWith(/No auth found|No credentials found/)
     })
 
     it('errors when credentials are missing from credential store and netrc', async function () {
       await expect(getAuth(CREDENTIAL.account, CREDENTIAL.hosts[0], CREDENTIAL.service))
-      .to.be.rejectedWith(/No auth found|No credentials found/)
+        .to.be.rejectedWith(/No auth found|No credentials found/)
     })
   })
 })

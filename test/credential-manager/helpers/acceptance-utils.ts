@@ -252,24 +252,24 @@ export function setupFakePowerShell(): FakeCredentialStoreSetup {
  */
 export function setupFakeCredentialStore(): FakeCredentialStoreSetup | undefined {
   switch (process.platform) {
-  case 'darwin': {
-    if (!isSecurityAvailable()) return undefined
-    return setupFakeSecurity()
-  }
+    case 'darwin': {
+      if (!isSecurityAvailable()) return undefined
+      return setupFakeSecurity()
+    }
 
-  case 'linux': {
-    if (!isSecretToolAvailable()) return undefined
-    return setupFakeSecretTool()
-  }
+    case 'linux': {
+      if (!isSecretToolAvailable()) return undefined
+      return setupFakeSecretTool()
+    }
 
-  case 'win32': {
-    if (!isPowerShellAvailable()) return undefined
-    return setupFakePowerShell()
-  }
+    case 'win32': {
+      if (!isPowerShellAvailable()) return undefined
+      return setupFakePowerShell()
+    }
 
-  default: {
-    return undefined
-  }
+    default: {
+      return undefined
+    }
   }
 }
 

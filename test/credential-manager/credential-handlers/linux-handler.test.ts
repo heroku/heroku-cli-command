@@ -39,9 +39,7 @@ describe('LinuxHandler', function () {
     })
 
     it('should scrub sensitive data from error messages', function () {
-      const err = new Error(
-        'Command failed: secret-tool lookup service "heroku-cli" account "test@example.com"',
-      )
+      const err = new Error('Command failed: secret-tool lookup service "heroku-cli" account "test@example.com"')
       execSyncStub.throws(err)
 
       try {
@@ -144,9 +142,7 @@ attribute.service = heroku-cli
     })
 
     it('should scrub sensitive data from error messages', function () {
-      const err = new Error(
-        'Command failed: secret-tool clear service "heroku-cli" account "user@example.com"',
-      )
+      const err = new Error('Command failed: secret-tool clear service "heroku-cli" account "user@example.com"')
       execSyncStub.throws(err)
 
       try {

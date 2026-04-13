@@ -1,6 +1,8 @@
 /* eslint-disable complexity */
-import {type Config, run} from '@oclif/core'
-import inquirer from 'inquirer'
+import {type Config} from '@oclif/core/config'
+import {run} from '@oclif/core/run'
+
+import {prompter} from './prompter.js'
 
 interface PromptOptions {
   argv: string[]
@@ -28,7 +30,7 @@ export async function promptAndRun(options: PromptOptions): Promise<void> {
     if (!description) continue
 
     // eslint-disable-next-line no-await-in-loop
-    const {input} = await inquirer.prompt([{
+    const {input} = await prompter.prompt<{input: string}>([{
       message: `${description} (${required ? 'required' : 'optional - press "Enter" to bypass'})`,
       name: 'input',
       type: 'input',
@@ -60,7 +62,7 @@ export async function promptAndRun(options: PromptOptions): Promise<void> {
 
     if (type === 'boolean') {
       // eslint-disable-next-line no-await-in-loop
-      const {value} = await inquirer.prompt([{
+      const {value} = await prompter.prompt<{value: boolean}>([{
         choices: [{name: 'yes', value: true}, {name: 'no', value: false}],
         message: description,
         name: 'value',
@@ -70,10 +72,9 @@ export async function promptAndRun(options: PromptOptions): Promise<void> {
       if (value) {
         userInputByFlag.set(name, true)
       }
-    // eslint-disable-next-line unicorn/consistent-destructuring
     } else if (options?.length > 0) {
       // eslint-disable-next-line no-await-in-loop
-      const {value} = await inquirer.prompt([{
+      const {value} = await prompter.prompt<{value: string}>([{
         choices: options.map((opt: string) => ({name: opt, value: opt})),
         message: `Select the ${description}`,
         name: 'value',
@@ -85,7 +86,7 @@ export async function promptAndRun(options: PromptOptions): Promise<void> {
       }
     } else {
       // eslint-disable-next-line no-await-in-loop
-      const {value} = await inquirer.prompt([{
+      const {value} = await prompter.prompt<{value: string}>([{
         message: `${description} (optional - press "Enter" to bypass)`,
         name: 'value',
         type: 'input',

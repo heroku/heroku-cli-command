@@ -3,10 +3,10 @@
  * (ESM module exports cannot be stubbed with sinon).
  */
 import {
+  type AuthEntry,
   getAuth as realGetAuth,
   removeAuth as realRemoveAuth,
   saveAuth as realSaveAuth,
-  type AuthEntry,
 } from './credential-manager-core/index.js'
 
 export interface CredentialManagerProvider {

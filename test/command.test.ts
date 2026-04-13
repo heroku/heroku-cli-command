@@ -1,4 +1,4 @@
-import {Config} from '@oclif/core'
+import {Config} from '@oclif/core/config'
 import {expect, fancy} from 'fancy-test'
 import {dirname, resolve} from 'node:path'
 import {fileURLToPath} from 'node:url'

@@ -37,21 +37,21 @@ export function getNativeCredentialStore(): CredentialStore | null {
   const {platform} = process
 
   switch (platform) {
-  case 'darwin': {
-    return CredentialStore.MacOSKeychain
-  }
+    case 'darwin': {
+      return CredentialStore.MacOSKeychain
+    }
 
-  case 'linux': {
-    return hasSecretTool() ? CredentialStore.LinuxSecretService : null
-  }
+    case 'linux': {
+      return hasSecretTool() ? CredentialStore.LinuxSecretService : null
+    }
 
-  case 'win32': {
-    return CredentialStore.WindowsCredentialManager
-  }
+    case 'win32': {
+      return CredentialStore.WindowsCredentialManager
+    }
 
-  default: {
-    return null
-  }
+    default: {
+      return null
+    }
   }
 }
 

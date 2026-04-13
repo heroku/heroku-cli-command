@@ -75,9 +75,9 @@ export class WindowsHandler {
       // ...
 
       const accounts = output
-      .split('\n')
-      .map(line => line.trim())
-      .filter(line => line.length > 0)
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
 
       return accounts
     } catch (error) {

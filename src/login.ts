@@ -1,15 +1,16 @@
-import {saveAuth} from './credential-manager.js'
-import {HTTP} from '@heroku/http-call'
+import type {Config} from '@oclif/core/interfaces'
+
 import * as Heroku from '@heroku-cli/schema'
-import {Interfaces, ux} from '@oclif/core'
+import {HTTP} from '@heroku/http-call'
+import {ux} from '@oclif/core/ux'
 import ansis from 'ansis'
 import debug from 'debug'
-import inquirer, {QuestionCollection} from 'inquirer'
-import * as os from 'node:os'
+import os from 'node:os'
 import * as readline from 'node:readline'
-import open from 'open'
 
 import {APIClient, HerokuAPIError} from './api-client.js'
+import {saveAuth} from './credential-manager.js'
+import {prompter} from './prompter.js'
 import {vars} from './vars.js'
 
 const cliDebug = debug('heroku-cli-command')
@@ -35,7 +36,7 @@ const headers = (token: string) => ({headers: {accept: 'application/vnd.heroku+j
 export class Login {
   loginHost = process.env.HEROKU_LOGIN_HOST || 'https://cli-auth.heroku.com'
 
-  constructor(private readonly config: Interfaces.Config, private readonly heroku: APIClient) {}
+  constructor(private readonly config: Config, private readonly heroku: APIClient) {}
 
   async login(opts: Login.Options = {}): Promise<void> {
     let loggedIn = false
@@ -75,11 +76,7 @@ export class Login {
           process.stdin.setRawMode(false)
           rl.close()
           ux.stdout('')
-          if (key.toLowerCase() === 'q') {
-            ux.error('Login cancelled by user')
-          }
-
-          input = 'browser'
+          input = this.getLoginMethodFromPromptKey(key)
         }
       }
 
@@ -92,27 +89,27 @@ export class Login {
 
       let auth
       switch (input) {
-      case 'b':
-      case 'browser': {
-        auth = await this.browser(opts.browser)
-        break
-      }
+        case 'b':
+        case 'browser': {
+          auth = await this.browser(opts.browser)
+          break
+        }
 
-      case 'i':
-      case 'interactive': {
-        auth = await this.interactive(undefined, opts.expiresIn)
-        break
-      }
+        case 'i':
+        case 'interactive': {
+          auth = await this.interactive(undefined, opts.expiresIn)
+          break
+        }
 
-      case 's':
-      case 'sso': {
-        auth = await this.sso()
-        break
-      }
+        case 's':
+        case 'sso': {
+          auth = await this.sso()
+          break
+        }
 
-      default: {
-        return this.login(opts)
-      }
+        default: {
+          return this.login(opts)
+        }
       }
 
       await this.saveToken(auth)
@@ -153,11 +150,9 @@ export class Login {
       // would unwittingly break an integration that they are depending on
         const d = await this.defaultToken()
         if (d === resolvedToken) return
-        return Promise.all(
-          authorizations
-            .filter(a => a.access_token && a.access_token.token === resolvedToken)
-            .map(a => HTTP.delete(`${vars.apiUrl}/oauth/authorizations/${a.id}`, headers(resolvedToken))),
-        )
+        return Promise.all(authorizations
+          .filter(a => a.access_token && a.access_token.token === resolvedToken)
+          .map(a => HTTP.delete(`${vars.apiUrl}/oauth/authorizations/${a.id}`, headers(resolvedToken))))
       })
       .catch(error => {
         if (!error.http) throw error
@@ -183,7 +178,8 @@ export class Login {
       urlDisplayed = true
     }
 
-    ux.warn(`If browser does not open, visit ${ansis.greenBright(url)}`)
+    this.showManualBrowserLoginUrl(url)
+    const open = (await import('open')).default
     const cp = await open(url, {wait: false, ...(browser ? {app: {name: browser}} : {})})
     cp.on('error', err => {
       ux.warn(err)
@@ -257,23 +253,33 @@ export class Login {
     }
   }
 
+  private getLoginMethodFromPromptKey(key: string): 'browser' {
+    if (key === '\u0003') {
+      ux.error('Login cancelled by user', {exit: 130})
+    }
+
+    if (key.toLowerCase() === 'q') {
+      ux.error('Login cancelled by user')
+    }
+
+    return 'browser'
+  }
+
   private async interactive(login?: string, expiresIn?: number): Promise<NetrcEntry> {
     ux.stderr('heroku: Enter your login credentials\n')
-    const emailQuestions: QuestionCollection = [{
+    const {email} = await prompter.prompt<{email: string}>([{
       default: login,
       message: 'Email',
       name: 'email',
       type: 'input',
-    }]
-    const {email} = await inquirer.prompt<{email: string}>(emailQuestions)
+    }])
     login = email
 
-    const passwordQuestions: QuestionCollection = [{
+    const {password} = await prompter.prompt<{password: string}>([{
       message: 'Password',
       name: 'password',
       type: 'password',
-    }]
-    const {password} = await inquirer.prompt<{password: string}>(passwordQuestions)
+    }])
 
     let auth
     try {
@@ -288,12 +294,11 @@ export class Login {
         throw error
       }
 
-      const secondFactorQuestions: QuestionCollection = [{
+      const {secondFactor} = await prompter.prompt<{secondFactor: string}>([{
         message: 'Two-factor code',
         name: 'secondFactor',
         type: 'password',
-      }]
-      const {secondFactor} = await inquirer.prompt<{secondFactor: string}>(secondFactorQuestions)
+      }])
       auth = await this.createOAuthToken(login!, password, {expiresIn, secondFactor})
     }
 
@@ -305,17 +310,22 @@ export class Login {
     await saveAuth(entry.login, entry.password, [vars.apiHost, vars.httpGitHost])
   }
 
+  private showManualBrowserLoginUrl(url: string) {
+    ux.warn('If browser does not open, visit:')
+    ux.stderr(ansis.greenBright(url))
+  }
+
   private async sso(): Promise<NetrcEntry> {
+    const open = (await import('open')).default
     let url = process.env.SSO_URL
     let org = process.env.HEROKU_ORGANIZATION
     if (!url) {
-      const orgQuestions: QuestionCollection = [{
+      const {orgName} = await prompter.prompt<{orgName: string}>([{
         default: org,
         message: 'Organization name',
         name: 'orgName',
         type: 'input',
-      }]
-      const {orgName} = await inquirer.prompt<{orgName: string}>(orgQuestions)
+      }])
       org = orgName
       url = `https://sso.heroku.com/saml/${encodeURIComponent(org!)}/init?cli=true`
     }
@@ -323,18 +333,15 @@ export class Login {
     // TODO: handle browser
     cliDebug(`opening browser to ${url}`)
     ux.stderr(`Opening browser to:\n${url}\n`)
-    ux.stderr(ansis.gray(
-      `If the browser fails to open or you're authenticating on a remote
-machine, please manually open the URL above in your browser.\n`,
-    ))
+    ux.stderr(ansis.gray(`If the browser fails to open or you're authenticating on a remote
+machine, please manually open the URL above in your browser.\n`))
     await open(url, {wait: false})
 
-    const passwordQuestions: QuestionCollection = [{
+    const {password} = await prompter.prompt<{password: string}>([{
       message: 'Access token',
       name: 'password',
       type: 'password',
-    }]
-    const {password} = await inquirer.prompt<{password: string}>(passwordQuestions)
+    }])
     ux.action.start('Validating token')
     const {body: account} = await HTTP.get<Heroku.Account>(`${vars.apiUrl}/account`, headers(password))
     ux.action.stop()
