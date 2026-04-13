@@ -1,7 +1,8 @@
 {
   "require": [
     "tsx",
-    "./test/mocha-hooks.ts"
+    "./test/mocha-hooks.ts",
+    "./test/helpers/init.mjs"
   ],
   "watch-extensions": ["ts"],
   "recursive": true,
