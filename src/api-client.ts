@@ -297,7 +297,7 @@ export class APIClient {
 
   async getAuthEntry(): Promise<AuthEntry | undefined> {
     if (this._auth) return {account: this._account, token: this._auth}
-    if (process.env.HEROKU_API_TOKEN && !process.env.HEROKU_API_KEY) Errors.warn('HEROKU_API_TOKEN is set but you probably meant HEROKU_API_KEY')
+    if (process.env.HEROKU_API_TOKEN && !process.env.HEROKU_API_KEY) warn('HEROKU_API_TOKEN is set but you probably meant HEROKU_API_KEY')
     if (process.env.HEROKU_API_KEY) {
       this._account = undefined
       this._auth = process.env.HEROKU_API_KEY
