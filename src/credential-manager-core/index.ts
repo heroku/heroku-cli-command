@@ -89,7 +89,7 @@ export async function getAuth(account: string | undefined, host: string, service
         return {account: selectedAccount, token}
       }
 
-      config.useNetrc = true
+      throw new Error('No auth found')
     } catch (error) {
       const {message} = error as Error
       credDebug(message)
@@ -111,13 +111,13 @@ export async function getAuth(account: string | undefined, host: string, service
     const auth = await netrcHandler.getAuth(host)
 
     if (!auth.password) {
-      throw new Error('No credentials found. Please log in.')
+      throw new Error('No auth found')
     }
 
     return {account: auth.login, token: auth.password}
   }
 
-  throw new Error('No credentials found. Please log in.')
+  throw new Error('No auth found')
 }
 
 /**

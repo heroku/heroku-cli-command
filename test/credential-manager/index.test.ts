@@ -185,7 +185,7 @@ describe('credential-manager', function () {
       stderr.start()
 
       await expect(credentialManager.getAuth('user@example.com', 'api.heroku.com'))
-        .to.be.rejectedWith(Error, 'No credentials found. Please log in.')
+        .to.be.rejectedWith(Error, 'No auth found')
       expect(macosStub.calledOnce).to.be.true
       expect(netrcStub.calledOnce).to.be.true
       expect(unwrap(stderr.output)).to.contain('Warning: We can’t retrieve the Heroku token from heroku-cli.')
@@ -230,11 +230,18 @@ describe('credential-manager', function () {
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
       netrcStub.resolves({login: 'user@example.com', password: 'netrc-token'})
 
+      stderr.start()
+
       const auth = await credentialManager.getAuth(undefined, 'api.heroku.com')
 
       expect(macosStub.notCalled).to.be.true
       expect(netrcStub.calledOnce).to.be.true
       expect(auth).to.deep.equal({account: 'user@example.com', token: 'netrc-token'})
+      expect(unwrap(stderr.output)).to.contain('Warning: We can’t retrieve the Heroku token from heroku-cli.')
+      expect(unwrap(stderr.output)).to.contain('We\'ll try to retrieve the token from the .netrc file instead.')
+      expect(unwrap(stderr.output)).to.contain('To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".')
+
+      stderr.stop()
     })
 
     it('should fall back to netrc when an account is not provided and listAccounts fails', async function () {

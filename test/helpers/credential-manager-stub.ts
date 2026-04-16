@@ -20,7 +20,7 @@ export function stubCredentialManager(token = DEFAULT_TOKEN) {
 export function stubCredentialManagerWithNoCredentials() {
   setCredentialManagerProvider({
     async getAuth() {
-      throw new Error('No credentials found. Please log in.')
+      throw new Error('No auth found')
     },
     async removeAuth() {},
     async saveAuth() {},
