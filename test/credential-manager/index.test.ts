@@ -369,4 +369,190 @@ describe('credential-manager', function () {
       expect(handler).to.be.instanceOf(LinuxHandler)
     })
   })
+
+  describe('saveAuth with HEROKU_KEYCHAIN_WARNINGS', function () {
+    it('should not show warning when HEROKU_KEYCHAIN_WARNINGS is "off" and credential store fails', async function () {
+      process.env.HEROKU_KEYCHAIN_WARNINGS = 'off'
+      sinon.stub(MacOSHandler.prototype, 'saveAuth').throws(new Error('Keychain error'))
+      sinon.stub(NetrcHandler.prototype, 'saveAuthForHosts').resolves()
+
+      stderr.start()
+      await credentialManager.saveAuth('user@example.com', 'test-token', ['api.heroku.com'])
+
+      expect(unwrap(stderr.output)).to.not.contain('Warning:')
+
+      stderr.stop()
+    })
+  })
+
+  describe('getAuth with HEROKU_KEYCHAIN_WARNINGS', function () {
+    it('should not show warning when HEROKU_KEYCHAIN_WARNINGS is "off" and credential store fails', async function () {
+      process.env.HEROKU_KEYCHAIN_WARNINGS = 'off'
+      sinon.stub(MacOSHandler.prototype, 'getAuth').throws(new Error('Keychain error'))
+      sinon.stub(NetrcHandler.prototype, 'getAuth').resolves({login: 'user@example.com', password: 'netrc-token'})
+
+      stderr.start()
+      const auth = await credentialManager.getAuth('user@example.com', 'api.heroku.com')
+
+      expect(auth).to.deep.equal({account: 'user@example.com', token: 'netrc-token'})
+      expect(unwrap(stderr.output)).to.not.contain('Warning:')
+
+      stderr.stop()
+    })
+  })
+
+  describe('removeAuth with HEROKU_KEYCHAIN_WARNINGS', function () {
+    it('should not show warning when HEROKU_KEYCHAIN_WARNINGS is "off" and credential store fails', async function () {
+      process.env.HEROKU_KEYCHAIN_WARNINGS = 'off'
+      sinon.stub(MacOSHandler.prototype, 'removeAuth').throws(new Error('Keychain error'))
+      sinon.stub(NetrcHandler.prototype, 'removeAuthForHosts').resolves()
+
+      stderr.start()
+      await credentialManager.removeAuth('user@example.com', ['api.heroku.com'])
+
+      expect(unwrap(stderr.output)).to.not.contain('Warning:')
+
+      stderr.stop()
+    })
+  })
+
+  describe('saveAuth with empty hosts', function () {
+    it('should not call netrc when hosts array is empty', async function () {
+      const macosStub = sinon.stub(MacOSHandler.prototype, 'saveAuth')
+      const netrcStub = sinon.stub(NetrcHandler.prototype, 'saveAuthForHosts').resolves()
+
+      await credentialManager.saveAuth('user@example.com', 'test-token', [])
+
+      expect(macosStub.calledOnce).to.be.true
+      expect(netrcStub.notCalled).to.be.true
+    })
+
+    it('should not call netrc when hosts array is empty and credential store is disabled', async function () {
+      process.env.HEROKU_NETRC_WRITE = 'TRUE'
+      const macosStub = sinon.stub(MacOSHandler.prototype, 'saveAuth')
+      const netrcStub = sinon.stub(NetrcHandler.prototype, 'saveAuthForHosts').resolves()
+
+      await credentialManager.saveAuth('user@example.com', 'test-token', [])
+
+      expect(macosStub.notCalled).to.be.true
+      expect(netrcStub.notCalled).to.be.true
+    })
+  })
+
+  describe('removeAuth with empty hosts', function () {
+    it('should not call netrc when hosts array is empty', async function () {
+      const macosStub = sinon.stub(MacOSHandler.prototype, 'removeAuth')
+      const netrcStub = sinon.stub(NetrcHandler.prototype, 'removeAuthForHosts').resolves()
+
+      await credentialManager.removeAuth('user@example.com', [])
+
+      expect(macosStub.calledOnce).to.be.true
+      expect(netrcStub.notCalled).to.be.true
+    })
+  })
+
+  describe('getAuth when no credential store is available', function () {
+    it('should throw error when netrc-only mode has no credentials', async function () {
+      process.env.HEROKU_NETRC_WRITE = 'TRUE'
+      const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuth')
+      const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth').resolves({login: 'user@example.com', password: ''})
+
+      await expect(credentialManager.getAuth('user@example.com', 'api.heroku.com'))
+        .to.be.rejectedWith(Error, 'No credentials found. Please log in.')
+      expect(macosStub.notCalled).to.be.true
+      expect(netrcStub.calledOnce).to.be.true
+    })
+
+    it('should throw error when credential store is disabled and netrc has no password', async function () {
+      sinon.stub(process, 'platform').value('darwin')
+      process.env.HEROKU_NETRC_WRITE = 'TRUE'
+      sinon.stub(NetrcHandler.prototype, 'getAuth').resolves({login: 'user@example.com', password: undefined})
+
+      await expect(credentialManager.getAuth(undefined, 'api.heroku.com'))
+        .to.be.rejectedWith(Error, 'No credentials found. Please log in.')
+    })
+
+    it('should throw error when no credential store and netrc throws error', async function () {
+      sinon.stub(process, 'platform').value('darwin')
+      process.env.HEROKU_NETRC_WRITE = 'TRUE'
+      sinon.stub(NetrcHandler.prototype, 'getAuth').rejects(new Error('Netrc read error'))
+
+      await expect(credentialManager.getAuth(undefined, 'api.heroku.com'))
+        .to.be.rejectedWith(Error, 'Netrc read error')
+    })
+  })
+
+  describe('module exports', function () {
+    it('should export LinuxHandler', function () {
+      const {LinuxHandler: ExportedLinuxHandler} = credentialManager
+      expect(ExportedLinuxHandler).to.equal(LinuxHandler)
+    })
+
+    it('should export MacOSHandler', function () {
+      const {MacOSHandler: ExportedMacOSHandler} = credentialManager
+      expect(ExportedMacOSHandler).to.equal(MacOSHandler)
+    })
+
+    it('should export NetrcHandler', function () {
+      const {NetrcHandler: ExportedNetrcHandler} = credentialManager
+      expect(ExportedNetrcHandler).to.equal(NetrcHandler)
+    })
+
+    it('should export WindowsHandler', function () {
+      const {WindowsHandler: ExportedWindowsHandler} = credentialManager
+      expect(ExportedWindowsHandler).to.equal(WindowsHandler)
+    })
+
+    it('should export selectAccount', function () {
+      const {selectAccount: exportedSelectAccount} = credentialManager
+      expect(exportedSelectAccount).to.be.a('function')
+    })
+
+    it('should export CredentialStore', function () {
+      const {CredentialStore: ExportedCredentialStore} = credentialManager
+      expect(ExportedCredentialStore).to.be.an('object')
+      expect(ExportedCredentialStore.MacOSKeychain).to.equal('macos-keychain')
+      expect(ExportedCredentialStore.WindowsCredentialManager).to.equal('windows-credential-manager')
+      expect(ExportedCredentialStore.LinuxSecretService).to.equal('linux-secret-service')
+    })
+
+    it('should export getNativeCredentialStore', function () {
+      const {getNativeCredentialStore: exportedGetNativeCredentialStore} = credentialManager
+      expect(exportedGetNativeCredentialStore).to.be.a('function')
+      const result = exportedGetNativeCredentialStore()
+      expect(result).to.equal('macos-keychain')
+    })
+
+    it('should export getStorageConfig', function () {
+      const {getStorageConfig: exportedGetStorageConfig} = credentialManager
+      expect(exportedGetStorageConfig).to.be.a('function')
+      const result = exportedGetStorageConfig()
+      expect(result).to.have.property('credentialStore')
+      expect(result).to.have.property('useNetrc')
+    })
+
+    it('should export Netrc', function () {
+      const {Netrc: ExportedNetrc} = credentialManager
+      expect(ExportedNetrc).to.be.a('function')
+    })
+
+    it('should export parse', function () {
+      const {parse: exportedParse} = credentialManager
+      expect(exportedParse).to.be.a('function')
+    })
+  })
+
+  describe('platform-specific handlers', function () {
+    it('should use WindowsHandler on win32 platform', function () {
+      sinon.stub(process, 'platform').value('win32')
+      const handler = credentialManager.getCredentialHandler(CredentialStore.WindowsCredentialManager)
+      expect(handler).to.be.instanceOf(WindowsHandler)
+    })
+
+    it('should use LinuxHandler on linux platform', function () {
+      sinon.stub(process, 'platform').value('linux')
+      const handler = credentialManager.getCredentialHandler(CredentialStore.LinuxSecretService)
+      expect(handler).to.be.instanceOf(LinuxHandler)
+    })
+  })
 })
