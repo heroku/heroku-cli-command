@@ -12,6 +12,7 @@
       "./src"
     ],
     "skipLibCheck": true,
+    "sourceMap": true,
     "strict": true,
     "target": "es2022"
   },

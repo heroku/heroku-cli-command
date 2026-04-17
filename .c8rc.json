@@ -1,5 +1,5 @@
 {
-  "src": ["src"],
+  "src": ["./src"],
   "extension": [".ts"],
   "exclude": [
     "**/*.d.ts",
@@ -14,6 +14,9 @@
   ],
   "include": ["src/**/*.ts"],
   "reporter": ["text-summary", "html", "lcov"],
+  "all": true,
+  "excludeAfterRemap": true,
+  "allowExternal": false,
   "statements": 40,
   "branches": 40,
   "functions": 40,
