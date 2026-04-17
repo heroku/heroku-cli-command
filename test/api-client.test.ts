@@ -111,7 +111,7 @@ describe('api_client', () => {
         setCredentialManagerProvider({
           async getAuth() {
             getCalls++
-            throw new Error('No credentials found. Please log in.')
+            throw new Error('No auth found')
           },
           async removeAuth() {},
           async saveAuth() {},
@@ -219,7 +219,7 @@ describe('api_client', () => {
       .it('clears token and account when called with undefined', async ctx => {
         setCredentialManagerProvider({
           async getAuth() {
-            throw new Error('No credentials found. Please log in.')
+            throw new Error('No auth found')
           },
           async removeAuth() {},
           async saveAuth() {},
