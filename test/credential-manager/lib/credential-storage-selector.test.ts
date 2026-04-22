@@ -13,6 +13,7 @@ describe('credential-storage-selector', function () {
       const env = {...process.env}
       sinon.stub(process, 'env').value(env)
       delete env.HEROKU_NETRC_WRITE
+      delete env.HEROKU_KEYCHAIN_WRITE
     })
 
     afterEach(function () {
@@ -27,6 +28,27 @@ describe('credential-storage-selector', function () {
 
       expect(result.credentialStore).to.be.null
       expect(result.useNetrc).to.be.true
+    })
+
+    it('should return native + netrc when HEROKU_NETRC_WRITE and HEROKU_KEYCHAIN_WRITE are true', function () {
+      platformStub.value('darwin')
+      process.env.HEROKU_NETRC_WRITE = 'TRUE'
+      process.env.HEROKU_KEYCHAIN_WRITE = 'TRUE'
+
+      const result = getStorageConfig()
+
+      expect(result.credentialStore).to.equal(CredentialStore.MacOSKeychain)
+      expect(result.useNetrc).to.be.true
+    })
+
+    it('should return native without netrc when HEROKU_KEYCHAIN_WRITE is true', function () {
+      platformStub.value('darwin')
+      process.env.HEROKU_KEYCHAIN_WRITE = 'TRUE'
+
+      const result = getStorageConfig()
+
+      expect(result.credentialStore).to.equal(CredentialStore.MacOSKeychain)
+      expect(result.useNetrc).to.be.false
     })
 
     it('should return macOS Keychain + netrc for darwin platform', function () {
@@ -89,6 +111,7 @@ describe('credential-storage-selector', function () {
       const env = {...process.env}
       sinon.stub(process, 'env').value(env)
       delete env.HEROKU_NETRC_WRITE
+      delete env.HEROKU_KEYCHAIN_WRITE
     })
 
     afterEach(function () {
