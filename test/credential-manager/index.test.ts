@@ -23,7 +23,7 @@ describe('credential-manager', function () {
     sinon.stub(process, 'env').value(env)
 
     delete env.HEROKU_NETRC_WRITE
-    delete env.HEROKU_KEYCHAIN_WRITE
+    delete env.HEROKU_NATIVE_STORE_WRITE
   })
 
   afterEach(function () {
@@ -62,8 +62,8 @@ describe('credential-manager', function () {
       expect(netrcStub.calledOnce).to.be.true
     })
 
-    it('should save to native store only when HEROKU_KEYCHAIN_WRITE is true', async function () {
-      process.env.HEROKU_KEYCHAIN_WRITE = 'true'
+    it('should save to native store only when HEROKU_NATIVE_STORE_WRITE is true', async function () {
+      process.env.HEROKU_NATIVE_STORE_WRITE = 'true'
       const macosStub = sinon.stub(MacOSHandler.prototype, 'saveAuth')
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'saveAuthForHosts').resolves()
 
@@ -73,9 +73,9 @@ describe('credential-manager', function () {
       expect(netrcStub.notCalled).to.be.true
     })
 
-    it('should save to both when HEROKU_NETRC_WRITE and HEROKU_KEYCHAIN_WRITE are true', async function () {
+    it('should save to both when HEROKU_NETRC_WRITE and HEROKU_NATIVE_STORE_WRITE are true', async function () {
       process.env.HEROKU_NETRC_WRITE = 'TRUE'
-      process.env.HEROKU_KEYCHAIN_WRITE = 'TRUE'
+      process.env.HEROKU_NATIVE_STORE_WRITE = 'TRUE'
       const macosStub = sinon.stub(MacOSHandler.prototype, 'saveAuth')
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'saveAuthForHosts').resolves()
 
@@ -163,8 +163,8 @@ describe('credential-manager', function () {
       expect(auth).to.deep.equal({account: 'user@example.com', token: 'netrc-token'})
     })
 
-    it('should retrieve from native store only when HEROKU_KEYCHAIN_WRITE is true', async function () {
-      process.env.HEROKU_KEYCHAIN_WRITE = 'true'
+    it('should retrieve from native store only when HEROKU_NATIVE_STORE_WRITE is true', async function () {
+      process.env.HEROKU_NATIVE_STORE_WRITE = 'true'
       const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuth').returns('keychain-token')
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
 
@@ -175,8 +175,8 @@ describe('credential-manager', function () {
       expect(auth).to.deep.equal({account: 'user@example.com', token: 'keychain-token'})
     })
 
-    it('should not fall back to netrc when HEROKU_KEYCHAIN_WRITE is true and native store fails', async function () {
-      process.env.HEROKU_KEYCHAIN_WRITE = 'true'
+    it('should not fall back to netrc when HEROKU_NATIVE_STORE_WRITE is true and native store fails', async function () {
+      process.env.HEROKU_NATIVE_STORE_WRITE = 'true'
       const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuth').throws(new Error('Keychain error'))
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
 
@@ -350,8 +350,8 @@ describe('credential-manager', function () {
       expect(netrcStub.calledOnce).to.be.true
     })
 
-    it('should remove from native store only when HEROKU_KEYCHAIN_WRITE is true', async function () {
-      process.env.HEROKU_KEYCHAIN_WRITE = 'true'
+    it('should remove from native store only when HEROKU_NATIVE_STORE_WRITE is true', async function () {
+      process.env.HEROKU_NATIVE_STORE_WRITE = 'true'
       const macosStub = sinon.stub(MacOSHandler.prototype, 'removeAuth')
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'removeAuthForHosts').resolves()
 
@@ -361,9 +361,9 @@ describe('credential-manager', function () {
       expect(netrcStub.notCalled).to.be.true
     })
 
-    it('should remove from both when HEROKU_NETRC_WRITE and HEROKU_KEYCHAIN_WRITE are true', async function () {
+    it('should remove from both when HEROKU_NETRC_WRITE and HEROKU_NATIVE_STORE_WRITE are true', async function () {
       process.env.HEROKU_NETRC_WRITE = 'TRUE'
-      process.env.HEROKU_KEYCHAIN_WRITE = 'TRUE'
+      process.env.HEROKU_NATIVE_STORE_WRITE = 'TRUE'
       const macosStub = sinon.stub(MacOSHandler.prototype, 'removeAuth')
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'removeAuthForHosts').resolves()
 

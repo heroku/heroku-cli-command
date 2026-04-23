@@ -13,7 +13,7 @@ describe('credential-storage-selector', function () {
       const env = {...process.env}
       sinon.stub(process, 'env').value(env)
       delete env.HEROKU_NETRC_WRITE
-      delete env.HEROKU_KEYCHAIN_WRITE
+      delete env.HEROKU_NATIVE_STORE_WRITE
     })
 
     afterEach(function () {
@@ -30,10 +30,10 @@ describe('credential-storage-selector', function () {
       expect(result.useNetrc).to.be.true
     })
 
-    it('should return native + netrc when HEROKU_NETRC_WRITE and HEROKU_KEYCHAIN_WRITE are true', function () {
+    it('should return native + netrc when HEROKU_NETRC_WRITE and HEROKU_NATIVE_STORE_WRITE are true', function () {
       platformStub.value('darwin')
       process.env.HEROKU_NETRC_WRITE = 'TRUE'
-      process.env.HEROKU_KEYCHAIN_WRITE = 'TRUE'
+      process.env.HEROKU_NATIVE_STORE_WRITE = 'TRUE'
 
       const result = getStorageConfig()
 
@@ -41,9 +41,9 @@ describe('credential-storage-selector', function () {
       expect(result.useNetrc).to.be.true
     })
 
-    it('should return native without netrc when HEROKU_KEYCHAIN_WRITE is true', function () {
+    it('should return native without netrc when HEROKU_NATIVE_STORE_WRITE is true', function () {
       platformStub.value('darwin')
-      process.env.HEROKU_KEYCHAIN_WRITE = 'TRUE'
+      process.env.HEROKU_NATIVE_STORE_WRITE = 'TRUE'
 
       const result = getStorageConfig()
 
@@ -111,7 +111,7 @@ describe('credential-storage-selector', function () {
       const env = {...process.env}
       sinon.stub(process, 'env').value(env)
       delete env.HEROKU_NETRC_WRITE
-      delete env.HEROKU_KEYCHAIN_WRITE
+      delete env.HEROKU_NATIVE_STORE_WRITE
     })
 
     afterEach(function () {
