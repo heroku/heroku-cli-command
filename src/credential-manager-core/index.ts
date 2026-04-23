@@ -122,7 +122,7 @@ export async function getAuth(account: string | undefined, host: string, service
 
 /**
  * Removes authentication credentials from the platform native store (when present) and .netrc.
- * Uses {@link getNativeCredentialStore} so HEROKU_NETRC_WRITE does not skip Keychain/vault cleanup after a mixed login.
+ * Uses {@link getNativeCredentialStore} so legacy HEROKU_NETRC_WRITE-only mode does not skip Keychain/vault cleanup after a mixed login.
  *
  * @param account - User's account (email)
  * @param hosts - Hostname(s) for netrc storage (e.g., ['api.heroku.com'])
