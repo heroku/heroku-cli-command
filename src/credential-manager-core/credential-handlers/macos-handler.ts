@@ -114,6 +114,12 @@ export class MacOSHandler {
         },
       )
     } catch (error) {
+      const execError = error as Error & {status?: number}
+      // security exits 44 when the generic password does not exist (e.g. netrc-only login)
+      if (execError.status === 44) {
+        return
+      }
+
       const {message} = error as Error
       throw new Error(`Failed to remove token from macOS Keychain: ${this.scrubError(message)}`)
     }

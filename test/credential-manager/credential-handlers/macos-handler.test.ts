@@ -165,6 +165,13 @@ attributes:
       expect(() => handler.removeAuth('test@example.com', 'heroku-cli')).to.throw('Failed to remove token from macOS Keychain: Permission denied')
     })
 
+    it('should return when the generic password does not exist (exit 44)', function () {
+      const err = new Error('Command failed') as Error & {status?: number}
+      err.status = 44
+      execSyncStub.throws(err)
+      expect(() => handler.removeAuth('missing@example.com', 'heroku-cli')).to.not.throw()
+    })
+
     it('should scrub sensitive data from error messages', function () {
       const err = new Error('Command failed: security delete-generic-password -a "user@example.com" -s "heroku-cli"')
       execSyncStub.throws(err)

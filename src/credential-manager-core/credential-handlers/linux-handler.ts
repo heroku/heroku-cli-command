@@ -63,17 +63,11 @@ export class LinuxHandler {
         throw new Error(stderr)
       }
 
-      /** Expected output format:
-        stdout:
-          label = Label Name
-          secret = secret-value
-          created = 2024-01-01 12:00:00
-          modified = 2024-01-01 12:00:00
-          schema = org.freedesktop.Secret.Generic
-        stderr:
-          attribute.service = heroku-cli
-          attribute.account = user@example.com
-      */
+      /*
+       * Expected output format:
+       * stdout: label, secret, created, modified, schema lines
+       * stderr: attribute.service / attribute.account lines
+       */
 
       const accounts: string[] = []
       const lines = (spawnResult.stderr ?? '').split('\n')
@@ -103,15 +97,29 @@ export class LinuxHandler {
    * @throws Error if the removal operation fails.
    */
   public removeAuth(account: string, service: string): void {
-    try {
-      childProcess.execSync(
-        `secret-tool clear service "${service}" account "${account}"`,
-        {encoding: 'utf8'},
-      )
-    } catch (error) {
-      const {message} = error as Error
+    const spawnResult = childProcess.spawnSync(
+      'secret-tool',
+      ['clear', 'service', service, 'account', account],
+      {encoding: 'utf8'},
+    )
+
+    if (spawnResult.error) {
+      const {message} = spawnResult.error
       throw new Error(`Failed to remove token from Linux keyring: ${this.scrubError(message)}`)
     }
+
+    if (spawnResult.status === 0) {
+      return
+    }
+
+    const status = spawnResult.status ?? -1
+
+    const stderr = (spawnResult.stderr ?? '').toString()
+    if (this.isMissingSecretClearFailure(status, stderr)) {
+      return
+    }
+
+    throw new Error(`Failed to remove token from Linux keyring: ${this.scrubError(stderr || `exit ${status}`)}`)
   }
 
   /**
@@ -151,6 +159,18 @@ export class LinuxHandler {
       const {message} = error as Error
       throw new Error(`Failed to store token in Linux keyring: ${this.scrubError(message)}`)
     }
+  }
+
+  /**
+   * secret-tool clear fails when no matching credential exists; treat as successful no-op for logout.
+   */
+  private isMissingSecretClearFailure(status: number, stderr: string): boolean {
+    if (status === 0) {
+      return false
+    }
+
+    const text = stderr.toLowerCase()
+    return /no matching|could not find|not found|unknown attribute|does not exist|cannot remove/i.test(text)
   }
 
   /**

@@ -124,7 +124,7 @@ export async function getAuth(account: string | undefined, host: string, service
  * Removes authentication credentials from the platform native store (when present) and .netrc.
  * Uses {@link getNativeCredentialStore} so legacy HEROKU_NETRC_WRITE-only mode does not skip Keychain/vault cleanup after a mixed login.
  *
- * @param account - User's account (email)
+ * @param account - User's account (email), or undefined when using HEROKU_API_KEY only (native removal is skipped)
  * @param hosts - Hostname(s) for netrc storage (e.g., ['api.heroku.com'])
  * @param service - Service name (defaults to 'heroku-cli')
  * @returns Promise that resolves when credentials are removed
@@ -134,14 +134,9 @@ export async function removeAuth(account: string | undefined, hosts: string[], s
   const netrcHandler = new NetrcHandler()
   const nativeStore = getNativeCredentialStore()
 
-  if (nativeStore) {
+  if (nativeStore && account) {
     try {
       const handler = getCredentialHandler(nativeStore)
-
-      if (!account) {
-        throw new Error('Undefined account provided for removal')
-      }
-
       handler.removeAuth(account, service)
     } catch (error) {
       const {message} = error as Error

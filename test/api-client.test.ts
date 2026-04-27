@@ -271,6 +271,10 @@ describe('api_client', () => {
       api.get('/oauth/authorizations/~').reply(200, {})
     })
 
+    afterEach(() => {
+      delete process.env.HEROKU_API_KEY
+    })
+
     test
       .it('calls removeAuth with api and git hosts after revoking session', async ctx => {
         const cmd = new Command([], ctx.config)
@@ -280,6 +284,18 @@ describe('api_client', () => {
         expect(removeAuthCalls[0].account).to.equal('logout@example.com')
         expect(removeAuthCalls[0].hosts).to.deep.equal(['api.heroku.com', 'git.heroku.com'])
         expect(cmd.heroku.auth).to.be.undefined
+      })
+
+    test
+      .it('calls removeAuth with undefined account when HEROKU_API_KEY is set', async ctx => {
+        process.env.HEROKU_API_KEY = 'env-api-key'
+        removeAuthCalls.length = 0
+        const cmd = new Command([], ctx.config)
+        cmd.config = ctx.config
+        await cmd.heroku.logout()
+        expect(removeAuthCalls).to.have.length(1)
+        expect(removeAuthCalls[0].account).to.be.undefined
+        expect(removeAuthCalls[0].hosts).to.deep.equal(['api.heroku.com', 'git.heroku.com'])
       })
   })
 
