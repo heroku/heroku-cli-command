@@ -130,20 +130,42 @@ attribute.service = heroku-cli
   })
 
   describe('removeAuth', function () {
-    it('should call execSync with the correct arguments to remove the token', function () {
-      execSyncStub.returns('')
+    it('should call spawnSync with the correct arguments to remove the token', function () {
+      spawnSyncStub.returns({
+        error: undefined,
+        status: 0,
+        stderr: '',
+      })
       handler.removeAuth('test@example.com', 'heroku-cli')
-      expect(execSyncStub.args[0][0]).to.contain('secret-tool clear service "heroku-cli" account "test@example.com"')
+      expect(spawnSyncStub.calledOnce).to.be.true
+      expect(spawnSyncStub.args[0][0]).to.equal('secret-tool')
+      expect(spawnSyncStub.args[0][1]).to.deep.equal(['clear', 'service', 'heroku-cli', 'account', 'test@example.com'])
     })
 
     it('should throw an error when removal fails', function () {
-      execSyncStub.throws(new Error('Permission denied'))
+      spawnSyncStub.returns({
+        error: undefined,
+        status: 1,
+        stderr: 'Permission denied',
+      })
       expect(() => handler.removeAuth('test@example.com', 'heroku-cli')).to.throw('Failed to remove token from Linux keyring: Permission denied')
     })
 
+    it('should return when no matching credential exists', function () {
+      spawnSyncStub.returns({
+        error: undefined,
+        status: 1,
+        stderr: 'No matching credentials\n',
+      })
+      expect(() => handler.removeAuth('missing@example.com', 'heroku-cli')).to.not.throw()
+    })
+
     it('should scrub sensitive data from error messages', function () {
-      const err = new Error('Command failed: secret-tool clear service "heroku-cli" account "user@example.com"')
-      execSyncStub.throws(err)
+      spawnSyncStub.returns({
+        error: undefined,
+        status: 1,
+        stderr: 'secret-tool clear service "heroku-cli" account "user@example.com" failed',
+      })
 
       try {
         handler.removeAuth('user@example.com', 'heroku-cli')
@@ -154,6 +176,35 @@ attribute.service = heroku-cli
         expect((error as Error).message).to.include('[SCRUBBED]')
         expect((error as Error).message).to.not.include('user@example.com')
       }
+    })
+
+    it('should return when secret-tool exits 1 with empty stderr', function () {
+      spawnSyncStub.returns({
+        error: undefined,
+        status: 1,
+        stderr: '',
+      })
+      expect(() => handler.removeAuth('missing@example.com', 'heroku-cli')).to.not.throw()
+    })
+
+    it('should return when secret-tool exits 1 with whitespace-only stderr', function () {
+      spawnSyncStub.returns({
+        error: undefined,
+        status: 1,
+        stderr: '  \n',
+      })
+      expect(() => handler.removeAuth('missing@example.com', 'heroku-cli')).to.not.throw()
+    })
+
+    it('should pass LC_ALL=C in the environment', function () {
+      spawnSyncStub.returns({
+        error: undefined,
+        status: 0,
+        stderr: '',
+      })
+      handler.removeAuth('test@example.com', 'heroku-cli')
+      const options = spawnSyncStub.args[0][2]
+      expect(options.env.LC_ALL).to.equal('C')
     })
   })
 

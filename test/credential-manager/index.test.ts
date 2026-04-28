@@ -419,7 +419,7 @@ describe('credential-manager', function () {
       expect(macosStub.args[0][1]).to.equal('custom-service')
     })
 
-    it('should continue to netrc if account is undefined', async function () {
+    it('should continue to netrc if account is undefined without native removal or warnings', async function () {
       const macosStub = sinon.stub(MacOSHandler.prototype, 'removeAuth')
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'removeAuthForHosts').resolves()
 
@@ -428,9 +428,7 @@ describe('credential-manager', function () {
 
       expect(macosStub.notCalled).to.be.true
       expect(netrcStub.calledOnce).to.be.true
-      expect(unwrap(stderr.output)).to.contain('Warning: We can’t remove the Heroku token from heroku-cli.')
-      expect(unwrap(stderr.output)).to.contain('We\'ll remove the token from the .netrc file instead.')
-      expect(unwrap(stderr.output)).to.contain('To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".')
+      expect(unwrap(stderr.output)).to.not.contain('We can’t remove the Heroku token from heroku-cli.')
 
       stderr.stop()
     })
