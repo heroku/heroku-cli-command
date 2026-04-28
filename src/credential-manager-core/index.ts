@@ -189,6 +189,7 @@ export {WindowsHandler} from './credential-handlers/windows-handler.js'
 export {selectAccount} from './lib/account-selector.js'
 export {CredentialStore, getNativeCredentialStore, getStorageConfig} from './lib/credential-storage-selector.js'
 export type {StorageConfig} from './lib/credential-storage-selector.js'
+export {deleteLoginState, readLoginState, writeLoginState} from './lib/login-state.js'
 export {Netrc, parse} from './lib/netrc-parser.js'
 export type {
   Machines,
