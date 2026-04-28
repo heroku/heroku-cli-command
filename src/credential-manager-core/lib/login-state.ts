@@ -10,11 +10,11 @@ type LoginState = {
   account: string
 }
 
-export function readLoginState(dataDir: string): LoginState | undefined {
+export async function readLoginState(dataDir: string): Promise<LoginState | undefined> {
   const filePath = join(dataDir, LOGIN_STATE_FILE)
 
   try {
-    const content = fs.readFileSync(filePath, 'utf8')
+    const content = await fs.promises.readFile(filePath, 'utf8')
     const parsed = JSON.parse(content)
 
     if (typeof parsed?.account === 'string' && parsed.account.length > 0) {

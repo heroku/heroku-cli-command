@@ -2,12 +2,15 @@ import {Config} from '@oclif/core/config'
 import debug from 'debug'
 import {expect, fancy} from 'fancy-test'
 import nock from 'nock'
-import {dirname, resolve} from 'node:path'
+import * as fs from 'node:fs'
+import * as os from 'node:os'
+import {dirname, join, resolve} from 'node:path'
 import {fileURLToPath} from 'node:url'
 import * as sinon from 'sinon'
 import {stderr} from 'stdout-stderr'
 
 import {Command as CommandBase} from '../src/command.js'
+import {writeLoginState} from '../src/credential-manager-core/lib/login-state.js'
 import {setCredentialManagerProvider} from '../src/credential-manager.js'
 import {RequestId, requestIdHeader} from '../src/request-id.js'
 import {restoreCredentialManagerStub, stubCredentialManager} from './helpers/credential-manager-stub.js'
@@ -192,6 +195,73 @@ describe('api_client', () => {
         expect(body).to.deep.equal({ok: true})
         expect((cmd.heroku.login as sinon.SinonStub).calledOnce).to.be.true;
         (cmd.heroku.login as sinon.SinonStub).restore()
+      })
+  })
+
+  describe('login state file integration', () => {
+    let tmpDir: string
+
+    beforeEach(() => {
+      tmpDir = fs.mkdtempSync(join(os.tmpdir(), 'heroku-api-client-'))
+      process.env.HEROKU_NATIVE_STORE_WRITE = 'true'
+    })
+
+    afterEach(() => {
+      fs.rmSync(tmpDir, {force: true, recursive: true})
+      delete process.env.HEROKU_NATIVE_STORE_WRITE
+    })
+
+    test
+      .it('passes cached account from login.json to credential store', async ctx => {
+        let receivedAccount: string | undefined
+        setCredentialManagerProvider({
+          async getAuth(account) {
+            receivedAccount = account
+            return {account: account ?? 'fallback@example.com', token: 'cached-token'}
+          },
+          async removeAuth() {},
+          async saveAuth() {},
+        })
+        await writeLoginState(tmpDir, 'cached@example.com')
+        const cmd = new Command([], ctx.config)
+        cmd.config = {...ctx.config, dataDir: tmpDir} as Config
+        await cmd.heroku.getAuthEntry()
+        expect(receivedAccount).to.equal('cached@example.com')
+      })
+
+    test
+      .it('deletes login.json on logout', async ctx => {
+        setCredentialManagerProvider({
+          async getAuth() {
+            return {account: 'logout-int@example.com', token: 'logout-int-token'}
+          },
+          async removeAuth() {},
+          async saveAuth() {},
+        })
+        await writeLoginState(tmpDir, 'logout-int@example.com')
+        api.delete('/oauth/sessions/~').reply(200, {})
+        api.get('/oauth/authorizations').reply(200, [])
+        api.get('/oauth/authorizations/~').reply(200, {})
+        const cmd = new Command([], ctx.config)
+        cmd.config = {...ctx.config, dataDir: tmpDir} as Config
+        await cmd.heroku.logout()
+        expect(fs.existsSync(join(tmpDir, 'login.json'))).to.be.false
+      })
+
+    test
+      .it('clears stale login.json when credential store has no matching account', async ctx => {
+        setCredentialManagerProvider({
+          async getAuth() {
+            throw new Error('No auth found')
+          },
+          async removeAuth() {},
+          async saveAuth() {},
+        })
+        await writeLoginState(tmpDir, 'stale@example.com')
+        const cmd = new Command([], ctx.config)
+        cmd.config = {...ctx.config, dataDir: tmpDir} as Config
+        await cmd.heroku.getAuthEntry()
+        expect(fs.existsSync(join(tmpDir, 'login.json'))).to.be.false
       })
   })
 

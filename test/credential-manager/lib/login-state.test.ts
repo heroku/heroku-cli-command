@@ -6,6 +6,8 @@ import sinon from 'sinon'
 
 import {deleteLoginState, readLoginState, writeLoginState} from '../../../src/credential-manager-core/lib/login-state.js'
 
+const skipOnWindows = process.platform === 'win32' ? it.skip : it
+
 describe('login-state', function () {
   let tmpDir: string
 
@@ -19,34 +21,34 @@ describe('login-state', function () {
   })
 
   describe('readLoginState', function () {
-    it('returns undefined when file does not exist', function () {
-      expect(readLoginState(tmpDir)).to.be.undefined
+    it('returns undefined when file does not exist', async function () {
+      expect(await readLoginState(tmpDir)).to.be.undefined
     })
 
-    it('reads a valid login state file', function () {
+    it('reads a valid login state file', async function () {
       fs.writeFileSync(join(tmpDir, 'login.json'), JSON.stringify({account: 'user@example.com'}))
-      const result = readLoginState(tmpDir)
+      const result = await readLoginState(tmpDir)
       expect(result).to.deep.equal({account: 'user@example.com'})
     })
 
-    it('returns undefined for malformed JSON', function () {
+    it('returns undefined for malformed JSON', async function () {
       fs.writeFileSync(join(tmpDir, 'login.json'), 'not json')
-      expect(readLoginState(tmpDir)).to.be.undefined
+      expect(await readLoginState(tmpDir)).to.be.undefined
     })
 
-    it('returns undefined when account field is missing', function () {
+    it('returns undefined when account field is missing', async function () {
       fs.writeFileSync(join(tmpDir, 'login.json'), JSON.stringify({other: 'field'}))
-      expect(readLoginState(tmpDir)).to.be.undefined
+      expect(await readLoginState(tmpDir)).to.be.undefined
     })
 
-    it('returns undefined when account is empty string', function () {
+    it('returns undefined when account is empty string', async function () {
       fs.writeFileSync(join(tmpDir, 'login.json'), JSON.stringify({account: ''}))
-      expect(readLoginState(tmpDir)).to.be.undefined
+      expect(await readLoginState(tmpDir)).to.be.undefined
     })
 
-    it('returns undefined when account is not a string', function () {
+    it('returns undefined when account is not a string', async function () {
       fs.writeFileSync(join(tmpDir, 'login.json'), JSON.stringify({account: 123}))
-      expect(readLoginState(tmpDir)).to.be.undefined
+      expect(await readLoginState(tmpDir)).to.be.undefined
     })
   })
 
@@ -71,7 +73,7 @@ describe('login-state', function () {
       expect(content).to.deep.equal({account: 'new@example.com'})
     })
 
-    it('sets file permissions to 0o600', async function () {
+    skipOnWindows('sets file permissions to 0o600', async function () {
       await writeLoginState(tmpDir, 'user@example.com')
       const stats = fs.statSync(join(tmpDir, 'login.json'))
       // eslint-disable-next-line no-bitwise

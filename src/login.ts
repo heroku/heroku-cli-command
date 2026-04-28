@@ -82,9 +82,8 @@ export class Login {
         }
       }
 
-      const storageConfig = getStorageConfig()
       try {
-        if (previousToken && !storageConfig.credentialStore) await this.logout(previousToken)
+        if (previousToken && !getStorageConfig().credentialStore) await this.logout(previousToken)
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
         ux.warn(message)

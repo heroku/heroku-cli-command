@@ -334,15 +334,22 @@ export class APIClient {
 
     if (!this._storedAuthPromise) {
       this._storedAuthPromise = (async (): Promise<AuthEntry | undefined> => {
+        const {credentialStore} = getStorageConfig()
+        const useLoginState = Boolean(credentialStore && this.config.dataDir)
         try {
-          const cachedAccount = this.readCachedAccount()
+          const cachedAccount = useLoginState
+            ? (await readLoginState(this.config.dataDir))?.account
+            : undefined
           const {account, token} = await getStoredAuth(cachedAccount, vars.apiHost)
           this._auth = token
           this._account = account
           this._storedAuthResolvedAbsent = false
           return {account: this._account, token: this._auth}
         } catch {
-          await this.clearLoginState()
+          if (useLoginState) {
+            await deleteLoginState(this.config.dataDir)
+          }
+
           this._storedAuthResolvedAbsent = true
           return undefined
         } finally {
@@ -428,12 +435,6 @@ export class APIClient {
     if (config.credentialStore && this.config.dataDir) {
       await deleteLoginState(this.config.dataDir)
     }
-  }
-
-  private readCachedAccount(): string | undefined {
-    const config = getStorageConfig()
-    if (!config.credentialStore || !this.config.dataDir) return undefined
-    return readLoginState(this.config.dataDir)?.account
   }
 
   private resetStoredAuthResolution(): void {
