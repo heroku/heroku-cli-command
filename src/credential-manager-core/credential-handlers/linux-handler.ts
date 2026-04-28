@@ -100,7 +100,7 @@ export class LinuxHandler {
     const spawnResult = childProcess.spawnSync(
       'secret-tool',
       ['clear', 'service', service, 'account', account],
-      {encoding: 'utf8'},
+      {encoding: 'utf8', env: {...process.env, LC_ALL: 'C'}},
     )
 
     if (spawnResult.error) {
@@ -167,6 +167,11 @@ export class LinuxHandler {
   private isMissingSecretClearFailure(status: number, stderr: string): boolean {
     if (status === 0) {
       return false
+    }
+
+    // secret-tool clear exits 1 with no output when nothing matched (locale-independent).
+    if (status === 1 && stderr.trim() === '') {
+      return true
     }
 
     const text = stderr.toLowerCase()

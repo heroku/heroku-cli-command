@@ -177,6 +177,35 @@ attribute.service = heroku-cli
         expect((error as Error).message).to.not.include('user@example.com')
       }
     })
+
+    it('should return when secret-tool exits 1 with empty stderr', function () {
+      spawnSyncStub.returns({
+        error: undefined,
+        status: 1,
+        stderr: '',
+      })
+      expect(() => handler.removeAuth('missing@example.com', 'heroku-cli')).to.not.throw()
+    })
+
+    it('should return when secret-tool exits 1 with whitespace-only stderr', function () {
+      spawnSyncStub.returns({
+        error: undefined,
+        status: 1,
+        stderr: '  \n',
+      })
+      expect(() => handler.removeAuth('missing@example.com', 'heroku-cli')).to.not.throw()
+    })
+
+    it('should pass LC_ALL=C in the environment', function () {
+      spawnSyncStub.returns({
+        error: undefined,
+        status: 0,
+        stderr: '',
+      })
+      handler.removeAuth('test@example.com', 'heroku-cli')
+      const options = spawnSyncStub.args[0][2]
+      expect(options.env.LC_ALL).to.equal('C')
+    })
   })
 
   describe('saveAuth', function () {
