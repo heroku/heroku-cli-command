@@ -100,6 +100,7 @@ export class APIClient {
       protocol: apiUrl.protocol,
     }
     const delinquencyConfig: IDelinquencyConfig = {fetch_delinquency: false, warning_shown: false}
+    const shownHeaderWarnings = new Set<string>()
     this.http = class APIHTTPClient<T> extends HTTP.create(opts)<T> {
       static configDelinquency(url: string, opts: APIClient.Options): void {
         if (opts.method?.toUpperCase() !== 'GET' || (opts.hostname && opts.hostname !== apiUrl.hostname)) {
@@ -247,10 +248,17 @@ export class APIClient {
 
       static showWarnings<T>(response: HTTP<T>) {
         const warnings = response.headers['x-heroku-warning'] || response.headers['warning-message']
+        const emitIfNew = (raw: string) => {
+          const normalized = raw.replace(/^\s*warning:?\s*/i, '').trim()
+          if (!normalized || shownHeaderWarnings.has(normalized)) return
+          shownHeaderWarnings.add(normalized)
+          warn(normalized)
+        }
+
         if (Array.isArray(warnings))
-          for (const warning of warnings) warn(warning.replace(/^\s*warning:?\s*/i, ''))
+          for (const warning of warnings) emitIfNew(warning)
         else if (typeof warnings === 'string')
-          warn(warnings.replace(/^\s*warning:?\s*/i, ''))
+          emitIfNew(warnings)
       }
 
       static trackRequestIds<T>(response: HTTP<T>) {
