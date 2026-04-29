@@ -89,7 +89,7 @@ export async function getAuth(account: string | undefined, host: string, service
         return {account: selectedAccount, token}
       }
 
-      config.useNetrc = true
+      throw new Error('No auth found')
     } catch (error) {
       const {message} = error as Error
       credDebug(message)
@@ -111,20 +111,20 @@ export async function getAuth(account: string | undefined, host: string, service
     const auth = await netrcHandler.getAuth(host)
 
     if (!auth.password) {
-      throw new Error('No credentials found. Please log in.')
+      throw new Error('No auth found')
     }
 
     return {account: auth.login, token: auth.password}
   }
 
-  throw new Error('No credentials found. Please log in.')
+  throw new Error('No auth found')
 }
 
 /**
  * Removes authentication credentials from the platform native store (when present) and .netrc.
- * Uses {@link getNativeCredentialStore} so HEROKU_NETRC_WRITE does not skip Keychain/vault cleanup after a mixed login.
+ * Uses {@link getNativeCredentialStore} so legacy HEROKU_NETRC_WRITE-only mode does not skip Keychain/vault cleanup after a mixed login.
  *
- * @param account - User's account (email)
+ * @param account - User's account (email), or undefined when using HEROKU_API_KEY only (native removal is skipped)
  * @param hosts - Hostname(s) for netrc storage (e.g., ['api.heroku.com'])
  * @param service - Service name (defaults to 'heroku-cli')
  * @returns Promise that resolves when credentials are removed
@@ -134,14 +134,9 @@ export async function removeAuth(account: string | undefined, hosts: string[], s
   const netrcHandler = new NetrcHandler()
   const nativeStore = getNativeCredentialStore()
 
-  if (nativeStore) {
+  if (nativeStore && account) {
     try {
       const handler = getCredentialHandler(nativeStore)
-
-      if (!account) {
-        throw new Error('Undefined account provided for removal')
-      }
-
       handler.removeAuth(account, service)
     } catch (error) {
       const {message} = error as Error
@@ -194,6 +189,7 @@ export {WindowsHandler} from './credential-handlers/windows-handler.js'
 export {selectAccount} from './lib/account-selector.js'
 export {CredentialStore, getNativeCredentialStore, getStorageConfig} from './lib/credential-storage-selector.js'
 export type {StorageConfig} from './lib/credential-storage-selector.js'
+export {deleteLoginState, readLoginState, writeLoginState} from './lib/login-state.js'
 export {Netrc, parse} from './lib/netrc-parser.js'
 export type {
   Machines,

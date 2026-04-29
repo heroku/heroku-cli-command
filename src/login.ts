@@ -9,6 +9,8 @@ import os from 'node:os'
 import * as readline from 'node:readline'
 
 import {APIClient, HerokuAPIError} from './api-client.js'
+import {getStorageConfig} from './credential-manager-core/lib/credential-storage-selector.js'
+import {writeLoginState} from './credential-manager-core/lib/login-state.js'
 import {saveAuth} from './credential-manager.js'
 import {prompter} from './prompter.js'
 import {vars} from './vars.js'
@@ -50,6 +52,9 @@ export class Login {
       if (opts.expiresIn && opts.expiresIn > thirtyDays) ux.error('Cannot set an expiration longer than thirty days')
 
       const previousToken = await this.heroku.getAuth()
+      const previousAccount = previousToken
+        ? (await this.heroku.getAuthEntry())?.account?.trim() || undefined
+        : undefined
       let input: string | undefined = opts.method
       if (!input) {
         if (opts.expiresIn) {
@@ -81,7 +86,7 @@ export class Login {
       }
 
       try {
-        if (previousToken) await this.logout(previousToken)
+        if (previousToken && !getStorageConfig().credentialStore) await this.logout(previousToken)
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
         ux.warn(message)
@@ -97,7 +102,7 @@ export class Login {
 
         case 'i':
         case 'interactive': {
-          auth = await this.interactive(undefined, opts.expiresIn)
+          auth = await this.interactive(previousAccount, opts.expiresIn)
           break
         }
 
@@ -308,6 +313,10 @@ export class Login {
 
   private async saveToken(entry: NetrcEntry) {
     await saveAuth(entry.login, entry.password, [vars.apiHost, vars.httpGitHost])
+    const config = getStorageConfig()
+    if (config.credentialStore && this.config.dataDir) {
+      await writeLoginState(this.config.dataDir, entry.login)
+    }
   }
 
   private showManualBrowserLoginUrl(url: string) {

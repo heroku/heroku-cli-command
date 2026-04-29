@@ -8,6 +8,7 @@ import {fileURLToPath} from 'node:url'
 import * as sinon from 'sinon'
 
 import {Command as CommandBase} from '../src/command.js'
+import {setCredentialManagerProvider} from '../src/credential-manager.js'
 import {Login} from '../src/login.js'
 import {prompter} from '../src/prompter.js'
 import {restoreCredentialManagerStub, stubCredentialManager} from './helpers/credential-manager-stub.js'
@@ -55,6 +56,45 @@ describe('login with interactive', () => {
     sinon.restore()
     restoreCredentialManagerStub()
   })
+
+  test
+    .it('pre-fills email prompt with previous account on interactive login', async ctx => {
+      const capturedQuestions: any[] = []
+      const promptStub = prompter.prompt as sinon.SinonStub
+      promptStub.callsFake(async (questions: any[]) => {
+        capturedQuestions.push(...questions)
+        const answers: any = {}
+        for (const q of questions) {
+          if (q.name === 'email') answers.email = 'test@example.com'
+          if (q.name === 'password') answers.password = 'test-password'
+        }
+
+        return answers
+      })
+
+      setCredentialManagerProvider({
+        async getAuth(account) {
+          return {account: account ?? 'previous@example.com', token: 'previous-token'}
+        },
+        async removeAuth() {},
+        async saveAuth() {},
+      })
+
+      const cmd = new Command([], ctx.config)
+      cmd.heroku.setAuthEntry({account: 'previous@example.com', token: 'previous-token'})
+
+      api
+        .post('/oauth/authorizations')
+        .reply(200, {
+          access_token: {token: 'new-token'},
+          user: {email: 'test@example.com'},
+        })
+
+      await cmd.heroku.login({method: 'interactive'})
+      const emailQuestion = capturedQuestions.find((q: any) => q.name === 'email')
+      expect(emailQuestion).to.exist
+      expect(emailQuestion.default).to.equal('previous@example.com')
+    })
 
   test
     .it('throws a custom error message body for device_trust_required error', async ctx => {

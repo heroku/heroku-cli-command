@@ -2,12 +2,17 @@ import {Config} from '@oclif/core/config'
 import debug from 'debug'
 import {expect, fancy} from 'fancy-test'
 import nock from 'nock'
-import {dirname, resolve} from 'node:path'
+import * as fs from 'node:fs'
+import * as os from 'node:os'
+import {dirname, join, resolve} from 'node:path'
 import {fileURLToPath} from 'node:url'
 import * as sinon from 'sinon'
 import {stderr} from 'stdout-stderr'
 
+const SYSTEM_TMPDIR = os.tmpdir()
+
 import {Command as CommandBase} from '../src/command.js'
+import {writeLoginState} from '../src/credential-manager-core/lib/login-state.js'
 import {setCredentialManagerProvider} from '../src/credential-manager.js'
 import {RequestId, requestIdHeader} from '../src/request-id.js'
 import {restoreCredentialManagerStub, stubCredentialManager} from './helpers/credential-manager-stub.js'
@@ -111,7 +116,7 @@ describe('api_client', () => {
         setCredentialManagerProvider({
           async getAuth() {
             getCalls++
-            throw new Error('No credentials found. Please log in.')
+            throw new Error('No auth found')
           },
           async removeAuth() {},
           async saveAuth() {},
@@ -195,6 +200,76 @@ describe('api_client', () => {
       })
   })
 
+  describe('login state file integration', () => {
+    let tmpDir: string
+    let platformStub: sinon.SinonStub
+
+    beforeEach(() => {
+      tmpDir = fs.mkdtempSync(join(SYSTEM_TMPDIR, 'heroku-api-client-'))
+      platformStub = sinon.stub(process, 'platform').value('darwin')
+      process.env.HEROKU_NATIVE_STORE_WRITE = 'true'
+    })
+
+    afterEach(() => {
+      fs.rmSync(tmpDir, {force: true, recursive: true})
+      delete process.env.HEROKU_NATIVE_STORE_WRITE
+      platformStub.restore()
+    })
+
+    test
+      .it('passes cached account from login.json to credential store', async ctx => {
+        let receivedAccount: string | undefined
+        setCredentialManagerProvider({
+          async getAuth(account) {
+            receivedAccount = account
+            return {account: account ?? 'fallback@example.com', token: 'cached-token'}
+          },
+          async removeAuth() {},
+          async saveAuth() {},
+        })
+        await writeLoginState(tmpDir, 'cached@example.com')
+        const cmd = new Command([], ctx.config)
+        cmd.config = {...ctx.config, dataDir: tmpDir} as Config
+        await cmd.heroku.getAuthEntry()
+        expect(receivedAccount).to.equal('cached@example.com')
+      })
+
+    test
+      .it('deletes login.json on logout', async ctx => {
+        setCredentialManagerProvider({
+          async getAuth() {
+            return {account: 'logout-int@example.com', token: 'logout-int-token'}
+          },
+          async removeAuth() {},
+          async saveAuth() {},
+        })
+        await writeLoginState(tmpDir, 'logout-int@example.com')
+        api.delete('/oauth/sessions/~').reply(200, {})
+        api.get('/oauth/authorizations').reply(200, [])
+        api.get('/oauth/authorizations/~').reply(200, {})
+        const cmd = new Command([], ctx.config)
+        cmd.config = {...ctx.config, dataDir: tmpDir} as Config
+        await cmd.heroku.logout()
+        expect(fs.existsSync(join(tmpDir, 'login.json'))).to.be.false
+      })
+
+    test
+      .it('clears stale login.json when credential store has no matching account', async ctx => {
+        setCredentialManagerProvider({
+          async getAuth() {
+            throw new Error('No auth found')
+          },
+          async removeAuth() {},
+          async saveAuth() {},
+        })
+        await writeLoginState(tmpDir, 'stale@example.com')
+        const cmd = new Command([], ctx.config)
+        cmd.config = {...ctx.config, dataDir: tmpDir} as Config
+        await cmd.heroku.getAuthEntry()
+        expect(fs.existsSync(join(tmpDir, 'login.json'))).to.be.false
+      })
+  })
+
   describe('setAuthEntry', () => {
     test
       .it('updates auth getter and subsequent getAuthEntry without calling credential store', async ctx => {
@@ -219,7 +294,7 @@ describe('api_client', () => {
       .it('clears token and account when called with undefined', async ctx => {
         setCredentialManagerProvider({
           async getAuth() {
-            throw new Error('No credentials found. Please log in.')
+            throw new Error('No auth found')
           },
           async removeAuth() {},
           async saveAuth() {},
@@ -271,6 +346,10 @@ describe('api_client', () => {
       api.get('/oauth/authorizations/~').reply(200, {})
     })
 
+    afterEach(() => {
+      delete process.env.HEROKU_API_KEY
+    })
+
     test
       .it('calls removeAuth with api and git hosts after revoking session', async ctx => {
         const cmd = new Command([], ctx.config)
@@ -280,6 +359,18 @@ describe('api_client', () => {
         expect(removeAuthCalls[0].account).to.equal('logout@example.com')
         expect(removeAuthCalls[0].hosts).to.deep.equal(['api.heroku.com', 'git.heroku.com'])
         expect(cmd.heroku.auth).to.be.undefined
+      })
+
+    test
+      .it('calls removeAuth with undefined account when HEROKU_API_KEY is set', async ctx => {
+        process.env.HEROKU_API_KEY = 'env-api-key'
+        removeAuthCalls.length = 0
+        const cmd = new Command([], ctx.config)
+        cmd.config = ctx.config
+        await cmd.heroku.logout()
+        expect(removeAuthCalls).to.have.length(1)
+        expect(removeAuthCalls[0].account).to.be.undefined
+        expect(removeAuthCalls[0].hosts).to.deep.equal(['api.heroku.com', 'git.heroku.com'])
       })
   })
 

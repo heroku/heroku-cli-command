@@ -105,6 +105,10 @@ export class WindowsHandler {
       childProcess.execSync(psCommand, {encoding: 'utf8', shell: 'powershell', stdio: ['pipe', 'pipe', 'ignore']})
     } catch (error) {
       const {message} = error as Error
+      if (this.isMissingVaultCredential(message)) {
+        return
+      }
+
       throw new Error(`Failed to remove token from Windows Credential Manager: ${this.scrubError(message)}`)
     }
   }
@@ -143,6 +147,16 @@ export class WindowsHandler {
       const {message} = error as Error
       throw new Error(`Failed to store token in Windows Credential Manager: ${this.scrubError(message)}`)
     }
+  }
+
+  /**
+   * PasswordVault.Retrieve throws when the credential is absent (e.g. netrc-only login).
+   */
+  private isMissingVaultCredential(message: string): boolean {
+    const lower = message.toLowerCase()
+    return lower.includes('element not found')
+      || lower.includes('specified credential could not be found')
+      || lower.includes('0x80070490')
   }
 
   /**

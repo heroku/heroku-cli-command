@@ -105,6 +105,11 @@ user2@example.com
       expect(() => handler.removeAuth('test@example.com', 'heroku-cli')).to.throw('Failed to remove token from Windows Credential Manager: Permission denied')
     })
 
+    it('should return when the credential does not exist', function () {
+      execSyncStub.throws(new Error('Element not found'))
+      expect(() => handler.removeAuth('missing@example.com', 'heroku-cli')).to.not.throw()
+    })
+
     it('should scrub sensitive data from error messages', function () {
       const err = new Error('Command failed: $vault.Retrieve("heroku-cli", "test@example.com")')
       execSyncStub.throws(err)
