@@ -200,15 +200,18 @@ describe('api_client', () => {
 
   describe('login state file integration', () => {
     let tmpDir: string
+    let platformStub: sinon.SinonStub
 
     beforeEach(() => {
       tmpDir = fs.mkdtempSync(join(os.tmpdir(), 'heroku-api-client-'))
+      platformStub = sinon.stub(process, 'platform').value('darwin')
       process.env.HEROKU_NATIVE_STORE_WRITE = 'true'
     })
 
     afterEach(() => {
       fs.rmSync(tmpDir, {force: true, recursive: true})
       delete process.env.HEROKU_NATIVE_STORE_WRITE
+      platformStub.restore()
     })
 
     test
