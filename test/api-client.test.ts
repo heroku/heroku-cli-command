@@ -9,6 +9,8 @@ import {fileURLToPath} from 'node:url'
 import * as sinon from 'sinon'
 import {stderr} from 'stdout-stderr'
 
+const SYSTEM_TMPDIR = os.tmpdir()
+
 import {Command as CommandBase} from '../src/command.js'
 import {writeLoginState} from '../src/credential-manager-core/lib/login-state.js'
 import {setCredentialManagerProvider} from '../src/credential-manager.js'
@@ -203,7 +205,7 @@ describe('api_client', () => {
     let platformStub: sinon.SinonStub
 
     beforeEach(() => {
-      tmpDir = fs.mkdtempSync(join(os.tmpdir(), 'heroku-api-client-'))
+      tmpDir = fs.mkdtempSync(join(SYSTEM_TMPDIR, 'heroku-api-client-'))
       platformStub = sinon.stub(process, 'platform').value('darwin')
       process.env.HEROKU_NATIVE_STORE_WRITE = 'true'
     })
