@@ -52,6 +52,9 @@ export class Login {
       if (opts.expiresIn && opts.expiresIn > thirtyDays) ux.error('Cannot set an expiration longer than thirty days')
 
       const previousToken = await this.heroku.getAuth()
+      const previousAccount = previousToken
+        ? (await this.heroku.getAuthEntry())?.account?.trim() || undefined
+        : undefined
       let input: string | undefined = opts.method
       if (!input) {
         if (opts.expiresIn) {
@@ -99,7 +102,7 @@ export class Login {
 
         case 'i':
         case 'interactive': {
-          auth = await this.interactive(undefined, opts.expiresIn)
+          auth = await this.interactive(previousAccount, opts.expiresIn)
           break
         }
 
