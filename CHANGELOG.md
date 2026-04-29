@@ -10,13 +10,6 @@
 
 * adopt @heroku-cli/test-utils and modernize test setup ([#308](https://github.com/heroku/heroku-cli-command/issues/308)) ([db7be8e](https://github.com/heroku/heroku-cli-command/commit/db7be8eb0e84422e40240c5df5d063513dbe528f))
 
-## [12.3.2](https://github.com/heroku/heroku-cli-command/compare/command-v12.3.1...command-v12.3.2) (2026-04-29)
-
-
-### Bug Fixes
-
-* dedupe API warning headers within one client invocation ([#343](https://github.com/heroku/heroku-cli-command/issues/343)) ([ac1717a](https://github.com/heroku/heroku-cli-command/commit/ac1717a69a86935a6e75f4c2bcbe77f35ec2e20c))
-
 ## [12.3.1](https://github.com/heroku/heroku-cli-command/compare/command-v12.2.2...command-v12.3.1) (2026-04-03)
 
 
