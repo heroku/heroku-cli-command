@@ -937,6 +937,60 @@ describe('api_client', () => {
         expect(stderr.output).to.contain('Warning: some other warning')
         expect(stderr.output).not.to.contain('Warning: Warning: some other warning')
       })
+
+    test
+      .it('does not repeat the same warning on subsequent identical responses', async ctx => {
+        api = nock('https://api.heroku.com', {
+          reqheaders: {authorization: 'Bearer mypass'},
+        })
+        api.get('/apps').twice().reply(200, [], {'X-Heroku-Warning': 'Your account password will expire soon.'})
+
+        const cmd = new Command([], ctx.config)
+        stderr.start()
+        await cmd.heroku.get('/apps')
+        await cmd.heroku.get('/apps')
+        stderr.stop()
+
+        expect(stderr.output.match(/Warning: Your account password will expire soon\./g)?.length).to.equal(1)
+      })
+
+    test
+      .it('shows distinct warnings from successive responses', async ctx => {
+        api = nock('https://api.heroku.com', {
+          reqheaders: {authorization: 'Bearer mypass'},
+        })
+        api.get('/apps').twice().reply(200, [], {'X-Heroku-Warning': 'First warning'})
+        api.get('/apps/foo').reply(200, [], {'X-Heroku-Warning': 'Second warning'})
+
+        const cmd = new Command([], ctx.config)
+        stderr.start()
+        await cmd.heroku.get('/apps')
+        await cmd.heroku.get('/apps')
+        await cmd.heroku.get('/apps/foo')
+        stderr.stop()
+
+        expect(stderr.output).to.contain('Warning: First warning')
+        expect(stderr.output.match(/Warning: First warning/g)?.length).to.equal(1)
+        expect(stderr.output).to.contain('Warning: Second warning')
+        expect(stderr.output.match(/Warning: Second warning/g)?.length).to.equal(1)
+      })
+
+    test
+      .it('shows the same header warning again for a new command instance', async ctx => {
+        api = nock('https://api.heroku.com', {
+          reqheaders: {authorization: 'Bearer mypass'},
+        })
+        api.get('/apps').twice().reply(200, [], {'X-Heroku-Warning': 'Password expiry reminder'})
+
+        const cmd1 = new Command([], ctx.config)
+        const cmd2 = new Command([], ctx.config)
+        stderr.start()
+        await cmd1.heroku.get('/apps')
+        await cmd2.heroku.get('/apps')
+        stderr.stop()
+
+        expect(stderr.output.match(/Warning: Password expiry reminder/g)?.length).to.equal(2)
+      })
   })
 
   context('with Warning-Message header set on response', function () {
