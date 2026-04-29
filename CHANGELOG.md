@@ -10,6 +10,25 @@
 
 * adopt @heroku-cli/test-utils and modernize test setup ([#308](https://github.com/heroku/heroku-cli-command/issues/308)) ([db7be8e](https://github.com/heroku/heroku-cli-command/commit/db7be8eb0e84422e40240c5df5d063513dbe528f))
 
+## [13.0.0-beta.2](https://github.com/heroku/heroku-cli-command/compare/command-v13.0.0-beta.1...command-v13.0.0-beta.2) (2026-04-29)
+
+
+### Features
+
+* cache account hint in login.json for native credential store ([#342](https://github.com/heroku/heroku-cli-command/issues/342)) ([cf0544a](https://github.com/heroku/heroku-cli-command/commit/cf0544ad3d00c4e33de0677c7d509cddec36d799))
+* env var keychain bool ([#340](https://github.com/heroku/heroku-cli-command/issues/340)) ([ec16c2a](https://github.com/heroku/heroku-cli-command/commit/ec16c2a3615e403a1db3bc3c538e885227efadbc))
+
+
+### Bug Fixes
+
+* stop removeauth error no acct ([#341](https://github.com/heroku/heroku-cli-command/issues/341)) ([40642b9](https://github.com/heroku/heroku-cli-command/commit/40642b9c0049a679df9dd474ad26894202383a77))
+* throw an error when account is not resolved ([#339](https://github.com/heroku/heroku-cli-command/issues/339)) ([2986154](https://github.com/heroku/heroku-cli-command/commit/298615482eb0f44e5221486948bd330f1ab2fef7))
+
+
+### Miscellaneous Chores
+
+* release 13.0.0-beta.2 ([70df59e](https://github.com/heroku/heroku-cli-command/commit/70df59e12a2b803317959cc91a68c80e8fc98860))
+
 ## [13.0.0-beta.1](https://github.com/heroku/heroku-cli-command/compare/command-v12.1.2-beta.0...command-v13.0.0-beta.1) (2026-04-14)
 
 
