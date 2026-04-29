@@ -5,6 +5,8 @@ import {CLIError, warn} from '@oclif/core/errors'
 import debug from 'debug'
 import * as url from 'node:url'
 
+import {getStorageConfig} from './credential-manager-core/lib/credential-storage-selector.js'
+import {deleteLoginState, readLoginState} from './credential-manager-core/lib/login-state.js'
 import {type AuthEntry, getAuth as getStoredAuth, removeAuth} from './credential-manager.js'
 import {Login} from './login.js'
 import {Mutex} from './mutex.js'
@@ -332,13 +334,22 @@ export class APIClient {
 
     if (!this._storedAuthPromise) {
       this._storedAuthPromise = (async (): Promise<AuthEntry | undefined> => {
+        const {credentialStore} = getStorageConfig()
+        const useLoginState = Boolean(credentialStore && this.config.dataDir)
         try {
-          const {account, token} = await getStoredAuth(undefined, vars.apiHost)
+          const cachedAccount = useLoginState
+            ? (await readLoginState(this.config.dataDir))?.account
+            : undefined
+          const {account, token} = await getStoredAuth(cachedAccount, vars.apiHost)
           this._auth = token
           this._account = account
           this._storedAuthResolvedAbsent = false
           return {account: this._account, token: this._auth}
         } catch {
+          if (useLoginState) {
+            await deleteLoginState(this.config.dataDir)
+          }
+
           this._storedAuthResolvedAbsent = true
           return undefined
         } finally {
@@ -364,6 +375,7 @@ export class APIClient {
 
     this.setAuthEntry(undefined)
     await removeAuth(entry?.account, [vars.apiHost, vars.httpGitHost])
+    await this.clearLoginState()
   }
 
   patch<T>(url: string, options: APIClient.Options = {}) {
@@ -416,6 +428,13 @@ export class APIClient {
         throw error
       }
     })
+  }
+
+  private async clearLoginState(): Promise<void> {
+    const config = getStorageConfig()
+    if (config.credentialStore && this.config.dataDir) {
+      await deleteLoginState(this.config.dataDir)
+    }
   }
 
   private resetStoredAuthResolution(): void {
