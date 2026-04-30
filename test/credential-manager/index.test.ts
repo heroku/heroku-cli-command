@@ -1,6 +1,5 @@
 import {expect, use} from 'chai'
 import chaiAsPromised from 'chai-as-promised'
-import inquirer from 'inquirer'
 import sinon from 'sinon'
 import {stderr} from 'stdout-stderr'
 
@@ -242,35 +241,6 @@ describe('credential-manager', function () {
       expect(unwrap(stderr.output)).to.contain('To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".')
 
       stderr.stop()
-    })
-
-    it('should use the selected account when an account is not provided', async function () {
-      const listAccountsStub = sinon.stub(MacOSHandler.prototype, 'listAccounts').returns(['user@example.com'])
-      const getAuthStub = sinon.stub(MacOSHandler.prototype, 'getAuth').returns('keychain-token')
-      const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
-
-      const auth = await credentialManager.getAuth(undefined, 'api.heroku.com')
-
-      expect(listAccountsStub.calledOnce).to.be.true
-      expect(listAccountsStub.firstCall.args[0]).to.equal('heroku-cli')
-      expect(getAuthStub.calledOnce).to.be.true
-      expect(netrcStub.notCalled).to.be.true
-      expect(auth).to.deep.equal({account: 'user@example.com', token: 'keychain-token'})
-    })
-
-    it('should use the selected account when an account is not provided and multiple accounts are found', async function () {
-      const listAccountsStub = sinon.stub(MacOSHandler.prototype, 'listAccounts').returns(['user1@example.com', 'user2@example.com'])
-      const promptStub = (sinon.stub(inquirer, 'prompt')).resolves({account: 'user2@example.com'})
-      const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuth').returns('keychain-token')
-      const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
-
-      const auth = await credentialManager.getAuth(undefined, 'api.heroku.com')
-
-      expect(listAccountsStub.calledOnce).to.be.true
-      expect(promptStub.calledOnce).to.be.true
-      expect(macosStub.calledOnce).to.be.true
-      expect(netrcStub.notCalled).to.be.true
-      expect(auth).to.deep.equal({account: 'user2@example.com', token: 'keychain-token'})
     })
 
     it('should fall back to netrc when an account is not provided and no accounts are found', async function () {

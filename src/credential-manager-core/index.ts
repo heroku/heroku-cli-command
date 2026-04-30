@@ -6,7 +6,6 @@ import {LinuxHandler} from './credential-handlers/linux-handler.js'
 import {MacOSHandler} from './credential-handlers/macos-handler.js'
 import {NetrcHandler} from './credential-handlers/netrc-handler.js'
 import {WindowsHandler} from './credential-handlers/windows-handler.js'
-import {selectAccount} from './lib/account-selector.js'
 import {reportCredentialStoreError} from './lib/cli-command-telemetry.js'
 import {CredentialStore, getNativeCredentialStore, getStorageConfig} from './lib/credential-storage-selector.js'
 import {AuthEntry, NetrcAuthEntry} from './lib/types.js'
@@ -79,14 +78,6 @@ export async function getAuth(account: string | undefined, host: string, service
       if (account) {
         const token = handler.getAuth(account, service)
         return {account, token}
-      }
-
-      const accounts = handler.listAccounts(service)
-      const selectedAccount = await selectAccount(accounts)
-
-      if (selectedAccount) {
-        const token = handler.getAuth(selectedAccount, service)
-        return {account: selectedAccount, token}
       }
 
       throw new Error('No auth found')
@@ -186,7 +177,6 @@ export {LinuxHandler} from './credential-handlers/linux-handler.js'
 export {MacOSHandler} from './credential-handlers/macos-handler.js'
 export {NetrcHandler} from './credential-handlers/netrc-handler.js'
 export {WindowsHandler} from './credential-handlers/windows-handler.js'
-export {selectAccount} from './lib/account-selector.js'
 export {CredentialStore, getNativeCredentialStore, getStorageConfig} from './lib/credential-storage-selector.js'
 export type {StorageConfig} from './lib/credential-storage-selector.js'
 export {deleteLoginState, readLoginState, writeLoginState} from './lib/login-state.js'
