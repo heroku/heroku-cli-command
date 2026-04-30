@@ -74,13 +74,8 @@ export async function getAuth(account: string | undefined, host: string, service
   if (config.credentialStore && account) {
     try {
       const handler = getCredentialHandler(config.credentialStore)
-
-      if (account) {
-        const token = handler.getAuth(account, service)
-        return {account, token}
-      }
-
-      throw new Error('No auth found')
+      const token = handler.getAuth(account, service)
+      return {account, token}
     } catch (error) {
       const {message} = error as Error
       credDebug(message)
@@ -96,6 +91,11 @@ export async function getAuth(account: string | undefined, host: string, service
         operation: 'getAuth',
       })
     }
+  } else if (config.credentialStore && !account && process.env.HEROKU_KEYCHAIN_WARNINGS !== 'off') {
+    ux.warn(heredoc(`
+        We can’t retrieve the Heroku token from ${service}.
+        We'll try to retrieve the token from the .netrc file instead.
+        To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".`))
   }
 
   if (config.useNetrc) {

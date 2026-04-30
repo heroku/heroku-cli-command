@@ -243,8 +243,7 @@ describe('credential-manager', function () {
       stderr.stop()
     })
 
-    it('should fall back to netrc when an account is not provided and no accounts are found', async function () {
-      sinon.stub(MacOSHandler.prototype, 'listAccounts').returns([])
+    it('should fall back to netrc when an account is not provided', async function () {
       const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuth')
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
       netrcStub.resolves({login: 'user@example.com', password: 'netrc-token'})
@@ -256,6 +255,9 @@ describe('credential-manager', function () {
       expect(macosStub.notCalled).to.be.true
       expect(netrcStub.calledOnce).to.be.true
       expect(auth).to.deep.equal({account: 'user@example.com', token: 'netrc-token'})
+      expect(unwrap(stderr.output)).to.contain('Warning: We can’t retrieve the Heroku token from heroku-cli.')
+      expect(unwrap(stderr.output)).to.contain('We\'ll try to retrieve the token from the .netrc file instead.')
+      expect(unwrap(stderr.output)).to.contain('To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".')
 
       stderr.stop()
     })
