@@ -348,6 +348,11 @@ export class APIClient {
           const cachedAccount = useLoginState
             ? (await readLoginState(this.config.dataDir))?.account
             : undefined
+          if (useLoginState && !cachedAccount) {
+            this._storedAuthResolvedAbsent = true
+            return undefined
+          }
+
           const {account, token} = await getStoredAuth(cachedAccount, vars.apiHost)
           this._auth = token
           this._account = account

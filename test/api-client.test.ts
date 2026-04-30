@@ -268,6 +268,24 @@ describe('api_client', () => {
         await cmd.heroku.getAuthEntry()
         expect(fs.existsSync(join(tmpDir, 'login.json'))).to.be.false
       })
+
+    test
+      .it('returns undefined without querying credential store when login.json is missing', async ctx => {
+        let getAuthCalled = false
+        setCredentialManagerProvider({
+          async getAuth() {
+            getAuthCalled = true
+            return {account: 'should-not-use@example.com', token: 'should-not-use'}
+          },
+          async removeAuth() {},
+          async saveAuth() {},
+        })
+        const cmd = new Command([], ctx.config)
+        cmd.config = {...ctx.config, dataDir: tmpDir} as Config
+        const result = await cmd.heroku.getAuthEntry()
+        expect(result).to.be.undefined
+        expect(getAuthCalled).to.be.false
+      })
   })
 
   describe('setAuthEntry', () => {
