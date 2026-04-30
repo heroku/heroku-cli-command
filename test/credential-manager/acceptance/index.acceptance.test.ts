@@ -111,23 +111,23 @@ describe('credential-manager acceptance', function () {
   })
 
   describe('native credential store', function () {
-    before(function() {
+    before(function () {
       delete process.env.HEROKU_NETRC_WRITE
     })
 
-    afterEach(function() {
+    afterEach(function () {
       cleanupCredentialStore()
     })
 
     // We save with `hosts = []` to test the keychain-only path
-    it('saves and retrieves an entry', async function() {
+    it('saves and retrieves an entry', async function () {
       await saveAuth(CREDENTIAL.account, CREDENTIAL.token, [], CREDENTIAL.service)
 
       const auth = await getAuth(CREDENTIAL.account, 'missing.host.example.com', CREDENTIAL.service)
-      expect(auth).to.deep.equal({ account: CREDENTIAL.account, token: CREDENTIAL.token })
+      expect(auth).to.deep.equal({account: CREDENTIAL.account, token: CREDENTIAL.token})
     })
 
-    it('removes an entry', async function() {
+    it('removes an entry', async function () {
       // suppressing the keychain warning message since it is not relevant to this test
       process.env.HEROKU_KEYCHAIN_WARNINGS = 'off'
       await saveAuth(CREDENTIAL.account, CREDENTIAL.token, [], CREDENTIAL.service)
@@ -138,15 +138,15 @@ describe('credential-manager acceptance', function () {
       delete process.env.HEROKU_KEYCHAIN_WARNINGS
     })
 
-    it('updates entry when account already has credentials', async function() {
+    it('updates entry when account already has credentials', async function () {
       await saveAuth(CREDENTIAL.account, CREDENTIAL.token, [], CREDENTIAL.service)
       await saveAuth(CREDENTIAL.account, 'new-token', [], CREDENTIAL.service)
 
       const auth = await getAuth(CREDENTIAL.account, 'missing.host.example.com', CREDENTIAL.service)
-      expect(auth).to.deep.equal({ account: CREDENTIAL.account, token: 'new-token' })
+      expect(auth).to.deep.equal({account: CREDENTIAL.account, token: 'new-token'})
     })
 
-    it('lists accounts for a single service', async function() {
+    it('lists accounts for a single service', async function () {
       const accountA = CREDENTIAL.account
       const accountB = `second-${accountA}`
 
@@ -154,7 +154,7 @@ describe('credential-manager acceptance', function () {
       await saveAuth(accountB, CREDENTIAL.token, [], CREDENTIAL.service)
       await saveAuth(CREDENTIAL_ALTERNATE_SERVICE.account, CREDENTIAL_ALTERNATE_SERVICE.token, [], CREDENTIAL_ALTERNATE_SERVICE.service)
 
-      const { accounts } = listCredentialStoreAccounts(CREDENTIAL.service)
+      const {accounts} = listCredentialStoreAccounts(CREDENTIAL.service)
       expect(accounts).to.have.lengthOf(2)
       expect(accounts).to.include(accountA)
       expect(accounts).to.include(accountB)
