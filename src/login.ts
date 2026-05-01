@@ -153,10 +153,10 @@ export class Login {
       // grab the default authorization because that is the token shown in the
       // dashboard as API Key and they may be using it for something else and we
       // would unwittingly break an integration that they are depending on
-        const d = await this.defaultToken()
-        if (d === resolvedToken) return
+        const defaultApiToken = await this.defaultToken()
+        if (defaultApiToken && this.isSameToken(resolvedToken, defaultApiToken)) return
         return Promise.all(authorizations
-          .filter(a => a.access_token && a.access_token.token === resolvedToken)
+          .filter(a => a.access_token?.token && this.isSameToken(resolvedToken, a.access_token.token))
           .map(a => HTTP.delete(`${vars.apiUrl}/oauth/authorizations/${a.id}`, headers(resolvedToken))))
       })
       .catch(error => {
@@ -309,6 +309,13 @@ export class Login {
 
     this.heroku.setAuthEntry({account: auth.login, token: auth.password})
     return auth
+  }
+
+  private isSameToken(localToken: string, apiToken: string): boolean {
+    const pattern = apiToken
+      .replace(/[.+?^${}()|[\]\\]/g, String.raw`\$&`)
+      .replace(/\*/g, '[^*]')
+    return new RegExp(`^${pattern}$`).test(localToken)
   }
 
   private async saveToken(entry: NetrcEntry) {
