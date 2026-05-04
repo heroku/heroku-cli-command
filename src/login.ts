@@ -18,6 +18,7 @@ import {vars} from './vars.js'
 const cliDebug = debug('heroku-cli-command')
 const hostname = os.hostname()
 const thirtyDays = 60 * 60 * 24 * 30
+const REDACTED_TOKEN_ASTERISKS = '*'.repeat(10)
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace Login {
@@ -154,9 +155,9 @@ export class Login {
       // dashboard as API Key and they may be using it for something else and we
       // would unwittingly break an integration that they are depending on
         const defaultApiToken = await this.defaultToken()
-        if (defaultApiToken && this.isSameToken(resolvedToken, defaultApiToken)) return
+        if (defaultApiToken && this.isCurrentOAuthToken(resolvedToken, defaultApiToken)) return
         return Promise.all(authorizations
-          .filter(a => a.access_token?.token && this.isSameToken(resolvedToken, a.access_token.token))
+          .filter(a => a.access_token?.token && this.isCurrentOAuthToken(resolvedToken, a.access_token.token))
           .map(a => HTTP.delete(`${vars.apiUrl}/oauth/authorizations/${a.id}`, headers(resolvedToken))))
       })
       .catch(error => {
@@ -311,11 +312,17 @@ export class Login {
     return auth
   }
 
-  private isSameToken(localToken: string, apiToken: string): boolean {
-    const pattern = apiToken
-      .replace(/[.+?^${}()|[\]\\]/g, String.raw`\$&`)
-      .replace(/\*/g, '[^*]')
-    return new RegExp(`^${pattern}$`).test(localToken)
+  private isCurrentOAuthToken(localToken: string, apiToken: string): boolean {
+    const asteriskIndex = apiToken.indexOf(REDACTED_TOKEN_ASTERISKS)
+
+    if (asteriskIndex === -1) {
+      // raw value stored, direct match works
+      return localToken === apiToken
+    }
+
+    const prefix = apiToken.slice(0, asteriskIndex)
+    const suffix = apiToken.slice(asteriskIndex + REDACTED_TOKEN_ASTERISKS.length)
+    return localToken.startsWith(prefix) && (suffix === '' || localToken.endsWith(suffix))
   }
 
   private async saveToken(entry: NetrcEntry) {

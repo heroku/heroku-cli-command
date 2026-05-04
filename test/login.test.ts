@@ -55,6 +55,7 @@ describe('login with interactive', () => {
   afterEach(() => {
     sinon.restore()
     restoreCredentialManagerStub()
+    nock.cleanAll()
   })
 
   test
@@ -194,4 +195,132 @@ describe('login with browser', () => {
       expect(() => (login as any).getLoginMethodFromPromptKey('\u0003')).to.throw('cancelled')
       expect(errorStub.calledWithExactly('Login cancelled by user', {exit: 130})).to.equal(true)
     })
+})
+
+describe('logout', () => {
+  let api: nock.Scope
+
+  beforeEach(() => {
+    api = nock('https://api.heroku.com')
+    api.delete('/oauth/sessions/~').reply(200, {})
+  })
+
+  afterEach(() => {
+    sinon.restore()
+    restoreCredentialManagerStub()
+    nock.cleanAll()
+  })
+
+  test
+    .it('deletes the matching authorization', async ctx => {
+      const token = 'fake-token-abc'
+      api.get('/oauth/authorizations').reply(200, [
+        {access_token: {token}, id: 'auth-id-1'},
+        {access_token: {token: 'fake-token-other'}, id: 'auth-id-2'},
+      ])
+      api.get('/oauth/authorizations/~').reply(200, {access_token: {token: 'fake-token-default'}})
+      const deleteStub = api.delete('/oauth/authorizations/auth-id-1').reply(200, {})
+
+      setCredentialManagerProvider({
+        async getAuth() {
+          return {account: 'test@example.com', token}
+        },
+        async removeAuth() {},
+        async saveAuth() {},
+      })
+      const cmd = new Command([], ctx.config)
+      await cmd.heroku.logout()
+
+      expect(deleteStub.isDone()).to.equal(true)
+    })
+
+  test
+    .it('does not delete the default API key authorization', async ctx => {
+      const token = 'fake-token-abc'
+      api.get('/oauth/authorizations').reply(200, [
+        {access_token: {token}, id: 'auth-id-1'},
+      ])
+      api.get('/oauth/authorizations/~').reply(200, {access_token: {token}})
+      const deleteStub = api.delete('/oauth/authorizations/auth-id-1').reply(200, {})
+
+      setCredentialManagerProvider({
+        async getAuth() {
+          return {account: 'test@example.com', token}
+        },
+        async removeAuth() {},
+        async saveAuth() {},
+      })
+      const cmd = new Command([], ctx.config)
+      await cmd.heroku.logout()
+
+      expect(deleteStub.isDone()).to.equal(false)
+    })
+
+  test
+    .it('does not delete any authorization when no token matches', async ctx => {
+      const token = 'fake-token-abc'
+      api.get('/oauth/authorizations').reply(200, [
+        {access_token: {token: 'fake-token-other'}, id: 'auth-id-1'},
+      ])
+      api.get('/oauth/authorizations/~').reply(200, {access_token: {token: 'fake-token-default'}})
+      const deleteStub = api.delete('/oauth/authorizations/auth-id-1').reply(200, {})
+
+      setCredentialManagerProvider({
+        async getAuth() {
+          return {account: 'test@example.com', token}
+        },
+        async removeAuth() {},
+        async saveAuth() {},
+      })
+      const cmd = new Command([], ctx.config)
+      await cmd.heroku.logout()
+
+      expect(deleteStub.isDone()).to.equal(false)
+    })
+
+  test
+    .it('does not error when authorizations list is empty', async ctx => {
+      const token = 'fake-token-abc'
+      api.get('/oauth/authorizations').reply(200, [])
+      api.get('/oauth/authorizations/~').reply(200, {})
+
+      setCredentialManagerProvider({
+        async getAuth() {
+          return {account: 'test@example.com', token}
+        },
+        async removeAuth() {},
+        async saveAuth() {},
+      })
+      const cmd = new Command([], ctx.config)
+      await cmd.heroku.logout()
+    })
+})
+
+describe('isCurrentOAuthToken', () => {
+  const login = new Login(null as any, null as any)
+  const match = (localToken: string, apiToken: string) =>
+    (login as any).isCurrentOAuthToken(localToken, apiToken)
+
+  it('matches identical unredacted tokens', () => {
+    expect(match('fake-token-abc', 'fake-token-abc')).to.equal(true)
+  })
+
+  it('does not match different unredacted tokens', () => {
+    expect(match('fake-token-abc', 'fake-token-xyz')).to.equal(false)
+  })
+
+  it('matches redacted tokens with correct prefix and suffix', () => {
+    expect(match('prefixABCDEFGHIJKLMNOPQRSTUVWXYZsuffix', 'prefix**********suffix')).to.equal(true)
+    expect(match('prefixABCDEFGHIJKLMNOPQRSTUVWXYZ', 'prefix**********')).to.equal(true)
+  })
+
+  it('does not match when prefix differs', () => {
+    expect(match('xxxxxABCDEFGHIJKLMNOPQRSTUVWXYZsuffix', 'prefix**********suffix')).to.equal(false)
+    expect(match('xxxxxABCDEFGHIJKLMNOPQRSTUVWXYZ', 'prefix**********')).to.equal(false)
+  })
+
+  it('does not match when suffix differs', () => {
+    expect(match('prefixABCDEFGHIJKLMNOPQRSTUVWXYZxxxxx', 'prefix**********suffix')).to.equal(false)
+    expect(match('prefixABCDEFGHIJKLMNOPQRSTUVWXYZ', 'prefix**********suffix')).to.equal(false)
+  })
 })
