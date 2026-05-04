@@ -107,6 +107,23 @@ export async function getAuth(account: string | undefined, host: string, service
 }
 
 /**
+ * Lists all accounts stored in the native credential store for a given service.
+ *
+ * @param service - Service name (defaults to 'heroku-cli')
+ * @returns Array of account names, or empty array if no native credential store is available
+ */
+export function listKeychainAccounts(service = SERVICE_NAME): string[] {
+  const nativeStore = getNativeCredentialStore()
+
+  if (!nativeStore) {
+    return []
+  }
+
+  const handler = getCredentialHandler(nativeStore)
+  return handler.listAccounts(service)
+}
+
+/**
  * Removes authentication credentials from the platform native store (when present) and .netrc.
  * Uses {@link getNativeCredentialStore} so legacy HEROKU_NETRC_WRITE-only mode does not skip Keychain/vault cleanup after a mixed login.
  *
