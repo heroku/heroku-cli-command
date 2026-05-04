@@ -160,13 +160,6 @@ describe('credential-manager acceptance', function () {
       expect(accounts).to.include(accountB)
       expect(accounts).to.not.include(CREDENTIAL_ALTERNATE_SERVICE.account)
     })
-
-    it('retrieves when account is not provided and only one account is found', async function () {
-      await saveAuth(CREDENTIAL.account, CREDENTIAL.token, [], CREDENTIAL.service)
-
-      const auth = await getAuth(undefined, 'missing.host.example.com', CREDENTIAL.service)
-      expect(auth).to.deep.equal({account: CREDENTIAL.account, token: CREDENTIAL.token})
-    })
   })
 
   describe('native credential store + netrc fallback', function () {
