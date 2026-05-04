@@ -93,7 +93,7 @@ describe('credential-manager', function () {
 
       expect(macosStub.calledOnce).to.be.true
       expect(netrcStub.calledOnce).to.be.true
-      expect(unwrap(stderr.output)).to.contain('Warning: We can’t save the Heroku token to heroku-cli.')
+      expect(unwrap(stderr.output)).to.contain('Warning: We can\'t save the Heroku token to your computer\'s keychain.')
       expect(unwrap(stderr.output)).to.contain('We\'ll save the token to the .netrc file instead.')
       expect(unwrap(stderr.output)).to.contain('To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".')
 
@@ -200,7 +200,7 @@ describe('credential-manager', function () {
       expect(netrcStub.calledOnce).to.be.true
       expect(netrcStub.firstCall.args[0]).to.equal('api.heroku.com')
       expect(auth).to.deep.equal({account: 'user@example.com', token: 'netrc-token'})
-      expect(unwrap(stderr.output)).to.contain('Warning: We can’t retrieve the Heroku token from heroku-cli.')
+      expect(unwrap(stderr.output)).to.contain('Warning: We can\'t retrieve the Heroku token from your computer\'s keychain.')
       expect(unwrap(stderr.output)).to.contain('We\'ll try to retrieve the token from the .netrc file instead.')
       expect(unwrap(stderr.output)).to.contain('To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".')
 
@@ -218,7 +218,7 @@ describe('credential-manager', function () {
         .to.be.rejectedWith(Error, 'No auth found for api.heroku.com')
       expect(macosStub.calledOnce).to.be.true
       expect(netrcStub.calledOnce).to.be.true
-      expect(unwrap(stderr.output)).to.contain('Warning: We can’t retrieve the Heroku token from heroku-cli.')
+      expect(unwrap(stderr.output)).to.contain('Warning: We can\'t retrieve the Heroku token from your computer\'s keychain.')
       expect(unwrap(stderr.output)).to.contain('We\'ll try to retrieve the token from the .netrc file instead.')
       expect(unwrap(stderr.output)).to.contain('To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".')
 
@@ -236,7 +236,7 @@ describe('credential-manager', function () {
         .to.be.rejectedWith(Error, 'No auth found')
       expect(macosStub.calledOnce).to.be.true
       expect(netrcStub.calledOnce).to.be.true
-      expect(unwrap(stderr.output)).to.contain('Warning: We can’t retrieve the Heroku token from heroku-cli.')
+      expect(unwrap(stderr.output)).to.contain('Warning: We can\'t retrieve the Heroku token from your computer\'s keychain.')
       expect(unwrap(stderr.output)).to.contain('We\'ll try to retrieve the token from the .netrc file instead.')
       expect(unwrap(stderr.output)).to.contain('To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".')
 
@@ -328,7 +328,7 @@ describe('credential-manager', function () {
 
       expect(macosStub.calledOnce).to.be.true
       expect(netrcStub.calledOnce).to.be.true
-      expect(unwrap(stderr.output)).to.contain('Warning: We can’t remove the Heroku token from heroku-cli.')
+      expect(unwrap(stderr.output)).to.contain('Warning: We can\'t remove the Heroku token from your computer\'s keychain.')
       expect(unwrap(stderr.output)).to.contain('We\'ll remove the token from the .netrc file instead.')
       expect(unwrap(stderr.output)).to.contain('To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".')
 
@@ -374,7 +374,7 @@ describe('credential-manager', function () {
 
       expect(macosStub.notCalled).to.be.true
       expect(netrcStub.calledOnce).to.be.true
-      expect(unwrap(stderr.output)).to.not.contain('We can’t remove the Heroku token from heroku-cli.')
+      expect(unwrap(stderr.output)).to.not.contain('We can\'t remove the Heroku token from your computer\'s keychain.')
 
       stderr.stop()
     })

@@ -37,7 +37,7 @@ export async function saveAuth(account: string, token: string, hosts: string[], 
       credDebug(message)
       if (process.env.HEROKU_KEYCHAIN_WARNINGS !== 'off') {
         ux.warn(heredoc(`
-          We can’t save the Heroku token to ${service}.
+          We can't save the Heroku token to your computer's keychain.
           We'll save the token to the .netrc file instead.
           To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".`))
       }
@@ -81,7 +81,7 @@ export async function getAuth(account: string | undefined, host: string, service
       credDebug(message)
       if (process.env.HEROKU_KEYCHAIN_WARNINGS !== 'off') {
         ux.warn(heredoc(`
-          We can’t retrieve the Heroku token from ${service}.
+          We can't retrieve the Heroku token from your computer's keychain.
           We'll try to retrieve the token from the .netrc file instead.
           To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".`))
       }
@@ -129,7 +129,7 @@ export async function removeAuth(account: string | undefined, hosts: string[], s
       credDebug(message)
       if (process.env.HEROKU_KEYCHAIN_WARNINGS !== 'off') {
         ux.warn(heredoc(`
-          We can’t remove the Heroku token from ${service}.
+          We can't remove the Heroku token from your computer's keychain.
           We'll remove the token from the .netrc file instead.
           To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".`))
       }
