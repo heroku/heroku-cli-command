@@ -18,12 +18,14 @@ import {vars} from './vars.js'
 const cliDebug = debug('heroku-cli-command')
 const hostname = os.hostname()
 const thirtyDays = 60 * 60 * 24 * 30
+const REDACTED_TOKEN_ASTERISKS = '*'.repeat(10)
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace Login {
   export interface Options {
     browser?: string
     expiresIn?: number
+    keepExistingSession?: boolean
     method?: 'browser' | 'interactive' | 'sso'
   }
 }
@@ -86,7 +88,7 @@ export class Login {
       }
 
       try {
-        if (previousToken && !getStorageConfig().credentialStore) await this.logout(previousToken)
+        if (previousToken && !opts.keepExistingSession) await this.logout(previousToken)
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
         ux.warn(message)
@@ -153,10 +155,10 @@ export class Login {
       // grab the default authorization because that is the token shown in the
       // dashboard as API Key and they may be using it for something else and we
       // would unwittingly break an integration that they are depending on
-        const d = await this.defaultToken()
-        if (d === resolvedToken) return
+        const defaultApiToken = await this.defaultToken()
+        if (defaultApiToken && this.isCurrentOAuthToken(resolvedToken, defaultApiToken)) return
         return Promise.all(authorizations
-          .filter(a => a.access_token && a.access_token.token === resolvedToken)
+          .filter(a => a.access_token?.token && this.isCurrentOAuthToken(resolvedToken, a.access_token.token))
           .map(a => HTTP.delete(`${vars.apiUrl}/oauth/authorizations/${a.id}`, headers(resolvedToken))))
       })
       .catch(error => {
@@ -309,6 +311,19 @@ export class Login {
 
     this.heroku.setAuthEntry({account: auth.login, token: auth.password})
     return auth
+  }
+
+  private isCurrentOAuthToken(localToken: string, apiToken: string): boolean {
+    const asteriskIndex = apiToken.indexOf(REDACTED_TOKEN_ASTERISKS)
+
+    if (asteriskIndex === -1) {
+      // raw value stored, direct match works
+      return localToken === apiToken
+    }
+
+    const prefix = apiToken.slice(0, asteriskIndex)
+    const suffix = apiToken.slice(asteriskIndex + REDACTED_TOKEN_ASTERISKS.length)
+    return localToken.startsWith(prefix) && (suffix === '' || localToken.endsWith(suffix))
   }
 
   private async saveToken(entry: NetrcEntry) {
