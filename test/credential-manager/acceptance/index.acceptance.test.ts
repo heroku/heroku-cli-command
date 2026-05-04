@@ -217,7 +217,7 @@ describe('credential-manager acceptance', function () {
         await saveAuth(CREDENTIAL.account, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
         stderr.stop()
 
-        expect(unwrap(stderr.output)).to.contain('We can’t save the Heroku token to your computer\'s keychain.')
+        expect(unwrap(stderr.output)).to.contain('We can\'t save the Heroku token to your computer\'s keychain.')
         expect(unwrap(stderr.output)).to.contain('We\'ll save the token to the .netrc file instead.')
         expect(unwrap(stderr.output)).to.contain('To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".')
 
