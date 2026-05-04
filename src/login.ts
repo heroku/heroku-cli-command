@@ -25,6 +25,7 @@ export namespace Login {
   export interface Options {
     browser?: string
     expiresIn?: number
+    keepExistingSession?: boolean
     method?: 'browser' | 'interactive' | 'sso'
   }
 }
@@ -87,7 +88,7 @@ export class Login {
       }
 
       try {
-        if (previousToken && !getStorageConfig().credentialStore) await this.logout(previousToken)
+        if (previousToken && !opts.keepExistingSession) await this.logout(previousToken)
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
         ux.warn(message)

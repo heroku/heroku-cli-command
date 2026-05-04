@@ -166,6 +166,55 @@ describe('login with interactive', () => {
           expect(error.message).to.contain('Cannot set an expiration longer than thirty days')
         })
     })
+
+  test
+    .it('revokes the existing session by default when already logged in', async ctx => {
+      nock.cleanAll()
+
+      api.delete('/oauth/sessions/~').reply(200, {})
+      api.get('/oauth/authorizations').reply(200, [])
+      api.get('/oauth/authorizations/~').reply(200, {})
+      api.post('/oauth/authorizations').reply(200, {
+        access_token: {token: 'new-token'},
+        user: {email: 'test@example.com'},
+      })
+
+      setCredentialManagerProvider({
+        async getAuth() {
+          return {account: 'test@example.com', token: 'previous-token'}
+        },
+        async removeAuth() {},
+        async saveAuth() {},
+      })
+
+      const cmd = new Command([], ctx.config)
+      await cmd.heroku.login({method: 'interactive'})
+
+      expect(api.isDone()).to.equal(true)
+    })
+
+  test
+    .it('keeps the existing session when keepExistingSession is true', async ctx => {
+      nock.cleanAll()
+      api.delete('/oauth/sessions/~').reply(200, {})
+      api.post('/oauth/authorizations').reply(200, {
+        access_token: {token: 'new-token'},
+        user: {email: 'test@example.com'},
+      })
+
+      setCredentialManagerProvider({
+        async getAuth() {
+          return {account: 'test@example.com', token: 'previous-token'}
+        },
+        async removeAuth() {},
+        async saveAuth() {},
+      })
+
+      const cmd = new Command([], ctx.config)
+      await cmd.heroku.login({keepExistingSession: true, method: 'interactive'})
+
+      expect(api.isDone()).to.equal(false)
+    })
 })
 
 describe('login with browser', () => {
