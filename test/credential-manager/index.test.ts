@@ -381,26 +381,26 @@ describe('credential-manager', function () {
   })
 
   describe('listKeychainAccounts', function () {
-    it('should return accounts from the native credential store', function () {
+    it('should return accounts from the native credential store', async function () {
       sinon.stub(MacOSHandler.prototype, 'listAccounts').returns(['user1@example.com', 'user2@example.com'])
 
-      const accounts = credentialManager.listKeychainAccounts()
+      const accounts = await credentialManager.listKeychainAccounts()
 
       expect(accounts).to.deep.equal(['user1@example.com', 'user2@example.com'])
     })
 
-    it('should pass a custom service name to the handler', function () {
+    it('should pass a custom service name to the handler', async function () {
       const listStub = sinon.stub(MacOSHandler.prototype, 'listAccounts').returns(['user@example.com'])
 
-      credentialManager.listKeychainAccounts('custom-service')
+      await credentialManager.listKeychainAccounts('custom-service')
 
       expect(listStub.calledOnceWith('custom-service')).to.be.true
     })
 
-    it('should return an empty array when no native credential store is available', function () {
+    it('should return an empty array when no native credential store is available', async function () {
       process.env.HEROKU_NETRC_WRITE = 'TRUE'
 
-      const accounts = credentialManager.listKeychainAccounts()
+      const accounts = await credentialManager.listKeychainAccounts()
 
       expect(accounts).to.deep.equal([])
     })

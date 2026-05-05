@@ -112,15 +112,27 @@ export async function getAuth(account: string | undefined, host: string, service
  * @param service - Service name (defaults to 'heroku-cli')
  * @returns Array of account names, or empty array if no native credential store is available
  */
-export function listKeychainAccounts(service = SERVICE_NAME): string[] {
-  const nativeStore = getNativeCredentialStore()
+export async function listKeychainAccounts(service = SERVICE_NAME): Promise<string[]> {
+  const config = getStorageConfig()
 
-  if (!nativeStore) {
-    return []
+  if (config.credentialStore) {
+    try {
+      const handler = getCredentialHandler(config.credentialStore)
+      return handler.listAccounts(service)
+    } catch (error) {
+      const {message} = error as Error
+      credDebug(message)
+
+      await reportCredentialStoreError(error, {
+        credentialStore: config.credentialStore,
+        operation: 'listKeychainAccounts',
+      })
+
+      return []
+    }
   }
 
-  const handler = getCredentialHandler(nativeStore)
-  return handler.listAccounts(service)
+  return []
 }
 
 /**
