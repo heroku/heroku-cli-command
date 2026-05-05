@@ -89,7 +89,7 @@ function ensureCredentialSentryInitialized(): void {
   })
 }
 
-export type CredentialSentryOperation = 'getAuth' | 'removeAuth' | 'saveAuth'
+export type CredentialSentryOperation = 'getAuth' | 'listKeychainAccounts' | 'removeAuth' | 'saveAuth'
 
 export async function reportCredentialStoreError(
   error: unknown,
