@@ -1,4 +1,8 @@
-import type {Answers, StreamOptions} from 'inquirer'
+import type {Answers, createPromptModule} from 'inquirer'
+
+// inquirer 12's index.d.ts does not re-export StreamOptions; derive it from
+// the public createPromptModule signature instead of reaching into ./types.
+type StreamOptions = NonNullable<Parameters<typeof createPromptModule>[0]>
 
 class Prompter {
   /**
