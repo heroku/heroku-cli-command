@@ -183,7 +183,7 @@ describe('api_client', () => {
     test
       .it('401 unauthorized retries request with token set after login', async ctx => {
         stubCredentialManager('stale-token')
-        api.get('/account').reply(401, {id: 'unauthorized'})
+        api.get('/account').reply(401)
         api.get('/account').reply(200, {ok: true})
 
         const cmd = new Command([], ctx.config)
@@ -430,7 +430,7 @@ describe('api_client', () => {
         api = nock('https://api.heroku.com', {
           reqheaders: {Authorization: 'Bearer blah'},
         })
-        api.get('/account').reply(401, {id: 'unauthorized'})
+        api.get('/account').reply(401)
 
         const cmd = new Command([], ctx.config)
         try {
@@ -496,7 +496,7 @@ describe('api_client', () => {
         const particleboard = nock('https://particleboard.heroku.com', {
           reqheaders: {authorization: 'Bearer mypass'},
         })
-        particleboard.get('/account').reply(401, {id: 'unauthorized', message: 'Unauthorized'})
+        particleboard.get('/account').reply(401)
 
         stderr.start()
         const cmd = new Command([], ctx.config)
