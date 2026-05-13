@@ -168,16 +168,17 @@ describe('login with interactive', () => {
     })
 
   test
-    .it('revokes the existing session by default when already logged in', async ctx => {
+    .it('does not automatically revoke existing session when logging in', async ctx => {
       nock.cleanAll()
 
-      api.delete('/oauth/sessions/~').reply(200, {})
       api.get('/oauth/authorizations').reply(200, [])
       api.get('/oauth/authorizations/~').reply(200, {})
       api.post('/oauth/authorizations').reply(200, {
         access_token: {token: 'new-token'},
         user: {email: 'test@example.com'},
       })
+
+      const deleteStub = api.delete('/oauth/sessions/~').reply(200, {})
 
       setCredentialManagerProvider({
         async getAuth() {
@@ -190,30 +191,7 @@ describe('login with interactive', () => {
       const cmd = new Command([], ctx.config)
       await cmd.heroku.login({method: 'interactive'})
 
-      expect(api.isDone()).to.equal(true)
-    })
-
-  test
-    .it('keeps the existing session when keepExistingSession is true', async ctx => {
-      nock.cleanAll()
-      api.delete('/oauth/sessions/~').reply(200, {})
-      api.post('/oauth/authorizations').reply(200, {
-        access_token: {token: 'new-token'},
-        user: {email: 'test@example.com'},
-      })
-
-      setCredentialManagerProvider({
-        async getAuth() {
-          return {account: 'test@example.com', token: 'previous-token'}
-        },
-        async removeAuth() {},
-        async saveAuth() {},
-      })
-
-      const cmd = new Command([], ctx.config)
-      await cmd.heroku.login({keepExistingSession: true, method: 'interactive'})
-
-      expect(api.isDone()).to.equal(false)
+      expect(deleteStub.isDone()).to.equal(false)
     })
 })
 

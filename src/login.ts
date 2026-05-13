@@ -25,7 +25,6 @@ export namespace Login {
   export interface Options {
     browser?: string
     expiresIn?: number
-    keepExistingSession?: boolean
     method?: 'browser' | 'interactive' | 'sso'
   }
 }
@@ -85,13 +84,6 @@ export class Login {
           ux.stdout('')
           input = this.getLoginMethodFromPromptKey(key)
         }
-      }
-
-      try {
-        if (previousToken && !opts.keepExistingSession) await this.logout(previousToken)
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error)
-        ux.warn(message)
       }
 
       let auth
