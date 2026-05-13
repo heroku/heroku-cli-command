@@ -225,7 +225,7 @@ export class APIClient {
         } catch (error) {
           if (!(error instanceof HTTPError)) throw error
           if (retries > 0) {
-            if (opts.retryAuth !== false && error.http.statusCode === 401 && error.body.id === 'unauthorized') {
+            if (opts.retryAuth !== false && error.http.statusCode === 401) {
               if (process.env.HEROKU_API_KEY) {
                 throw new Error('The token provided to HEROKU_API_KEY is invalid. Please double-check that you have the correct token, or run `heroku login` without HEROKU_API_KEY set.')
               }

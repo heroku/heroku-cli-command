@@ -132,7 +132,7 @@ export class Login {
           return
         }
 
-        if (error.http.statusCode === 401 && error.http.body && error.http.body.id === 'unauthorized') {
+        if (error.http.statusCode === 401) {
           return
         }
 
@@ -155,7 +155,7 @@ export class Login {
       })
       .catch(error => {
         if (!error.http) throw error
-        if (error.http.statusCode === 401 && error.http.body && error.http.body.id === 'unauthorized') {
+        if (error.http.statusCode === 401) {
           return []
         }
 
@@ -247,7 +247,7 @@ export class Login {
     } catch (error: any) {
       if (!error.http) throw error
       if (error.http.statusCode === 404 && error.http.body && error.http.body.id === 'not_found' && error.http.body.resource === 'authorization') return
-      if (error.http.statusCode === 401 && error.http.body && error.http.body.id === 'unauthorized') return
+      if (error.http.statusCode === 401) return
       throw error
     }
   }
