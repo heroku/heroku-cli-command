@@ -37,6 +37,7 @@ describe('login with interactive', () => {
 
     stubCredentialManager()
 
+    // Mock prompter
     sinon.stub(prompter, 'prompt').callsFake(async (questions: any[]) => {
       const answers: any = {}
 
