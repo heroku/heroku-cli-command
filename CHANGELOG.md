@@ -1,15 +1,3 @@
-## [12.2.2](https://github.com/heroku/heroku-cli-command/compare/command-v12.2.1...command-v12.2.2) (2026-03-25)
-
-
-### Bug Fixes
-
-* Ctrl-C cancels login process ([#305](https://github.com/heroku/heroku-cli-command/issues/305)) ([bea43c5](https://github.com/heroku/heroku-cli-command/commit/bea43c5df7e1bf218baa35a99fc7c40430986855))
-
-
-### Miscellaneous Chores
-
-* adopt @heroku-cli/test-utils and modernize test setup ([#308](https://github.com/heroku/heroku-cli-command/issues/308)) ([db7be8e](https://github.com/heroku/heroku-cli-command/commit/db7be8eb0e84422e40240c5df5d063513dbe528f))
-
 ## [12.3.3](https://github.com/heroku/heroku-cli-command/compare/command-v12.3.2...command-v12.3.3) (2026-05-06)
 
 
@@ -42,6 +30,19 @@
 * release 12.2.4 ([#323](https://github.com/heroku/heroku-cli-command/issues/323)) ([339c6da](https://github.com/heroku/heroku-cli-command/commit/339c6da70b2094aebabde16cf47d24255f8be2c2))
 * release 12.3.0 ([#326](https://github.com/heroku/heroku-cli-command/issues/326)) ([11e46ea](https://github.com/heroku/heroku-cli-command/commit/11e46eab79c1b3d909621df457a5fd5c71dd866e))
 * release 12.3.1 ([#327](https://github.com/heroku/heroku-cli-command/issues/327)) ([72dff13](https://github.com/heroku/heroku-cli-command/commit/72dff13855ee6fc10610f2ac27eeb1a4b4684272))
+
+## [12.2.2](https://github.com/heroku/heroku-cli-command/compare/command-v12.2.1...command-v12.2.2) (2026-03-25)
+
+
+### Bug Fixes
+
+* Ctrl-C cancels login process ([#305](https://github.com/heroku/heroku-cli-command/issues/305)) ([bea43c5](https://github.com/heroku/heroku-cli-command/commit/bea43c5df7e1bf218baa35a99fc7c40430986855))
+
+
+### Miscellaneous Chores
+
+* adopt @heroku-cli/test-utils and modernize test setup ([#308](https://github.com/heroku/heroku-cli-command/issues/308)) ([db7be8e](https://github.com/heroku/heroku-cli-command/commit/db7be8eb0e84422e40240c5df5d063513dbe528f))
+
 
 ## [12.2.1](https://github.com/heroku/heroku-cli-command/compare/command-v12.2.0...command-v12.2.1) (2026-03-11)
 
