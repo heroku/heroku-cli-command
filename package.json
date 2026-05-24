@@ -17,7 +17,7 @@
   },
   "devDependencies": {
     "@heroku-cli/schema": "^1.0.25",
-    "@heroku-cli/test-utils": "^0.2.0",
+    "@heroku-cli/test-utils": "^0.3.0",
     "@types/chai": "^5.2.2",
     "@types/debug": "^4.1.12",
     "@types/mocha": "^10.0.6",
