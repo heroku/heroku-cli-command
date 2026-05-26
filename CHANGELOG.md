@@ -10,13 +10,6 @@
 
 * adopt @heroku-cli/test-utils and modernize test setup ([#308](https://github.com/heroku/heroku-cli-command/issues/308)) ([db7be8e](https://github.com/heroku/heroku-cli-command/commit/db7be8eb0e84422e40240c5df5d063513dbe528f))
 
-## [12.3.3](https://github.com/heroku/heroku-cli-command/compare/command-v12.3.2...command-v12.3.3) (2026-05-06)
-
-
-### Bug Fixes
-
-* **prompter:** route inquirer prompt UI to stderr by default ([#354](https://github.com/heroku/heroku-cli-command/issues/354)) ([a01f9ee](https://github.com/heroku/heroku-cli-command/commit/a01f9eeaacdcc9bc187ad563f7b426fb248d0b71))
-
 ## [12.3.2](https://github.com/heroku/heroku-cli-command/compare/command-v12.3.1...command-v12.3.2) (2026-04-29)
 
 

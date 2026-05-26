@@ -1,27 +1,9 @@
-import type {Answers, createPromptModule} from 'inquirer'
-
-// inquirer 12's index.d.ts does not re-export StreamOptions; derive it from
-// the public createPromptModule signature instead of reaching into ./types.
-type StreamOptions = NonNullable<Parameters<typeof createPromptModule>[0]>
+import type {Answers} from 'inquirer'
 
 class Prompter {
-  /**
-   * Wraps inquirer's prompt module so that prompt UI (question text, mask
-   * characters, cursor escapes) writes to stderr by default. Routing to stdout
-   * — inquirer's default — corrupts piped output (e.g. `heroku run … | tee`).
-   *
-   * Tests can override `input` and/or `output` via the optional second arg.
-   */
-  async prompt<T extends Answers = Answers>(
-    questions: any[],
-    streamOpts: StreamOptions = {},
-  ): Promise<T> {
+  async prompt<T extends Answers = Answers>(questions: any[]): Promise<T> {
     const inquirer = (await import('inquirer')).default
-    const promptModule = inquirer.createPromptModule({
-      output: process.stderr,
-      ...streamOpts,
-    })
-    return promptModule(questions) as Promise<T>
+    return inquirer.prompt<T>(questions) as Promise<T>
   }
 }
 
