@@ -53,6 +53,9 @@ export abstract class Command extends Base {
   async init(): Promise<void> {
     await super.init()
 
+    // Preload credentials so this.heroku.auth is set before run() (async credential-manager + sync checks).
+    await this.heroku.getAuth()
+
     if (!this.isPromptModeActive()) {
       return
     }

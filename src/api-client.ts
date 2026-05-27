@@ -3,9 +3,11 @@ import type {Config} from '@oclif/core/interfaces'
 import {HTTP, HTTPError, HTTPRequestOptions} from '@heroku/http-call'
 import {CLIError, warn} from '@oclif/core/errors'
 import debug from 'debug'
-import {Netrc} from 'netrc-parser'
 import * as url from 'node:url'
 
+import {getStorageConfig} from './credential-manager-core/lib/credential-storage-selector.js'
+import {deleteLoginState, readLoginState} from './credential-manager-core/lib/login-state.js'
+import {type AuthEntry, getAuth as getStoredAuth, removeAuth} from './credential-manager.js'
 import {Login} from './login.js'
 import {Mutex} from './mutex.js'
 import {IDelinquencyConfig, IDelinquencyInfo, ParticleboardClient} from './particleboard-client.js'
@@ -13,16 +15,6 @@ import {prompter} from './prompter.js'
 import {RequestId, requestIdHeader} from './request-id.js'
 import {vars} from './vars.js'
 import {yubikey} from './yubikey.js'
-
-// Defer netrc instantiation to avoid eager .netrc file operations at module load time
-let _netrc: Netrc | undefined
-function getNetrc(): Netrc {
-  if (!_netrc) {
-    _netrc = new Netrc()
-  }
-
-  return _netrc
-}
 
 export const ALLOWED_HEROKU_DOMAINS = Object.freeze(['heroku.com', 'herokai.com', 'herokuspace.com', 'herokudev.com'])
 export const LOCALHOST_DOMAINS = Object.freeze(['localhost', '127.0.0.1'])
@@ -72,9 +64,14 @@ export class APIClient {
   authPromise?: Promise<HTTP<any>>
   http: typeof HTTP
   preauthPromises: {[k: string]: Promise<HTTP<any>>}
+  private _account?: string
   private _auth?: string
   private readonly _login: Login
   private _particleboard!: ParticleboardClient
+  /** In-flight dedupe for concurrent getAuthEntry() calls before resolution completes. */
+  private _storedAuthPromise?: Promise<AuthEntry | undefined>
+  /** After a failed read from storage, skip re-querying until state is reset (login/logout/auth setter). */
+  private _storedAuthResolvedAbsent = false
   private _twoFactorMutex: Mutex<string> | undefined
 
   constructor(protected config: Config, public options: IOptions = {}) {
@@ -169,6 +166,7 @@ export class APIClient {
           opts.headers[requestIdHeader] = currentRequestId
         }
 
+        let auth: string | undefined
         if (!Object.keys(opts.headers).some(h => h.toLowerCase() === 'authorization')) {
           // Handle both relative and absolute URLs for validation
           let targetUrl: URL
@@ -184,7 +182,8 @@ export class APIClient {
           const isLocalhost = LOCALHOST_DOMAINS.includes(targetUrl.hostname as (typeof LOCALHOST_DOMAINS)[number])
 
           if (isHerokuApi || isLocalhost) {
-            opts.headers.authorization = `Bearer ${self.auth}`
+            auth = await self.getAuth()
+            opts.headers.authorization = `Bearer ${auth}`
           }
         }
 
@@ -194,10 +193,10 @@ export class APIClient {
         try {
           let response: HTTP<T>
           let particleboardResponse: HTTP<IDelinquencyInfo> | undefined
-          const particleboardClient: ParticleboardClient = self.particleboard
 
           if (delinquencyConfig.fetch_delinquency && !delinquencyConfig.warning_shown) {
-            self._particleboard.auth = self.auth
+            const particleboardClient: ParticleboardClient = self.particleboard
+            particleboardClient.auth = auth ?? await self.getAuth()
             const settledResponses = await Promise.allSettled([
               super.request<T>(url, opts),
               particleboardClient.get<IDelinquencyInfo>(delinquencyConfig.fetch_url as string),
@@ -226,14 +225,15 @@ export class APIClient {
         } catch (error) {
           if (!(error instanceof HTTPError)) throw error
           if (retries > 0) {
-            if (opts.retryAuth !== false && error.http.statusCode === 401 && error.body.id === 'unauthorized') {
+            if (opts.retryAuth !== false && error.http.statusCode === 401) {
               if (process.env.HEROKU_API_KEY) {
                 throw new Error('The token provided to HEROKU_API_KEY is invalid. Please double-check that you have the correct token, or run `heroku login` without HEROKU_API_KEY set.')
               }
 
               if (!self.authPromise) self.authPromise = self.login()
               await self.authPromise
-              opts.headers.authorization = `Bearer ${self.auth}`
+              const retryAuth = await self.getAuth()
+              opts.headers.authorization = `Bearer ${retryAuth}`
               return this.request<T>(url, opts, retries)
             }
 
@@ -295,22 +295,7 @@ export class APIClient {
   }
 
   get auth(): string | undefined {
-    if (!this._auth) {
-      if (process.env.HEROKU_API_TOKEN && !process.env.HEROKU_API_KEY) warn('HEROKU_API_TOKEN is set but you probably meant HEROKU_API_KEY')
-      this._auth = process.env.HEROKU_API_KEY
-      if (!this._auth) {
-        const netrc = getNetrc()
-        netrc.loadSync()
-        this._auth = netrc.machines[vars.apiHost] && netrc.machines[vars.apiHost].password
-      }
-    }
-
     return this._auth
-  }
-
-  set auth(token: string | undefined) {
-    delete this.authPromise
-    this._auth = token
   }
 
   get defaults(): typeof HTTP.defaults {
@@ -339,21 +324,66 @@ export class APIClient {
     return this.http.get<T>(url, options)
   }
 
+  async getAuth(): Promise<string | undefined> {
+    const authEntry = await this.getAuthEntry()
+    return authEntry?.token
+  }
+
+  async getAuthEntry(): Promise<AuthEntry | undefined> {
+    if (this._auth) return {account: this._account, token: this._auth}
+    if (process.env.HEROKU_API_TOKEN && !process.env.HEROKU_API_KEY) warn('HEROKU_API_TOKEN is set but you probably meant HEROKU_API_KEY')
+    if (process.env.HEROKU_API_KEY) {
+      this._account = undefined
+      this._auth = process.env.HEROKU_API_KEY
+      return {account: this._account, token: this._auth}
+    }
+
+    if (this._storedAuthResolvedAbsent) return undefined
+
+    if (!this._storedAuthPromise) {
+      this._storedAuthPromise = (async (): Promise<AuthEntry | undefined> => {
+        const {credentialStore} = getStorageConfig()
+        const useLoginState = Boolean(credentialStore && this.config.dataDir)
+        try {
+          const cachedAccount = useLoginState
+            ? (await readLoginState(this.config.dataDir))?.account
+            : undefined
+          const {account, token} = await getStoredAuth(cachedAccount, vars.apiHost)
+          this._auth = token
+          this._account = account
+          this._storedAuthResolvedAbsent = false
+          return {account: this._account, token: this._auth}
+        } catch {
+          if (useLoginState) {
+            await deleteLoginState(this.config.dataDir)
+          }
+
+          this._storedAuthResolvedAbsent = true
+          return undefined
+        } finally {
+          this._storedAuthPromise = undefined
+        }
+      })()
+    }
+
+    return this._storedAuthPromise
+  }
+
   login(opts: Login.Options = {}) {
     return this._login.login(opts)
   }
 
   async logout() {
+    const entry = await this.getAuthEntry()
     try {
-      await this._login.logout()
+      await this._login.logout(entry?.token)
     } catch (error) {
       if (error instanceof CLIError) warn(error)
     }
 
-    const netrc = getNetrc()
-    delete netrc.machines['api.heroku.com']
-    delete netrc.machines['git.heroku.com']
-    await netrc.save()
+    this.setAuthEntry(undefined)
+    await removeAuth(entry?.account, [vars.apiHost, vars.httpGitHost])
+    await this.clearLoginState()
   }
 
   patch<T>(url: string, options: APIClient.Options = {}) {
@@ -378,6 +408,13 @@ export class APIClient {
     return this.http.request<T>(url, options)
   }
 
+  setAuthEntry(entry: AuthEntry | undefined) {
+    delete this.authPromise
+    this._auth = entry?.token
+    this._account = entry?.account
+    this.resetStoredAuthResolution()
+  }
+
   stream(url: string, options: APIClient.Options = {}) {
     return this.http.stream(url, options)
   }
@@ -399,5 +436,17 @@ export class APIClient {
         throw error
       }
     })
+  }
+
+  private async clearLoginState(): Promise<void> {
+    const config = getStorageConfig()
+    if (config.credentialStore && this.config.dataDir) {
+      await deleteLoginState(this.config.dataDir)
+    }
+  }
+
+  private resetStoredAuthResolution(): void {
+    this._storedAuthPromise = undefined
+    this._storedAuthResolvedAbsent = false
   }
 }

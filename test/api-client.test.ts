@@ -2,14 +2,20 @@ import {Config} from '@oclif/core/config'
 import debug from 'debug'
 import {expect, fancy} from 'fancy-test'
 import nock from 'nock'
-import {dirname, resolve} from 'node:path'
+import * as fs from 'node:fs'
+import * as os from 'node:os'
+import {dirname, join, resolve} from 'node:path'
 import {fileURLToPath} from 'node:url'
 import * as sinon from 'sinon'
 import {stderr} from 'stdout-stderr'
 
+const SYSTEM_TMPDIR = os.tmpdir()
+
 import {Command as CommandBase} from '../src/command.js'
+import {writeLoginState} from '../src/credential-manager-core/lib/login-state.js'
+import {setCredentialManagerProvider} from '../src/credential-manager.js'
 import {RequestId, requestIdHeader} from '../src/request-id.js'
-import {restoreNetrcStub, stubNetrc} from './helpers/netrc-stub.js'
+import {restoreCredentialManagerStub, stubCredentialManager} from './helpers/credential-manager-stub.js'
 
 class Command extends CommandBase {
   async run() {}
@@ -28,16 +34,344 @@ const test = fancy
 
 describe('api_client', () => {
   beforeEach(function () {
+    nock.cleanAll()
     process.env = {}
     debug.disable()
     api = nock('https://api.heroku.com')
-    stubNetrc()
+    stubCredentialManager()
   })
 
   afterEach(function () {
     process.env = env
     api.done()
-    restoreNetrcStub()
+    restoreCredentialManagerStub()
+  })
+
+  describe('getAuthEntry', () => {
+    test
+      .it('returns account and token from credential manager', async ctx => {
+        stubCredentialManager('token-from-store')
+        const cmd = new Command([], ctx.config)
+        cmd.config = ctx.config
+        expect(await cmd.heroku.getAuthEntry()).to.deep.equal({account: 'test@example.com', token: 'token-from-store'})
+      })
+
+    test
+      .it('returns cached auth entry when _auth is already set', async ctx => {
+        stubCredentialManager('ignored-after-cache')
+        const cmd = new Command([], ctx.config)
+        cmd.config = ctx.config
+        cmd.heroku.setAuthEntry({account: 'cached-account@example.com', token: 'cached-only'})
+        expect(await cmd.heroku.getAuthEntry()).to.deep.equal({
+          account: 'cached-account@example.com',
+          token: 'cached-only',
+        })
+      })
+
+    test
+      .it('calls credential store once when getAuthEntry is invoked twice', async ctx => {
+        let getCalls = 0
+        setCredentialManagerProvider({
+          async getAuth() {
+            getCalls++
+            return {account: 'single@example.com', token: 'single-fetch-token'}
+          },
+          async removeAuth() {},
+          async saveAuth() {},
+        })
+        const cmd = new Command([], ctx.config)
+        cmd.config = ctx.config
+        const first = await cmd.heroku.getAuthEntry()
+        const second = await cmd.heroku.getAuthEntry()
+        expect(first).to.deep.equal({account: 'single@example.com', token: 'single-fetch-token'})
+        expect(second).to.deep.equal(first)
+        expect(getCalls).to.equal(1)
+      })
+
+    test
+      .it('dedupes concurrent getAuthEntry calls to credential store', async ctx => {
+        let getCalls = 0
+        setCredentialManagerProvider({
+          async getAuth() {
+            getCalls++
+            await new Promise(r => {
+              setImmediate(r)
+            })
+            return {account: 'concurrent@example.com', token: 'concurrent-token'}
+          },
+          async removeAuth() {},
+          async saveAuth() {},
+        })
+        const cmd = new Command([], ctx.config)
+        cmd.config = ctx.config
+        const [a, b] = await Promise.all([cmd.heroku.getAuthEntry(), cmd.heroku.getAuthEntry()])
+        expect(a).to.deep.equal({account: 'concurrent@example.com', token: 'concurrent-token'})
+        expect(b).to.deep.equal(a)
+        expect(getCalls).to.equal(1)
+      })
+
+    test
+      .it('does not call credential store twice when no credentials exist', async ctx => {
+        let getCalls = 0
+        setCredentialManagerProvider({
+          async getAuth() {
+            getCalls++
+            throw new Error('No auth found')
+          },
+          async removeAuth() {},
+          async saveAuth() {},
+        })
+        const cmd = new Command([], ctx.config)
+        cmd.config = ctx.config
+        expect(await cmd.heroku.getAuthEntry()).to.be.undefined
+        expect(await cmd.heroku.getAuthEntry()).to.be.undefined
+        expect(getCalls).to.equal(1)
+      })
+
+    test
+      .it('does not call credential store for getAuth when HEROKU_API_KEY is set', async ctx => {
+        let getCalls = 0
+        process.env.HEROKU_API_KEY = 'env-key'
+        setCredentialManagerProvider({
+          async getAuth() {
+            getCalls++
+            return {account: 'ignored@example.com', token: 'never'}
+          },
+          async removeAuth() {},
+          async saveAuth() {},
+        })
+        const cmd = new Command([], ctx.config)
+        cmd.config = ctx.config
+        expect(await cmd.heroku.getAuthEntry()).to.deep.equal({account: undefined, token: 'env-key'})
+        expect(getCalls).to.equal(0)
+      })
+
+    test
+      .it('re-reads credential store after logout', async ctx => {
+        let getCalls = 0
+        setCredentialManagerProvider({
+          async getAuth() {
+            getCalls++
+            if (getCalls === 1) return {account: 'before@example.com', token: 'before-logout'}
+            return {account: 'after@example.com', token: 'after-logout'}
+          },
+          async removeAuth() {},
+          async saveAuth() {},
+        })
+        api.delete('/oauth/sessions/~').reply(200, {})
+        api.get('/oauth/authorizations').reply(200, [])
+        api.get('/oauth/authorizations/~').reply(200, {})
+
+        const cmd = new Command([], ctx.config)
+        cmd.config = ctx.config
+        expect(await cmd.heroku.getAuthEntry()).to.deep.equal({
+          account: 'before@example.com',
+          token: 'before-logout',
+        })
+        expect(await cmd.heroku.getAuthEntry()).to.deep.equal({
+          account: 'before@example.com',
+          token: 'before-logout',
+        })
+        await cmd.heroku.logout()
+        expect(await cmd.heroku.getAuthEntry()).to.deep.equal({
+          account: 'after@example.com',
+          token: 'after-logout',
+        })
+        expect(getCalls).to.equal(2)
+      })
+
+    test
+      .it('401 unauthorized retries request with token set after login', async ctx => {
+        stubCredentialManager('stale-token')
+        api.get('/account').reply(401)
+        api.get('/account').reply(200, {ok: true})
+
+        const cmd = new Command([], ctx.config)
+        cmd.config = ctx.config
+        sinon.stub(cmd.heroku, 'login').callsFake(async () => {
+          cmd.heroku.setAuthEntry({account: undefined, token: 'fresh-token'})
+          return undefined as any
+        })
+
+        const {body} = await cmd.heroku.get('/account')
+        expect(body).to.deep.equal({ok: true})
+        expect((cmd.heroku.login as sinon.SinonStub).calledOnce).to.be.true;
+        (cmd.heroku.login as sinon.SinonStub).restore()
+      })
+  })
+
+  describe('login state file integration', () => {
+    let tmpDir: string
+    let platformStub: sinon.SinonStub
+
+    beforeEach(() => {
+      tmpDir = fs.mkdtempSync(join(SYSTEM_TMPDIR, 'heroku-api-client-'))
+      platformStub = sinon.stub(process, 'platform').value('darwin')
+      process.env.HEROKU_NATIVE_STORE_WRITE = 'true'
+    })
+
+    afterEach(() => {
+      fs.rmSync(tmpDir, {force: true, recursive: true})
+      delete process.env.HEROKU_NATIVE_STORE_WRITE
+      platformStub.restore()
+    })
+
+    test
+      .it('passes cached account from login.json to credential store', async ctx => {
+        let receivedAccount: string | undefined
+        setCredentialManagerProvider({
+          async getAuth(account) {
+            receivedAccount = account
+            return {account: account ?? 'fallback@example.com', token: 'cached-token'}
+          },
+          async removeAuth() {},
+          async saveAuth() {},
+        })
+        await writeLoginState(tmpDir, 'cached@example.com')
+        const cmd = new Command([], ctx.config)
+        cmd.config = {...ctx.config, dataDir: tmpDir} as Config
+        await cmd.heroku.getAuthEntry()
+        expect(receivedAccount).to.equal('cached@example.com')
+      })
+
+    test
+      .it('deletes login.json on logout', async ctx => {
+        setCredentialManagerProvider({
+          async getAuth() {
+            return {account: 'logout-int@example.com', token: 'logout-int-token'}
+          },
+          async removeAuth() {},
+          async saveAuth() {},
+        })
+        await writeLoginState(tmpDir, 'logout-int@example.com')
+        api.delete('/oauth/sessions/~').reply(200, {})
+        api.get('/oauth/authorizations').reply(200, [])
+        api.get('/oauth/authorizations/~').reply(200, {})
+        const cmd = new Command([], ctx.config)
+        cmd.config = {...ctx.config, dataDir: tmpDir} as Config
+        await cmd.heroku.logout()
+        expect(fs.existsSync(join(tmpDir, 'login.json'))).to.be.false
+      })
+
+    test
+      .it('clears stale login.json when credential store has no matching account', async ctx => {
+        setCredentialManagerProvider({
+          async getAuth() {
+            throw new Error('No auth found')
+          },
+          async removeAuth() {},
+          async saveAuth() {},
+        })
+        await writeLoginState(tmpDir, 'stale@example.com')
+        const cmd = new Command([], ctx.config)
+        cmd.config = {...ctx.config, dataDir: tmpDir} as Config
+        await cmd.heroku.getAuthEntry()
+        expect(fs.existsSync(join(tmpDir, 'login.json'))).to.be.false
+      })
+  })
+
+  describe('setAuthEntry', () => {
+    test
+      .it('updates auth getter and subsequent getAuthEntry without calling credential store', async ctx => {
+        let getCalls = 0
+        setCredentialManagerProvider({
+          async getAuth() {
+            getCalls++
+            return {account: 'ignored@example.com', token: 'ignored'}
+          },
+          async removeAuth() {},
+          async saveAuth() {},
+        })
+        const cmd = new Command([], ctx.config)
+        cmd.config = ctx.config
+        cmd.heroku.setAuthEntry({account: 'set@example.com', token: 'set-token'})
+        expect(cmd.heroku.auth).to.equal('set-token')
+        expect(await cmd.heroku.getAuthEntry()).to.deep.equal({account: 'set@example.com', token: 'set-token'})
+        expect(getCalls).to.equal(0)
+      })
+
+    test
+      .it('clears token and account when called with undefined', async ctx => {
+        setCredentialManagerProvider({
+          async getAuth() {
+            throw new Error('No auth found')
+          },
+          async removeAuth() {},
+          async saveAuth() {},
+        })
+        const cmd = new Command([], ctx.config)
+        cmd.config = ctx.config
+        cmd.heroku.setAuthEntry({account: 'gone@example.com', token: 'gone-token'})
+        cmd.heroku.setAuthEntry(undefined)
+        expect(cmd.heroku.auth).to.be.undefined
+        expect(await cmd.heroku.getAuthEntry()).to.be.undefined
+      })
+
+    test
+      .it('after clear, getAuthEntry reads credential store again', async ctx => {
+        let getCalls = 0
+        setCredentialManagerProvider({
+          async getAuth() {
+            getCalls++
+            return {account: 'second@example.com', token: `call-${getCalls}`}
+          },
+          async removeAuth() {},
+          async saveAuth() {},
+        })
+        const cmd = new Command([], ctx.config)
+        cmd.config = ctx.config
+        expect(await cmd.heroku.getAuthEntry()).to.deep.equal({account: 'second@example.com', token: 'call-1'})
+        cmd.heroku.setAuthEntry(undefined)
+        expect(await cmd.heroku.getAuthEntry()).to.deep.equal({account: 'second@example.com', token: 'call-2'})
+        expect(getCalls).to.equal(2)
+      })
+  })
+
+  describe('logout', () => {
+    const removeAuthCalls: {account: string | undefined; hosts: string[]}[] = []
+
+    beforeEach(() => {
+      removeAuthCalls.length = 0
+      setCredentialManagerProvider({
+        async getAuth() {
+          return {account: 'logout@example.com', token: 'logout-test-token'}
+        },
+        async removeAuth(account: string | undefined, hosts: string[]) {
+          removeAuthCalls.push({account, hosts})
+        },
+        async saveAuth() {},
+      })
+      api.delete('/oauth/sessions/~').reply(200, {})
+      api.get('/oauth/authorizations').reply(200, [])
+      api.get('/oauth/authorizations/~').reply(200, {})
+    })
+
+    afterEach(() => {
+      delete process.env.HEROKU_API_KEY
+    })
+
+    test
+      .it('calls removeAuth with api and git hosts after revoking session', async ctx => {
+        const cmd = new Command([], ctx.config)
+        cmd.config = ctx.config
+        await cmd.heroku.logout()
+        expect(removeAuthCalls).to.have.length(1)
+        expect(removeAuthCalls[0].account).to.equal('logout@example.com')
+        expect(removeAuthCalls[0].hosts).to.deep.equal(['api.heroku.com', 'git.heroku.com'])
+        expect(cmd.heroku.auth).to.be.undefined
+      })
+
+    test
+      .it('calls removeAuth with undefined account when HEROKU_API_KEY is set', async ctx => {
+        process.env.HEROKU_API_KEY = 'env-api-key'
+        removeAuthCalls.length = 0
+        const cmd = new Command([], ctx.config)
+        cmd.config = ctx.config
+        await cmd.heroku.logout()
+        expect(removeAuthCalls).to.have.length(1)
+        expect(removeAuthCalls[0].account).to.be.undefined
+        expect(removeAuthCalls[0].hosts).to.deep.equal(['api.heroku.com', 'git.heroku.com'])
+      })
   })
 
   test
@@ -96,7 +430,7 @@ describe('api_client', () => {
         api = nock('https://api.heroku.com', {
           reqheaders: {Authorization: 'Bearer blah'},
         })
-        api.get('/account').reply(401, {id: 'unauthorized'})
+        api.get('/account').reply(401)
 
         const cmd = new Command([], ctx.config)
         try {
@@ -162,7 +496,7 @@ describe('api_client', () => {
         const particleboard = nock('https://particleboard.heroku.com', {
           reqheaders: {authorization: 'Bearer mypass'},
         })
-        particleboard.get('/account').reply(401, {id: 'unauthorized', message: 'Unauthorized'})
+        particleboard.get('/account').reply(401)
 
         stderr.start()
         const cmd = new Command([], ctx.config)

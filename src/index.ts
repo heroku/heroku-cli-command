@@ -1,6 +1,7 @@
 export * from './api-client.js'
 export {Command, Command as default} from './command.js'
 export * from './completions.js'
+export * from './credential-manager-core/index.js'
 export * as flags from './flags/index.js'
 export * from './git.js'
 export * from './mutex.js'

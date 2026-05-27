@@ -2,15 +2,17 @@ import {expect} from 'chai'
 
 import {vars} from '../src/vars.js'
 
-const {env} = process
-beforeEach(() => {
-  process.env = {}
-})
-afterEach(() => {
-  process.env = env
-})
-
 describe('vars', () => {
+  const {env} = process
+
+  beforeEach(() => {
+    process.env = {}
+  })
+
+  afterEach(() => {
+    process.env = env
+  })
+
   it('sets vars by default', () => {
     expect(vars.host).to.equal('heroku.com')
     expect(vars.apiHost).to.equal('api.heroku.com')

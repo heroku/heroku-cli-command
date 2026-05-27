@@ -5,27 +5,20 @@ import {HTTP} from '@heroku/http-call'
 import {ux} from '@oclif/core/ux'
 import ansis from 'ansis'
 import debug from 'debug'
-import {Netrc} from 'netrc-parser'
 import os from 'node:os'
 import * as readline from 'node:readline'
 
 import {APIClient, HerokuAPIError} from './api-client.js'
+import {getStorageConfig} from './credential-manager-core/lib/credential-storage-selector.js'
+import {writeLoginState} from './credential-manager-core/lib/login-state.js'
+import {saveAuth} from './credential-manager.js'
 import {prompter} from './prompter.js'
 import {vars} from './vars.js'
 
 const cliDebug = debug('heroku-cli-command')
 const hostname = os.hostname()
 const thirtyDays = 60 * 60 * 24 * 30
-
-// Defer netrc instantiation to avoid eager file operations
-let _netrc: Netrc | undefined
-function getNetrc(): Netrc {
-  if (!_netrc) {
-    _netrc = new Netrc()
-  }
-
-  return _netrc
-}
+const REDACTED_TOKEN_ASTERISKS = '*'.repeat(10)
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace Login {
@@ -59,9 +52,10 @@ export class Login {
       if (process.env.HEROKU_API_KEY) ux.error('Cannot log in with HEROKU_API_KEY set')
       if (opts.expiresIn && opts.expiresIn > thirtyDays) ux.error('Cannot set an expiration longer than thirty days')
 
-      const netrc = getNetrc()
-      await netrc.load()
-      const previousEntry = netrc.machines['api.heroku.com']
+      const previousToken = await this.heroku.getAuth()
+      const previousAccount = previousToken
+        ? (await this.heroku.getAuthEntry())?.account?.trim() || undefined
+        : undefined
       let input: string | undefined = opts.method
       if (!input) {
         if (opts.expiresIn) {
@@ -92,13 +86,6 @@ export class Login {
         }
       }
 
-      try {
-        if (previousEntry && previousEntry.password) await this.logout(previousEntry.password)
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error)
-        ux.warn(message)
-      }
-
       let auth
       switch (input) {
         case 'b':
@@ -109,7 +96,7 @@ export class Login {
 
         case 'i':
         case 'interactive': {
-          auth = await this.interactive(previousEntry && previousEntry.login, opts.expiresIn)
+          auth = await this.interactive(previousAccount, opts.expiresIn)
           break
         }
 
@@ -132,19 +119,20 @@ export class Login {
     }
   }
 
-  async logout(token = this.heroku.auth) {
-    if (!token) return cliDebug('no credentials to logout')
+  async logout(token?: string) {
+    const resolvedToken = token ?? await this.heroku.getAuth()
+    if (!resolvedToken) return cliDebug('no credentials to logout')
     const requests: Promise<any>[] = []
     // for SSO logins we delete the session since those do not show up in
     // authorizations because they are created a trusted client
-    requests.push(HTTP.delete(`${vars.apiUrl}/oauth/sessions/~`, headers(token))
+    requests.push(HTTP.delete(`${vars.apiUrl}/oauth/sessions/~`, headers(resolvedToken))
       .catch(error => {
         if (!error.http) throw error
         if (error.http.statusCode === 404 && error.http.body && error.http.body.id === 'not_found' && error.http.body.resource === 'session') {
           return
         }
 
-        if (error.http.statusCode === 401 && error.http.body && error.http.body.id === 'unauthorized') {
+        if (error.http.statusCode === 401) {
           return
         }
 
@@ -154,20 +142,20 @@ export class Login {
     // grab all the authorizations so that we can delete the token they are
     // using in the CLI.  we have to do this rather than delete ~ because
     // the ~ is the API Key, not the authorization that is currently requesting
-    requests.push(HTTP.get<Heroku.OAuthAuthorization[]>(`${vars.apiUrl}/oauth/authorizations`, headers(token))
+    requests.push(HTTP.get<Heroku.OAuthAuthorization[]>(`${vars.apiUrl}/oauth/authorizations`, headers(resolvedToken))
       .then(async ({body: authorizations}) => {
       // grab the default authorization because that is the token shown in the
       // dashboard as API Key and they may be using it for something else and we
       // would unwittingly break an integration that they are depending on
-        const d = await this.defaultToken()
-        if (d === token) return
+        const defaultApiToken = await this.defaultToken()
+        if (defaultApiToken && this.isCurrentOAuthToken(resolvedToken, defaultApiToken)) return
         return Promise.all(authorizations
-          .filter(a => a.access_token && a.access_token.token === this.heroku.auth)
-          .map(a => HTTP.delete(`${vars.apiUrl}/oauth/authorizations/${a.id}`, headers(token))))
+          .filter(a => a.access_token?.token && this.isCurrentOAuthToken(resolvedToken, a.access_token.token))
+          .map(a => HTTP.delete(`${vars.apiUrl}/oauth/authorizations/${a.id}`, headers(resolvedToken))))
       })
       .catch(error => {
         if (!error.http) throw error
-        if (error.http.statusCode === 401 && error.http.body && error.http.body.id === 'unauthorized') {
+        if (error.http.statusCode === 401) {
           return []
         }
 
@@ -215,10 +203,10 @@ export class Login {
 
     const auth = await fetchAuth()
     if (auth.error) ux.error(auth.error)
-    this.heroku.auth = auth.access_token
     ux.action.start('Logging in')
     const {body: account} = await HTTP.get<Heroku.Account>(`${vars.apiUrl}/account`, headers(auth.access_token))
     ux.action.stop()
+    this.heroku.setAuthEntry({account: account.email, token: auth.access_token})
     return {
       login: account.email!,
       password: auth.access_token,
@@ -251,13 +239,15 @@ export class Login {
   }
 
   private async defaultToken(): Promise<string | undefined> {
+    const token = await this.heroku.getAuth()
+    if (!token) return
     try {
-      const {body: authorization} = await HTTP.get<Heroku.OAuthAuthorization>(`${vars.apiUrl}/oauth/authorizations/~`, headers(this.heroku.auth!))
+      const {body: authorization} = await HTTP.get<Heroku.OAuthAuthorization>(`${vars.apiUrl}/oauth/authorizations/~`, headers(token))
       return authorization.access_token && authorization.access_token.token
     } catch (error: any) {
       if (!error.http) throw error
-      if (error.http.statusCode === 404 && error.http.body && error.http.body.id === 'not_found' && error.body.resource === 'authorization') return
-      if (error.http.statusCode === 401 && error.http.body && error.http.body.id === 'unauthorized') return
+      if (error.http.statusCode === 404 && error.http.body && error.http.body.id === 'not_found' && error.http.body.resource === 'authorization') return
+      if (error.http.statusCode === 401) return
       throw error
     }
   }
@@ -311,30 +301,29 @@ export class Login {
       auth = await this.createOAuthToken(login!, password, {expiresIn, secondFactor})
     }
 
-    this.heroku.auth = auth.password
+    this.heroku.setAuthEntry({account: auth.login, token: auth.password})
     return auth
   }
 
+  private isCurrentOAuthToken(localToken: string, apiToken: string): boolean {
+    const asteriskIndex = apiToken.indexOf(REDACTED_TOKEN_ASTERISKS)
+
+    if (asteriskIndex === -1) {
+      // raw value stored, direct match works
+      return localToken === apiToken
+    }
+
+    const prefix = apiToken.slice(0, asteriskIndex)
+    const suffix = apiToken.slice(asteriskIndex + REDACTED_TOKEN_ASTERISKS.length)
+    return localToken.startsWith(prefix) && (suffix === '' || localToken.endsWith(suffix))
+  }
+
   private async saveToken(entry: NetrcEntry) {
-    const netrc = getNetrc()
-    const hosts = [vars.apiHost, vars.httpGitHost]
-    for (const host of hosts) {
-      if (!netrc.machines[host]) netrc.machines[host] = {}
-      netrc.machines[host].login = entry.login
-      netrc.machines[host].password = entry.password
-      delete netrc.machines[host].method
-      delete netrc.machines[host].org
+    await saveAuth(entry.login, entry.password, [vars.apiHost, vars.httpGitHost])
+    const config = getStorageConfig()
+    if (config.credentialStore && this.config.dataDir) {
+      await writeLoginState(this.config.dataDir, entry.login)
     }
-
-    if (netrc.machines._tokens) {
-      (netrc.machines._tokens as any).forEach((token: any) => {
-        if (hosts.includes(token.host)) {
-          token.internalWhitespace = '\n  '
-        }
-      })
-    }
-
-    await netrc.save()
   }
 
   private showManualBrowserLoginUrl(url: string) {
@@ -370,9 +359,9 @@ machine, please manually open the URL above in your browser.\n`))
       type: 'password',
     }])
     ux.action.start('Validating token')
-    this.heroku.auth = password
     const {body: account} = await HTTP.get<Heroku.Account>(`${vars.apiUrl}/account`, headers(password))
     ux.action.stop()
+    this.heroku.setAuthEntry({account: account.email, token: password})
     return {
       login: account.email!,
       password,
