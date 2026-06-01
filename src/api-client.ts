@@ -298,6 +298,11 @@ export class APIClient {
     return this._auth
   }
 
+  set auth(token: string | undefined) {
+    delete this.authPromise
+    this._auth = token
+  }
+
   get defaults(): typeof HTTP.defaults {
     return this.http.defaults
   }

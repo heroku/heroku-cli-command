@@ -10,6 +10,25 @@
 
 * adopt @heroku-cli/test-utils and modernize test setup ([#308](https://github.com/heroku/heroku-cli-command/issues/308)) ([db7be8e](https://github.com/heroku/heroku-cli-command/commit/db7be8eb0e84422e40240c5df5d063513dbe528f))
 
+## [12.4.0](https://github.com/heroku/heroku-cli-command/compare/command-v12.3.3...command-v12.4.0) (2026-05-28)
+
+
+### Features
+
+* add Heroku credential manager functionality ([#372](https://github.com/heroku/heroku-cli-command/issues/372)) ([91bcd40](https://github.com/heroku/heroku-cli-command/commit/91bcd4017d4015071009aa953f7c0f7853c7240a))
+* update login to no longer logout as part of the process ([#357](https://github.com/heroku/heroku-cli-command/issues/357)) ([0077ccb](https://github.com/heroku/heroku-cli-command/commit/0077ccb05eb8f37c25e6bd98a3c1236371e2747e))
+
+
+### Bug Fixes
+
+* re-add auth setter ([2f8c11f](https://github.com/heroku/heroku-cli-command/commit/2f8c11fdd55dbfd91064aff299d79f78a905130d))
+* re-add auth setter ([#377](https://github.com/heroku/heroku-cli-command/issues/377)) ([a5ef794](https://github.com/heroku/heroku-cli-command/commit/a5ef794c328056ec20b5a5ab4bbea8e655928f71))
+
+
+### Code Refactoring
+
+* update check for 401 error to only look at error code ([#358](https://github.com/heroku/heroku-cli-command/issues/358)) ([160741a](https://github.com/heroku/heroku-cli-command/commit/160741a3fc533e1626dfb0f8524d6229c39e1c5f))
+
 ## [12.3.3](https://github.com/heroku/heroku-cli-command/compare/command-v12.3.2...command-v12.3.3) (2026-05-06)
 
 
