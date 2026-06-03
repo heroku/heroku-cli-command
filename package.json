@@ -5,8 +5,8 @@
   "author": "Heroku",
   "bugs": "https://github.com/heroku/heroku-cli-command/issues",
   "dependencies": {
+    "@heroku/http-call": "^5.5.2",
     "@heroku/js-blanket": "^1.0.0",
-    "@heroku/http-call": "^5.4.0",
     "@oclif/core": "^4.3.0",
     "@sentry/node": "^10.45.0",
     "ansis": "^4",
