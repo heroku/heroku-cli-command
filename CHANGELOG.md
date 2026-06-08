@@ -10,6 +10,16 @@
 
 * adopt @heroku-cli/test-utils and modernize test setup ([#308](https://github.com/heroku/heroku-cli-command/issues/308)) ([db7be8e](https://github.com/heroku/heroku-cli-command/commit/db7be8eb0e84422e40240c5df5d063513dbe528f))
 
+## [12.4.1](https://github.com/heroku/heroku-cli-command/compare/command-v12.4.0...command-v12.4.1) (2026-06-08)
+
+
+### Dependencies
+
+* bump @oclif/core from 4.10.0 to 4.11.4 ([#367](https://github.com/heroku/heroku-cli-command/issues/367)) ([cdca6d4](https://github.com/heroku/heroku-cli-command/commit/cdca6d40ca7da8e87f5bb8450c3e1a5a5b9a74f2))
+* bump picomatch from 4.0.3 to 4.0.4 ([#374](https://github.com/heroku/heroku-cli-command/issues/374)) ([15bd660](https://github.com/heroku/heroku-cli-command/commit/15bd660ea947d2d102faccd18cb6e38c6ffcfd05))
+* bump serialize-javascript to 7.0.5 and diff to 8.0.3 ([#379](https://github.com/heroku/heroku-cli-command/issues/379)) ([80c37fc](https://github.com/heroku/heroku-cli-command/commit/80c37fcafee7b075afe2be7d2e27afc4bf4b0ec0))
+* update @heroku/http-call to v5.5.2 ([#380](https://github.com/heroku/heroku-cli-command/issues/380)) ([88ebe3a](https://github.com/heroku/heroku-cli-command/commit/88ebe3ac0e70371b54da6ba076fee0561820b70b))
+
 ## [12.4.0](https://github.com/heroku/heroku-cli-command/compare/command-v12.3.3...command-v12.4.0) (2026-05-28)
 
 
