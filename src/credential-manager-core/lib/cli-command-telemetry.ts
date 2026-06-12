@@ -110,6 +110,8 @@ export async function reportCredentialStoreError(
     })
     await credentialSentrySdk.flush(2000)
     await credentialSentrySdk.getClient()?.close()
+    // Clear the cached client so it can be re-initialized on the next error
+    sentryClient = undefined
   } catch {
     // avoid impacting credential flows if Sentry fails
   }

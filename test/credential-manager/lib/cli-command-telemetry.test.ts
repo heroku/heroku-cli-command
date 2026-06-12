@@ -125,5 +125,38 @@ describe('cli-command-telemetry', function () {
 
       expect(closeStub.calledOnce).to.equal(true)
     })
+
+    it('can report multiple errors in sequence', async function () {
+      delete process.env.CI
+      process.env.NODE_ENV = 'development'
+      delete process.env.IS_HEROKU_TEST_ENV
+      delete process.env.DISABLE_TELEMETRY
+
+      const closeStub = stub().resolves()
+      stub(credentialSentrySdk, 'getClient').returns({close: closeStub} as unknown as NonNullable<ReturnType<typeof credentialSentrySdk.getClient>>)
+      stub(credentialSentrySdk, 'init')
+      const captureStub = stub(credentialSentrySdk, 'captureException')
+      stub(credentialSentrySdk, 'flush').resolves(true)
+
+      const err1 = new Error('First error')
+      await reportCredentialStoreError(err1, {
+        credentialStore: CredentialStore.MacOSKeychain,
+        operation: 'getAuth',
+      })
+
+      const err2 = new Error('Second error')
+      await reportCredentialStoreError(err2, {
+        credentialStore: CredentialStore.MacOSKeychain,
+        operation: 'saveAuth',
+      })
+
+      // Both errors should be captured
+      expect(captureStub.calledTwice).to.equal(true)
+      expect(captureStub.firstCall.args[0]).to.equal(err1)
+      expect(captureStub.secondCall.args[0]).to.equal(err2)
+
+      // Close should be called for each error
+      expect(closeStub.calledTwice).to.equal(true)
+    })
   })
 })
