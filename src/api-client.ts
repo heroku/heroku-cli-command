@@ -5,6 +5,7 @@ import {CLIError, warn} from '@oclif/core/errors'
 import debug from 'debug'
 import * as url from 'node:url'
 
+import {getStorageConfig} from './credential-manager-core/lib/credential-storage-selector.js'
 import {deleteLoginState, readLoginState} from './credential-manager-core/lib/login-state.js'
 import {type AuthEntry, getAuth as getStoredAuth, removeAuth} from './credential-manager.js'
 import {Login} from './login.js'
@@ -346,7 +347,8 @@ export class APIClient {
 
     if (!this._storedAuthPromise) {
       this._storedAuthPromise = (async (): Promise<AuthEntry | undefined> => {
-        const useLoginState = Boolean(this.config.dataDir)
+        const {credentialStore} = getStorageConfig()
+        const useLoginState = Boolean(credentialStore && this.config.dataDir)
         try {
           const cachedAccount = useLoginState
             ? (await readLoginState(this.config.dataDir))?.account
