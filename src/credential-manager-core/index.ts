@@ -85,10 +85,10 @@ export async function getAuth(account: string | undefined, host: string, service
           We can't retrieve the Heroku token from your computer's keychain.
           We'll try to retrieve the token from the .netrc file instead.
           To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".`))
-      }
 
-      // avoid showing the warning multiple times
-      warningShown = true
+        // avoid showing the warning multiple times
+        warningShown = true
+      }
 
       await reportCredentialStoreError(error, {
         credentialStore: config.credentialStore,

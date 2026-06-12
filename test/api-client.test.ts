@@ -270,7 +270,6 @@ describe('api_client', () => {
       })
   })
 
-
   describe('setAuthEntry', () => {
     test
       .it('updates auth getter and subsequent getAuthEntry without calling credential store', async ctx => {

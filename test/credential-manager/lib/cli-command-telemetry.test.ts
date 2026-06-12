@@ -1,6 +1,6 @@
 import {expect, use} from 'chai'
 import chaiAsPromised from 'chai-as-promised'
-import sinon from 'sinon'
+import {restore, SinonStub, stub} from 'sinon'
 
 import {
   credentialSentrySdk,
@@ -13,7 +13,7 @@ use(chaiAsPromised)
 
 describe('cli-command-telemetry', function () {
   afterEach(function () {
-    sinon.restore()
+    restore()
     delete process.env.CI
     process.env.NODE_ENV = 'test'
     delete process.env.IS_HEROKU_TEST_ENV
@@ -57,7 +57,7 @@ describe('cli-command-telemetry', function () {
     it('does not capture when CI is set', async function () {
       process.env.CI = 'true'
       process.env.NODE_ENV = 'development'
-      const captureStub = sinon.stub(credentialSentrySdk, 'captureException')
+      const captureStub = stub(credentialSentrySdk, 'captureException')
       const err = new Error('keychain failed')
       await reportCredentialStoreError(err, {
         credentialStore: CredentialStore.MacOSKeychain,
@@ -68,7 +68,7 @@ describe('cli-command-telemetry', function () {
 
     it('does not capture when NODE_ENV is test', async function () {
       process.env.NODE_ENV = 'test'
-      const captureStub = sinon.stub(credentialSentrySdk, 'captureException')
+      const captureStub = stub(credentialSentrySdk, 'captureException')
       await reportCredentialStoreError(new Error('x'), {
         credentialStore: CredentialStore.MacOSKeychain,
         operation: 'getAuth',
@@ -82,11 +82,11 @@ describe('cli-command-telemetry', function () {
       delete process.env.IS_HEROKU_TEST_ENV
       delete process.env.DISABLE_TELEMETRY
 
-      const closeStub = sinon.stub().resolves()
-      sinon.stub(credentialSentrySdk, 'getClient').returns({close: closeStub} as NonNullable<ReturnType<typeof credentialSentrySdk.getClient>>)
-      sinon.stub(credentialSentrySdk, 'init')
-      const captureStub = sinon.stub(credentialSentrySdk, 'captureException')
-      sinon.stub(credentialSentrySdk, 'flush').resolves(true)
+      const closeStub = stub().resolves()
+      stub(credentialSentrySdk, 'getClient').returns({close: closeStub} as unknown as NonNullable<ReturnType<typeof credentialSentrySdk.getClient>>)
+      stub(credentialSentrySdk, 'init')
+      const captureStub = stub(credentialSentrySdk, 'captureException')
+      stub(credentialSentrySdk, 'flush').resolves(true)
 
       const err = new Error('Failed to retrieve token from macOS Keychain: scrubbed')
       await reportCredentialStoreError(err, {
@@ -111,11 +111,11 @@ describe('cli-command-telemetry', function () {
       delete process.env.IS_HEROKU_TEST_ENV
       delete process.env.DISABLE_TELEMETRY
 
-      const closeStub = sinon.stub().resolves()
-      sinon.stub(credentialSentrySdk, 'getClient').returns({close: closeStub} as NonNullable<ReturnType<typeof credentialSentrySdk.getClient>>)
-      sinon.stub(credentialSentrySdk, 'init')
-      sinon.stub(credentialSentrySdk, 'captureException')
-      sinon.stub(credentialSentrySdk, 'flush').resolves(true)
+      const closeStub = stub().resolves()
+      stub(credentialSentrySdk, 'getClient').returns({close: closeStub} as unknown as NonNullable<ReturnType<typeof credentialSentrySdk.getClient>>)
+      stub(credentialSentrySdk, 'init')
+      stub(credentialSentrySdk, 'captureException')
+      stub(credentialSentrySdk, 'flush').resolves(true)
 
       const err = new Error('Test error')
       await reportCredentialStoreError(err, {
