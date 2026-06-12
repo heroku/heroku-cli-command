@@ -194,7 +194,6 @@ describe('credential-manager', function () {
       expect(auth).to.deep.equal({account: 'user@example.com', token: 'netrc-token'})
     })
 
-
     it('should throw error when credentials are not found in either location', async function () {
       const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuth').throws(new Error('Not found'))
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
