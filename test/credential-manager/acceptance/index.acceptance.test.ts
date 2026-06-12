@@ -1,9 +1,7 @@
 import {expect, use} from 'chai'
 import chaiAsPromised from 'chai-as-promised'
-import {stderr} from 'stdout-stderr'
 
 import {getAuth, removeAuth, saveAuth} from '../../../src/credential-manager-core/index.js'
-import {unwrap} from '../../helpers/unwrap.js'
 import {
   cleanupCredentialStore,
   cleanupDefaultNetrc,
