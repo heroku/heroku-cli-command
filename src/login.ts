@@ -9,6 +9,7 @@ import os from 'node:os'
 import * as readline from 'node:readline'
 
 import {APIClient, HerokuAPIError} from './api-client.js'
+import {getStorageConfig} from './credential-manager-core/lib/credential-storage-selector.js'
 import {writeLoginState} from './credential-manager-core/lib/login-state.js'
 import {saveAuth} from './credential-manager.js'
 import {prompter} from './prompter.js'
@@ -319,7 +320,8 @@ export class Login {
 
   private async saveToken(entry: NetrcEntry) {
     await saveAuth(entry.login, entry.password, [vars.apiHost, vars.httpGitHost])
-    if (this.config.dataDir) {
+    const config = getStorageConfig()
+    if (config.credentialStore && this.config.dataDir) {
       await writeLoginState(this.config.dataDir, entry.login)
     }
   }

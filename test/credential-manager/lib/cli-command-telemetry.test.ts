@@ -1,6 +1,6 @@
 import {expect, use} from 'chai'
 import chaiAsPromised from 'chai-as-promised'
-import sinon from 'sinon'
+import {restore, stub} from 'sinon'
 
 import {
   credentialSentrySdk,
@@ -13,7 +13,7 @@ use(chaiAsPromised)
 
 describe('cli-command-telemetry', function () {
   afterEach(function () {
-    sinon.restore()
+    restore()
     delete process.env.CI
     process.env.NODE_ENV = 'test'
     delete process.env.IS_HEROKU_TEST_ENV
@@ -57,7 +57,7 @@ describe('cli-command-telemetry', function () {
     it('does not capture when CI is set', async function () {
       process.env.CI = 'true'
       process.env.NODE_ENV = 'development'
-      const captureStub = sinon.stub(credentialSentrySdk, 'captureException')
+      const captureStub = stub(credentialSentrySdk, 'captureException')
       const err = new Error('keychain failed')
       await reportCredentialStoreError(err, {
         credentialStore: CredentialStore.MacOSKeychain,
@@ -68,7 +68,7 @@ describe('cli-command-telemetry', function () {
 
     it('does not capture when NODE_ENV is test', async function () {
       process.env.NODE_ENV = 'test'
-      const captureStub = sinon.stub(credentialSentrySdk, 'captureException')
+      const captureStub = stub(credentialSentrySdk, 'captureException')
       await reportCredentialStoreError(new Error('x'), {
         credentialStore: CredentialStore.MacOSKeychain,
         operation: 'getAuth',
@@ -82,10 +82,11 @@ describe('cli-command-telemetry', function () {
       delete process.env.IS_HEROKU_TEST_ENV
       delete process.env.DISABLE_TELEMETRY
 
-      sinon.stub(credentialSentrySdk, 'getClient').returns({} as NonNullable<ReturnType<typeof credentialSentrySdk.getClient>>)
-      sinon.stub(credentialSentrySdk, 'init')
-      const captureStub = sinon.stub(credentialSentrySdk, 'captureException')
-      sinon.stub(credentialSentrySdk, 'flush').resolves(true)
+      const closeStub = stub().resolves()
+      stub(credentialSentrySdk, 'getClient').returns({close: closeStub} as unknown as NonNullable<ReturnType<typeof credentialSentrySdk.getClient>>)
+      stub(credentialSentrySdk, 'init')
+      const captureStub = stub(credentialSentrySdk, 'captureException')
+      stub(credentialSentrySdk, 'flush').resolves(true)
 
       const err = new Error('Failed to retrieve token from macOS Keychain: scrubbed')
       await reportCredentialStoreError(err, {
@@ -102,6 +103,60 @@ describe('cli-command-telemetry', function () {
           credential_store: CredentialStore.MacOSKeychain,
         },
       })
+    })
+
+    it('calls close on Sentry client after flush', async function () {
+      delete process.env.CI
+      process.env.NODE_ENV = 'development'
+      delete process.env.IS_HEROKU_TEST_ENV
+      delete process.env.DISABLE_TELEMETRY
+
+      const closeStub = stub().resolves()
+      stub(credentialSentrySdk, 'getClient').returns({close: closeStub} as unknown as NonNullable<ReturnType<typeof credentialSentrySdk.getClient>>)
+      stub(credentialSentrySdk, 'init')
+      stub(credentialSentrySdk, 'captureException')
+      stub(credentialSentrySdk, 'flush').resolves(true)
+
+      const err = new Error('Test error')
+      await reportCredentialStoreError(err, {
+        credentialStore: CredentialStore.MacOSKeychain,
+        operation: 'saveAuth',
+      })
+
+      expect(closeStub.calledOnce).to.equal(true)
+    })
+
+    it('can report multiple errors in sequence', async function () {
+      delete process.env.CI
+      process.env.NODE_ENV = 'development'
+      delete process.env.IS_HEROKU_TEST_ENV
+      delete process.env.DISABLE_TELEMETRY
+
+      const closeStub = stub().resolves()
+      stub(credentialSentrySdk, 'getClient').returns({close: closeStub} as unknown as NonNullable<ReturnType<typeof credentialSentrySdk.getClient>>)
+      stub(credentialSentrySdk, 'init')
+      const captureStub = stub(credentialSentrySdk, 'captureException')
+      stub(credentialSentrySdk, 'flush').resolves(true)
+
+      const err1 = new Error('First error')
+      await reportCredentialStoreError(err1, {
+        credentialStore: CredentialStore.MacOSKeychain,
+        operation: 'getAuth',
+      })
+
+      const err2 = new Error('Second error')
+      await reportCredentialStoreError(err2, {
+        credentialStore: CredentialStore.MacOSKeychain,
+        operation: 'saveAuth',
+      })
+
+      // Both errors should be captured
+      expect(captureStub.calledTwice).to.equal(true)
+      expect(captureStub.firstCall.args[0]).to.equal(err1)
+      expect(captureStub.secondCall.args[0]).to.equal(err2)
+
+      // Close should be called for each error
+      expect(closeStub.calledTwice).to.equal(true)
     })
   })
 })
