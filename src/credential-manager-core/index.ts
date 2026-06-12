@@ -70,6 +70,7 @@ export async function saveAuth(account: string, token: string, hosts: string[], 
 export async function getAuth(account: string | undefined, host: string, service = SERVICE_NAME): Promise<AuthEntry> {
   const config = getStorageConfig()
   const netrcHandler = new NetrcHandler()
+  let warningShown = false
 
   if (config.credentialStore && account) {
     try {
@@ -86,6 +87,9 @@ export async function getAuth(account: string | undefined, host: string, service
           To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".`))
       }
 
+      // avoid showing the warning multiple times
+      warningShown = true
+
       await reportCredentialStoreError(error, {
         credentialStore: config.credentialStore,
         operation: 'getAuth',
@@ -94,6 +98,13 @@ export async function getAuth(account: string | undefined, host: string, service
   }
 
   if (config.useNetrc) {
+    if (process.env.HEROKU_KEYCHAIN_WARNINGS !== 'off' && config.credentialStore && !warningShown) {
+      ux.warn(heredoc(`
+          We can't retrieve the Heroku token from your computer's keychain.
+          We'll try to retrieve the token from the .netrc file instead.
+          To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".`))
+    }
+
     const auth = await netrcHandler.getAuth(host)
 
     if (!auth.password) {

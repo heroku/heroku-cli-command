@@ -207,6 +207,25 @@ describe('credential-manager', function () {
       stderr.stop()
     })
 
+    it('should show netrc fallback warning when credentialStore is set but no account is provided', async function () {
+      const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuth')
+      const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
+      netrcStub.resolves({login: 'user@example.com', password: 'netrc-token'})
+
+      stderr.start()
+
+      const auth = await credentialManager.getAuth(undefined, 'api.heroku.com')
+
+      expect(macosStub.notCalled).to.be.true
+      expect(netrcStub.calledOnce).to.be.true
+      expect(auth).to.deep.equal({account: 'user@example.com', token: 'netrc-token'})
+      expect(unwrap(stderr.output)).to.contain('We can\'t retrieve the Heroku token from your computer\'s keychain.')
+      expect(unwrap(stderr.output)).to.contain('We\'ll try to retrieve the token from the .netrc file instead.')
+      expect(unwrap(stderr.output)).to.contain('To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".')
+
+      stderr.stop()
+    })
+
     it('should throw error when credentials are not found in either location', async function () {
       const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuth').throws(new Error('Not found'))
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
