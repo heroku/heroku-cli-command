@@ -1,6 +1,6 @@
 import {expect, use} from 'chai'
 import chaiAsPromised from 'chai-as-promised'
-import {restore, SinonStub, stub} from 'sinon'
+import {restore, stub} from 'sinon'
 
 import {
   credentialSentrySdk,
