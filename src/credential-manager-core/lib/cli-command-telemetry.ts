@@ -109,6 +109,7 @@ export async function reportCredentialStoreError(
       },
     })
     await credentialSentrySdk.flush(2000)
+    await credentialSentrySdk.getClient()?.close()
   } catch {
     // avoid impacting credential flows if Sentry fails
   }

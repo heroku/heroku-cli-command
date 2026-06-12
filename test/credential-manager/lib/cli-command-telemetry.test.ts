@@ -82,7 +82,8 @@ describe('cli-command-telemetry', function () {
       delete process.env.IS_HEROKU_TEST_ENV
       delete process.env.DISABLE_TELEMETRY
 
-      sinon.stub(credentialSentrySdk, 'getClient').returns({} as NonNullable<ReturnType<typeof credentialSentrySdk.getClient>>)
+      const closeStub = sinon.stub().resolves()
+      sinon.stub(credentialSentrySdk, 'getClient').returns({close: closeStub} as NonNullable<ReturnType<typeof credentialSentrySdk.getClient>>)
       sinon.stub(credentialSentrySdk, 'init')
       const captureStub = sinon.stub(credentialSentrySdk, 'captureException')
       sinon.stub(credentialSentrySdk, 'flush').resolves(true)
@@ -102,6 +103,27 @@ describe('cli-command-telemetry', function () {
           credential_store: CredentialStore.MacOSKeychain,
         },
       })
+    })
+
+    it('calls close on Sentry client after flush', async function () {
+      delete process.env.CI
+      process.env.NODE_ENV = 'development'
+      delete process.env.IS_HEROKU_TEST_ENV
+      delete process.env.DISABLE_TELEMETRY
+
+      const closeStub = sinon.stub().resolves()
+      sinon.stub(credentialSentrySdk, 'getClient').returns({close: closeStub} as NonNullable<ReturnType<typeof credentialSentrySdk.getClient>>)
+      sinon.stub(credentialSentrySdk, 'init')
+      sinon.stub(credentialSentrySdk, 'captureException')
+      sinon.stub(credentialSentrySdk, 'flush').resolves(true)
+
+      const err = new Error('Test error')
+      await reportCredentialStoreError(err, {
+        credentialStore: CredentialStore.MacOSKeychain,
+        operation: 'saveAuth',
+      })
+
+      expect(closeStub.calledOnce).to.equal(true)
     })
   })
 })
