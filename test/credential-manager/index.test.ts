@@ -88,16 +88,10 @@ describe('credential-manager', function () {
       const macosStub = sinon.stub(MacOSHandler.prototype, 'saveAuth').throws(new Error('Keychain error'))
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'saveAuthForHosts').resolves()
 
-      stderr.start()
       await credentialManager.saveAuth('user@example.com', 'test-token', ['api.heroku.com'])
 
       expect(macosStub.calledOnce).to.be.true
       expect(netrcStub.calledOnce).to.be.true
-      expect(unwrap(stderr.output)).to.contain('Warning: We can\'t save the Heroku token to your computer\'s keychain.')
-      expect(unwrap(stderr.output)).to.contain('We\'ll save the token to the .netrc file instead.')
-      expect(unwrap(stderr.output)).to.contain('To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".')
-
-      stderr.stop()
     })
 
     it('should save to credential store once and netrc once for multiple hosts', async function () {
@@ -192,56 +186,24 @@ describe('credential-manager', function () {
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
       netrcStub.resolves({login: 'user@example.com', password: 'netrc-token'})
 
-      stderr.start()
-
       const auth = await credentialManager.getAuth('user@example.com', 'api.heroku.com')
 
       expect(macosStub.calledOnce).to.be.true
       expect(netrcStub.calledOnce).to.be.true
       expect(netrcStub.firstCall.args[0]).to.equal('api.heroku.com')
       expect(auth).to.deep.equal({account: 'user@example.com', token: 'netrc-token'})
-      expect(unwrap(stderr.output)).to.contain('Warning: We can\'t retrieve the Heroku token from your computer\'s keychain.')
-      expect(unwrap(stderr.output)).to.contain('We\'ll try to retrieve the token from the .netrc file instead.')
-      expect(unwrap(stderr.output)).to.contain('To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".')
-
-      stderr.stop()
     })
 
-    it('should show netrc fallback warning when credentialStore is set but no account is provided', async function () {
-      const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuth')
-      const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
-      netrcStub.resolves({login: 'user@example.com', password: 'netrc-token'})
-
-      stderr.start()
-
-      const auth = await credentialManager.getAuth(undefined, 'api.heroku.com')
-
-      expect(macosStub.notCalled).to.be.true
-      expect(netrcStub.calledOnce).to.be.true
-      expect(auth).to.deep.equal({account: 'user@example.com', token: 'netrc-token'})
-      expect(unwrap(stderr.output)).to.contain('We can\'t retrieve the Heroku token from your computer\'s keychain.')
-      expect(unwrap(stderr.output)).to.contain('We\'ll try to retrieve the token from the .netrc file instead.')
-      expect(unwrap(stderr.output)).to.contain('To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".')
-
-      stderr.stop()
-    })
 
     it('should throw error when credentials are not found in either location', async function () {
       const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuth').throws(new Error('Not found'))
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
       netrcStub.rejects(new Error('No auth found for api.heroku.com'))
 
-      stderr.start()
-
       await expect(credentialManager.getAuth('user@example.com', 'api.heroku.com'))
         .to.be.rejectedWith(Error, 'No auth found for api.heroku.com')
       expect(macosStub.calledOnce).to.be.true
       expect(netrcStub.calledOnce).to.be.true
-      expect(unwrap(stderr.output)).to.contain('Warning: We can\'t retrieve the Heroku token from your computer\'s keychain.')
-      expect(unwrap(stderr.output)).to.contain('We\'ll try to retrieve the token from the .netrc file instead.')
-      expect(unwrap(stderr.output)).to.contain('To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".')
-
-      stderr.stop()
     })
 
     it('should throw error when netrc password is empty', async function () {
@@ -249,17 +211,10 @@ describe('credential-manager', function () {
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
       netrcStub.resolves({login: 'user@example.com', password: undefined})
 
-      stderr.start()
-
       await expect(credentialManager.getAuth('user@example.com', 'api.heroku.com'))
         .to.be.rejectedWith(Error, 'No auth found')
       expect(macosStub.calledOnce).to.be.true
       expect(netrcStub.calledOnce).to.be.true
-      expect(unwrap(stderr.output)).to.contain('Warning: We can\'t retrieve the Heroku token from your computer\'s keychain.')
-      expect(unwrap(stderr.output)).to.contain('We\'ll try to retrieve the token from the .netrc file instead.')
-      expect(unwrap(stderr.output)).to.contain('To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".')
-
-      stderr.stop()
     })
 
     it('should fall back to netrc when an account is not provided', async function () {
@@ -342,16 +297,10 @@ describe('credential-manager', function () {
       const macosStub = sinon.stub(MacOSHandler.prototype, 'removeAuth').throws(new Error('Keychain error'))
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'removeAuthForHosts').resolves()
 
-      stderr.start()
       await credentialManager.removeAuth('user@example.com', ['api.heroku.com'])
 
       expect(macosStub.calledOnce).to.be.true
       expect(netrcStub.calledOnce).to.be.true
-      expect(unwrap(stderr.output)).to.contain('Warning: We can\'t remove the Heroku token from your computer\'s keychain.')
-      expect(unwrap(stderr.output)).to.contain('We\'ll remove the token from the .netrc file instead.')
-      expect(unwrap(stderr.output)).to.contain('To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".')
-
-      stderr.stop()
     })
 
     it('should remove from credential store once and netrc once for multiple hosts', async function () {

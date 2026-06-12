@@ -1,6 +1,4 @@
-import {ux} from '@oclif/core'
 import debug from 'debug'
-import tsheredoc from 'tsheredoc'
 
 import {LinuxHandler} from './credential-handlers/linux-handler.js'
 import {MacOSHandler} from './credential-handlers/macos-handler.js'
@@ -11,7 +9,6 @@ import {CredentialStore, getNativeCredentialStore, getStorageConfig} from './lib
 import {AuthEntry, NetrcAuthEntry} from './lib/types.js'
 
 const credDebug = debug('heroku-credential-manager')
-const heredoc = tsheredoc.default
 
 const SERVICE_NAME = 'heroku-cli'
 
@@ -35,12 +32,6 @@ export async function saveAuth(account: string, token: string, hosts: string[], 
     } catch (error) {
       const {message} = error as Error
       credDebug(message)
-      if (process.env.HEROKU_KEYCHAIN_WARNINGS !== 'off') {
-        ux.warn(heredoc(`
-          We can't save the Heroku token to your computer's keychain.
-          We'll save the token to the .netrc file instead.
-          To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".`))
-      }
 
       await reportCredentialStoreError(error, {
         credentialStore: config.credentialStore,
@@ -70,7 +61,6 @@ export async function saveAuth(account: string, token: string, hosts: string[], 
 export async function getAuth(account: string | undefined, host: string, service = SERVICE_NAME): Promise<AuthEntry> {
   const config = getStorageConfig()
   const netrcHandler = new NetrcHandler()
-  let warningShown = false
 
   if (config.credentialStore && account) {
     try {
@@ -80,15 +70,6 @@ export async function getAuth(account: string | undefined, host: string, service
     } catch (error) {
       const {message} = error as Error
       credDebug(message)
-      if (process.env.HEROKU_KEYCHAIN_WARNINGS !== 'off') {
-        ux.warn(heredoc(`
-          We can't retrieve the Heroku token from your computer's keychain.
-          We'll try to retrieve the token from the .netrc file instead.
-          To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".`))
-
-        // avoid showing the warning multiple times
-        warningShown = true
-      }
 
       await reportCredentialStoreError(error, {
         credentialStore: config.credentialStore,
@@ -98,13 +79,6 @@ export async function getAuth(account: string | undefined, host: string, service
   }
 
   if (config.useNetrc) {
-    if (process.env.HEROKU_KEYCHAIN_WARNINGS !== 'off' && config.credentialStore && !warningShown) {
-      ux.warn(heredoc(`
-          We can't retrieve the Heroku token from your computer's keychain.
-          We'll try to retrieve the token from the .netrc file instead.
-          To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".`))
-    }
-
     const auth = await netrcHandler.getAuth(host)
 
     if (!auth.password) {
@@ -167,12 +141,6 @@ export async function removeAuth(account: string | undefined, hosts: string[], s
     } catch (error) {
       const {message} = error as Error
       credDebug(message)
-      if (process.env.HEROKU_KEYCHAIN_WARNINGS !== 'off') {
-        ux.warn(heredoc(`
-          We can't remove the Heroku token from your computer's keychain.
-          We'll remove the token from the .netrc file instead.
-          To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".`))
-      }
 
       await reportCredentialStoreError(error, {
         credentialStore: nativeStore,
