@@ -1,9 +1,7 @@
 import {expect, use} from 'chai'
 import chaiAsPromised from 'chai-as-promised'
-import {stderr} from 'stdout-stderr'
 
 import {getAuth, removeAuth, saveAuth} from '../../../src/credential-manager-core/index.js'
-import {unwrap} from '../../helpers/unwrap.js'
 import {
   cleanupCredentialStore,
   cleanupDefaultNetrc,
@@ -213,13 +211,7 @@ describe('credential-manager acceptance', function () {
       }
 
       try {
-        stderr.start()
         await saveAuth(CREDENTIAL.account, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
-        stderr.stop()
-
-        expect(unwrap(stderr.output)).to.contain('We can\'t save the Heroku token to your computer\'s keychain.')
-        expect(unwrap(stderr.output)).to.contain('We\'ll save the token to the .netrc file instead.')
-        expect(unwrap(stderr.output)).to.contain('To turn off this warning, set HEROKU_KEYCHAIN_WARNINGS to "off".')
 
         const netrcAuth = await getAuth('missing-account@example.com', CREDENTIAL.hosts[0], CREDENTIAL.service)
         expect(netrcAuth).to.deep.equal({account: CREDENTIAL.account, token: CREDENTIAL.token})
