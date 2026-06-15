@@ -10,6 +10,15 @@
 
 * adopt @heroku-cli/test-utils and modernize test setup ([#308](https://github.com/heroku/heroku-cli-command/issues/308)) ([db7be8e](https://github.com/heroku/heroku-cli-command/commit/db7be8eb0e84422e40240c5df5d063513dbe528f))
 
+## [12.4.2](https://github.com/heroku/heroku-cli-command/compare/command-v12.4.1...command-v12.4.2) (2026-06-15)
+
+
+### Bug Fixes
+
+* remove .netrc warnings from the credential manager ([#384](https://github.com/heroku/heroku-cli-command/issues/384)) ([c331236](https://github.com/heroku/heroku-cli-command/commit/c3312367d2213cdcf9055337cc753185c5a35b32))
+* update login state file for both keychain and .netrc ([#381](https://github.com/heroku/heroku-cli-command/issues/381)) ([036a6cc](https://github.com/heroku/heroku-cli-command/commit/036a6cc2a2e37ce1b46209853d46a9cb26916f73))
+* update netrc fallback warning behavior ([#383](https://github.com/heroku/heroku-cli-command/issues/383)) ([900d87c](https://github.com/heroku/heroku-cli-command/commit/900d87c497530b52675a025f3930e56a534ff54c))
+
 ## [12.4.1](https://github.com/heroku/heroku-cli-command/compare/command-v12.4.0...command-v12.4.1) (2026-06-08)
 
 
