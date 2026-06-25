@@ -13,7 +13,7 @@ const credDebug = debug('heroku-credential-manager')
 const SERVICE_NAME = 'heroku-cli'
 
 /**
- * Saves authentication credentials to the native credential store (if available) and .netrc file.
+ * Saves authentication credentials to the native credential store (if available) or .netrc file.
  *
  * @param account - User's account (email)
  * @param token - Authentication token
@@ -24,11 +24,13 @@ const SERVICE_NAME = 'heroku-cli'
 export async function saveAuth(account: string, token: string, hosts: string[], service = SERVICE_NAME): Promise<void> {
   const config = getStorageConfig()
   const netrcHandler = new NetrcHandler()
+  let keychainSuccess = false
 
   if (config.credentialStore) {
     try {
       const handler = getCredentialHandler(config.credentialStore)
       handler.saveAuth({account, service, token})
+      keychainSuccess = true
     } catch (error) {
       const {message} = error as Error
       credDebug(message)
@@ -40,7 +42,8 @@ export async function saveAuth(account: string, token: string, hosts: string[], 
     }
   }
 
-  if (config.useNetrc && hosts.length > 0) {
+  const shouldUseNetrc = config.useNetrc || !keychainSuccess
+  if (shouldUseNetrc && hosts.length > 0) {
     const netrcAuth: NetrcAuthEntry = {
       login: account,
       password: token,
@@ -61,11 +64,13 @@ export async function saveAuth(account: string, token: string, hosts: string[], 
 export async function getAuth(account: string | undefined, host: string, service = SERVICE_NAME): Promise<AuthEntry> {
   const config = getStorageConfig()
   const netrcHandler = new NetrcHandler()
+  let keychainSuccess = false
 
   if (config.credentialStore && account) {
     try {
       const handler = getCredentialHandler(config.credentialStore)
       const token = handler.getAuth(account, service)
+      keychainSuccess = true
       return {account, token}
     } catch (error) {
       const {message} = error as Error
@@ -78,14 +83,13 @@ export async function getAuth(account: string | undefined, host: string, service
     }
   }
 
-  if (config.useNetrc) {
+  const shouldUseNetrc = config.useNetrc || !keychainSuccess
+  if (shouldUseNetrc) {
     const auth = await netrcHandler.getAuth(host)
 
-    if (!auth.password) {
-      throw new Error('No auth found')
+    if (auth.password) {
+      return {account: auth.login, token: auth.password}
     }
-
-    return {account: auth.login, token: auth.password}
   }
 
   throw new Error('No auth found')
@@ -122,7 +126,7 @@ export async function listKeychainAccounts(service = SERVICE_NAME): Promise<stri
 
 /**
  * Removes authentication credentials from the platform native store (when present) and .netrc.
- * Uses {@link getNativeCredentialStore} so legacy HEROKU_NETRC_WRITE-only mode does not skip Keychain/vault cleanup after a mixed login.
+ * Always attempts to remove from both stores to prevent stale tokens when users switch between modes.
  *
  * @param account - User's account (email), or undefined when using HEROKU_API_KEY only (native removal is skipped)
  * @param hosts - Hostname(s) for netrc storage (e.g., ['api.heroku.com'])
@@ -130,7 +134,6 @@ export async function listKeychainAccounts(service = SERVICE_NAME): Promise<stri
  * @returns Promise that resolves when credentials are removed
  */
 export async function removeAuth(account: string | undefined, hosts: string[], service = SERVICE_NAME): Promise<void> {
-  const config = getStorageConfig()
   const netrcHandler = new NetrcHandler()
   const nativeStore = getNativeCredentialStore()
 
@@ -149,7 +152,7 @@ export async function removeAuth(account: string | undefined, hosts: string[], s
     }
   }
 
-  if (config.useNetrc && hosts.length > 0) {
+  if (hosts.length > 0) {
     await netrcHandler.removeAuthForHosts(hosts)
   }
 }

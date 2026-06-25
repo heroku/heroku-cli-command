@@ -22,7 +22,6 @@ describe('credential-manager', function () {
     sinon.stub(process, 'env').value(env)
 
     delete env.HEROKU_NETRC_WRITE
-    delete env.HEROKU_NATIVE_STORE_WRITE
   })
 
   afterEach(function () {
@@ -30,7 +29,7 @@ describe('credential-manager', function () {
   })
 
   describe('saveAuth', function () {
-    it('should save to both credential store and netrc', async function () {
+    it('should save to credential store only', async function () {
       const macosStub = sinon.stub(MacOSHandler.prototype, 'saveAuth')
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'saveAuthForHosts').resolves()
 
@@ -42,15 +41,10 @@ describe('credential-manager', function () {
         service: 'heroku-cli',
         token: 'test-token',
       })
-      expect(netrcStub.calledOnce).to.be.true
-      expect(netrcStub.firstCall.args[0]).to.deep.equal({
-        login: 'user@example.com',
-        password: 'test-token',
-      })
-      expect(netrcStub.firstCall.args[1]).to.deep.equal(['api.heroku.com'])
+      expect(netrcStub.notCalled).to.be.true
     })
 
-    it('should save to netrc-only when credential store is disabled', async function () {
+    it('should save to netrc-only when HEROKU_NETRC_WRITE is true', async function () {
       process.env.HEROKU_NETRC_WRITE = 'TRUE'
       const macosStub = sinon.stub(MacOSHandler.prototype, 'saveAuth')
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'saveAuthForHosts').resolves()
@@ -61,30 +55,7 @@ describe('credential-manager', function () {
       expect(netrcStub.calledOnce).to.be.true
     })
 
-    it('should save to native store only when HEROKU_NATIVE_STORE_WRITE is true', async function () {
-      process.env.HEROKU_NATIVE_STORE_WRITE = 'true'
-      const macosStub = sinon.stub(MacOSHandler.prototype, 'saveAuth')
-      const netrcStub = sinon.stub(NetrcHandler.prototype, 'saveAuthForHosts').resolves()
-
-      await credentialManager.saveAuth('user@example.com', 'test-token', ['api.heroku.com'])
-
-      expect(macosStub.calledOnce).to.be.true
-      expect(netrcStub.notCalled).to.be.true
-    })
-
-    it('should save to both when HEROKU_NETRC_WRITE and HEROKU_NATIVE_STORE_WRITE are true', async function () {
-      process.env.HEROKU_NETRC_WRITE = 'TRUE'
-      process.env.HEROKU_NATIVE_STORE_WRITE = 'TRUE'
-      const macosStub = sinon.stub(MacOSHandler.prototype, 'saveAuth')
-      const netrcStub = sinon.stub(NetrcHandler.prototype, 'saveAuthForHosts').resolves()
-
-      await credentialManager.saveAuth('user@example.com', 'test-token', ['api.heroku.com'])
-
-      expect(macosStub.calledOnce).to.be.true
-      expect(netrcStub.calledOnce).to.be.true
-    })
-
-    it('should continue to netrc if credential store fails', async function () {
+    it('should fall back to netrc if credential store fails', async function () {
       const macosStub = sinon.stub(MacOSHandler.prototype, 'saveAuth').throws(new Error('Keychain error'))
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'saveAuthForHosts').resolves()
 
@@ -94,19 +65,8 @@ describe('credential-manager', function () {
       expect(netrcStub.calledOnce).to.be.true
     })
 
-    it('should save to credential store once and netrc once for multiple hosts', async function () {
-      const macosStub = sinon.stub(MacOSHandler.prototype, 'saveAuth')
-      const netrcStub = sinon.stub(NetrcHandler.prototype, 'saveAuthForHosts').resolves()
-
-      await credentialManager.saveAuth('user@example.com', 'test-token', ['api.heroku.com', 'git.heroku.com'])
-
-      expect(macosStub.calledOnce).to.be.true
-      expect(netrcStub.calledOnce).to.be.true
-      expect(netrcStub.firstCall.args[1]).to.deep.equal(['api.heroku.com', 'git.heroku.com'])
-    })
-
-    it('should throw an error when netrc fails to save', async function () {
-      const macosStub = sinon.stub(MacOSHandler.prototype, 'saveAuth')
+    it('should throw an error when netrc fallback fails', async function () {
+      const macosStub = sinon.stub(MacOSHandler.prototype, 'saveAuth').throws(new Error('Keychain error'))
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'saveAuthForHosts').throws(new Error('Netrc error'))
 
       await expect(credentialManager.saveAuth('user@example.com', 'test-token', ['api.heroku.com']))
@@ -117,7 +77,7 @@ describe('credential-manager', function () {
 
     it('should save to credential store with custom service name', async function () {
       const macosStub = sinon.stub(MacOSHandler.prototype, 'saveAuth')
-      sinon.stub(NetrcHandler.prototype, 'saveAuthForHosts').resolves()
+      const netrcStub = sinon.stub(NetrcHandler.prototype, 'saveAuthForHosts').resolves()
 
       await credentialManager.saveAuth('user@example.com', 'test-token', ['api.heroku.com'], 'custom-service')
 
@@ -126,6 +86,7 @@ describe('credential-manager', function () {
         service: 'custom-service',
         token: 'test-token',
       })
+      expect(netrcStub.notCalled).to.be.true
     })
   })
 
@@ -143,7 +104,7 @@ describe('credential-manager', function () {
       expect(netrcStub.notCalled).to.be.true
     })
 
-    it('should retrieve from netrc-only when credential store is disabled', async function () {
+    it('should retrieve from netrc-only when HEROKU_NETRC_WRITE is true', async function () {
       process.env.HEROKU_NETRC_WRITE = 'TRUE'
       const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuth')
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth').resolves({login: 'user@example.com', password: 'netrc-token'})
@@ -154,31 +115,6 @@ describe('credential-manager', function () {
       expect(netrcStub.calledOnce).to.be.true
       expect(netrcStub.firstCall.args[0]).to.equal('api.heroku.com')
       expect(auth).to.deep.equal({account: 'user@example.com', token: 'netrc-token'})
-    })
-
-    it('should retrieve from native store only when HEROKU_NATIVE_STORE_WRITE is true', async function () {
-      process.env.HEROKU_NATIVE_STORE_WRITE = 'true'
-      const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuth').returns('keychain-token')
-      const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
-
-      const auth = await credentialManager.getAuth('user@example.com', 'api.heroku.com')
-
-      expect(macosStub.calledOnce).to.be.true
-      expect(netrcStub.notCalled).to.be.true
-      expect(auth).to.deep.equal({account: 'user@example.com', token: 'keychain-token'})
-    })
-
-    it('should not fall back to netrc when HEROKU_NATIVE_STORE_WRITE is true and native store fails', async function () {
-      process.env.HEROKU_NATIVE_STORE_WRITE = 'true'
-      const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuth').throws(new Error('Keychain error'))
-      const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
-
-      stderr.start()
-      await expect(credentialManager.getAuth('user@example.com', 'api.heroku.com')).to.be.rejectedWith(Error, 'No auth found')
-      stderr.stop()
-
-      expect(macosStub.calledOnce).to.be.true
-      expect(netrcStub.notCalled).to.be.true
     })
 
     it('should fall back to netrc if credential store fails', async function () {
@@ -258,31 +194,8 @@ describe('credential-manager', function () {
       expect(netrcStub.firstCall.args[0]).to.deep.equal(['api.heroku.com'])
     })
 
-    it('should still remove from native store when HEROKU_NETRC_WRITE disables save path', async function () {
+    it('should remove from both stores even when HEROKU_NETRC_WRITE is true', async function () {
       process.env.HEROKU_NETRC_WRITE = 'TRUE'
-      const macosStub = sinon.stub(MacOSHandler.prototype, 'removeAuth')
-      const netrcStub = sinon.stub(NetrcHandler.prototype, 'removeAuthForHosts').resolves()
-
-      await credentialManager.removeAuth('user@example.com', ['api.heroku.com'])
-
-      expect(macosStub.calledOnce).to.be.true
-      expect(netrcStub.calledOnce).to.be.true
-    })
-
-    it('should remove from native store only when HEROKU_NATIVE_STORE_WRITE is true', async function () {
-      process.env.HEROKU_NATIVE_STORE_WRITE = 'true'
-      const macosStub = sinon.stub(MacOSHandler.prototype, 'removeAuth')
-      const netrcStub = sinon.stub(NetrcHandler.prototype, 'removeAuthForHosts').resolves()
-
-      await credentialManager.removeAuth('user@example.com', ['api.heroku.com'])
-
-      expect(macosStub.calledOnce).to.be.true
-      expect(netrcStub.notCalled).to.be.true
-    })
-
-    it('should remove from both when HEROKU_NETRC_WRITE and HEROKU_NATIVE_STORE_WRITE are true', async function () {
-      process.env.HEROKU_NETRC_WRITE = 'TRUE'
-      process.env.HEROKU_NATIVE_STORE_WRITE = 'TRUE'
       const macosStub = sinon.stub(MacOSHandler.prototype, 'removeAuth')
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'removeAuthForHosts').resolves()
 

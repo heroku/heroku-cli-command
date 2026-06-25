@@ -13,7 +13,6 @@ describe('credential-storage-selector', function () {
       const env = {...process.env}
       sinon.stub(process, 'env').value(env)
       delete env.HEROKU_NETRC_WRITE
-      delete env.HEROKU_NATIVE_STORE_WRITE
     })
 
     afterEach(function () {
@@ -30,20 +29,8 @@ describe('credential-storage-selector', function () {
       expect(result.useNetrc).to.be.true
     })
 
-    it('should return native + netrc when HEROKU_NETRC_WRITE and HEROKU_NATIVE_STORE_WRITE are true', function () {
+    it('should return macOS Keychain without netrc for darwin platform', function () {
       platformStub.value('darwin')
-      process.env.HEROKU_NETRC_WRITE = 'TRUE'
-      process.env.HEROKU_NATIVE_STORE_WRITE = 'TRUE'
-
-      const result = getStorageConfig()
-
-      expect(result.credentialStore).to.equal(CredentialStore.MacOSKeychain)
-      expect(result.useNetrc).to.be.true
-    })
-
-    it('should return native without netrc when HEROKU_NATIVE_STORE_WRITE is true', function () {
-      platformStub.value('darwin')
-      process.env.HEROKU_NATIVE_STORE_WRITE = 'TRUE'
 
       const result = getStorageConfig()
 
@@ -51,25 +38,16 @@ describe('credential-storage-selector', function () {
       expect(result.useNetrc).to.be.false
     })
 
-    it('should return macOS Keychain + netrc for darwin platform', function () {
-      platformStub.value('darwin')
-
-      const result = getStorageConfig()
-
-      expect(result.credentialStore).to.equal(CredentialStore.MacOSKeychain)
-      expect(result.useNetrc).to.be.true
-    })
-
-    it('should return Windows Credential Manager + netrc for win32 platform', function () {
+    it('should return Windows Credential Manager without netrc for win32 platform', function () {
       platformStub.value('win32')
 
       const result = getStorageConfig()
 
       expect(result.credentialStore).to.equal(CredentialStore.WindowsCredentialManager)
-      expect(result.useNetrc).to.be.true
+      expect(result.useNetrc).to.be.false
     })
 
-    it('should return Linux Secret Service + netrc when secret-tool is available', function () {
+    it('should return Linux Secret Service without netrc when secret-tool is available', function () {
       platformStub.value('linux')
 
       const execSyncStub = sinon.stub(childProcess, 'execSync')
@@ -78,7 +56,7 @@ describe('credential-storage-selector', function () {
       const result = getStorageConfig()
 
       expect(result.credentialStore).to.equal(CredentialStore.LinuxSecretService)
-      expect(result.useNetrc).to.be.true
+      expect(result.useNetrc).to.be.false
     })
 
     it('should return netrc-only when secret-tool is not available', function () {
@@ -111,7 +89,6 @@ describe('credential-storage-selector', function () {
       const env = {...process.env}
       sinon.stub(process, 'env').value(env)
       delete env.HEROKU_NETRC_WRITE
-      delete env.HEROKU_NATIVE_STORE_WRITE
     })
 
     afterEach(function () {
