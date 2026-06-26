@@ -126,7 +126,7 @@ export async function listKeychainAccounts(service = SERVICE_NAME): Promise<stri
 
 /**
  * Removes authentication credentials from the platform native store (when present) and .netrc.
- * Always attempts to remove from both stores to prevent stale tokens when users switch between modes.
+ * Always attempts to remove from both stores to remove stale tokens when users switch between modes.
  *
  * @param account - User's account (email), or undefined when using HEROKU_API_KEY only (native removal is skipped)
  * @param hosts - Hostname(s) for netrc storage (e.g., ['api.heroku.com'])

@@ -3,7 +3,7 @@ import {execSync} from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 
-import {getCredentialHandler, getStorageConfig} from '../../../src/credential-manager-core/index.js'
+import {listKeychainAccounts, removeAuth} from '../../../src/credential-manager-core/index.js'
 import {Netrc} from '../../../src/credential-manager-core/lib/netrc-parser.js'
 
 export type AcceptanceFixture = {
@@ -68,15 +68,17 @@ export async function cleanupDefaultNetrc(): Promise<void> {
 /**
  * Removes all accounts for the provided test service from the platform-native credential store.
  */
-export function cleanupCredentialStore(): void {
+export async function cleanupCredentialStore(): Promise<void> {
   const services = getAllAcceptanceServices()
   for (const service of services) {
-    const {accounts, handler} = listCredentialStoreAccounts(service)
-    if (!handler) return
+    /* eslint-disable no-await-in-loop */
+    const accounts = await listKeychainAccounts(service)
+    if (accounts.length === 0) continue
 
     for (const account of accounts) {
-      handler.removeAuth(account, service)
+      await removeAuth(account, [], service)
     }
+    /* eslint-enable no-await-in-loop */
   }
 }
 
@@ -92,20 +94,6 @@ export function getAllAcceptanceHosts(): string[] {
  */
 export function getAllAcceptanceServices(): string[] {
   return [...new Set(Object.values(CREDENTIAL_FIXTURES).map(fixture => fixture.service))]
-}
-
-/**
- * Lists all accounts for the provided test service from the platform-native credential store.
- */
-export function listCredentialStoreAccounts(service: string) {
-  const {credentialStore} = getStorageConfig()
-
-  if (!credentialStore) return {accounts: []}
-
-  const handler = getCredentialHandler(credentialStore)
-  const accounts = handler.listAccounts(service)
-
-  return {accounts, handler}
 }
 
 /**
