@@ -56,11 +56,10 @@ export function getNativeCredentialStore(): CredentialStore | null {
 }
 
 /**
- * Determines whether to use OS-native credential storage, .netrc file, or both.
+ * Determines whether to use OS-native credential storage or .netrc file.
  *
- * `HEROKU_NETRC_WRITE=true` alone selects legacy netrc-only reads/writes (no native store on the primary path).
- * `HEROKU_NATIVE_STORE_WRITE=true` skips .netrc on the primary path so the OS native store (Keychain, Secret Service, Windows Credential Manager) can be tested in isolation.
- * When both are `true`, credentials use the native store and .netrc (dual path).
+ * By default, uses keychain exclusively (when available).
+ * `HEROKU_NETRC_WRITE=true` selects netrc-only mode, skipping keychain entirely.
  *
  * @returns Object containing storage configuration
  *
@@ -71,23 +70,24 @@ export function getNativeCredentialStore(): CredentialStore | null {
  *   // Use macOS handler
  * }
  * if (config.useNetrc) {
- *   // Also use netrc handler
+ *   // Use netrc handler (explicit override mode)
  * }
  * ```
  */
 export function getStorageConfig(): StorageConfig {
   const netrcWriteLegacy = process.env.HEROKU_NETRC_WRITE?.toLowerCase() === 'true'
-  const nativeStoreWriteEnabled = process.env.HEROKU_NATIVE_STORE_WRITE?.toLowerCase() === 'true'
 
-  if (netrcWriteLegacy && !nativeStoreWriteEnabled) {
+  if (netrcWriteLegacy) {
     return {
       credentialStore: null,
       useNetrc: true,
     }
   }
 
+  const nativeCredentialStore = getNativeCredentialStore()
+
   return {
-    credentialStore: getNativeCredentialStore(),
-    useNetrc: !nativeStoreWriteEnabled || netrcWriteLegacy,
+    credentialStore: nativeCredentialStore,
+    useNetrc: !nativeCredentialStore,
   }
 }

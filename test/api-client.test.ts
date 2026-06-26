@@ -207,12 +207,10 @@ describe('api_client', () => {
     beforeEach(() => {
       tmpDir = fs.mkdtempSync(join(SYSTEM_TMPDIR, 'heroku-api-client-'))
       platformStub = sinon.stub(process, 'platform').value('darwin')
-      process.env.HEROKU_NATIVE_STORE_WRITE = 'true'
     })
 
     afterEach(() => {
       fs.rmSync(tmpDir, {force: true, recursive: true})
-      delete process.env.HEROKU_NATIVE_STORE_WRITE
       platformStub.restore()
     })
 

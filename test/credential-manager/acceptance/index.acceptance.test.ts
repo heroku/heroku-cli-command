@@ -1,12 +1,13 @@
 import {expect, use} from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 
-import {getAuth, removeAuth, saveAuth} from '../../../src/credential-manager-core/index.js'
+import {
+  getAuth, listKeychainAccounts, Netrc, removeAuth, saveAuth,
+} from '../../../src/credential-manager-core/index.js'
 import {
   cleanupCredentialStore,
   cleanupDefaultNetrc,
   CREDENTIAL_FIXTURES,
-  listCredentialStoreAccounts,
   setupFakeCredentialStore,
   skipUnlessAcceptance,
   snapshotDefaultNetrc,
@@ -103,8 +104,15 @@ describe('credential-manager acceptance', function () {
     it('skips credential store', async function () {
       await saveAuth(CREDENTIAL.account, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
 
-      const {accounts} = listCredentialStoreAccounts(CREDENTIAL.service)
+      const accounts = await listKeychainAccounts(CREDENTIAL.service)
       expect(accounts).to.deep.equal([])
+    })
+
+    it('errors when password is empty', async function () {
+      await saveAuth(CREDENTIAL.account, '', CREDENTIAL.hosts, CREDENTIAL.service)
+
+      await expect(getAuth(CREDENTIAL.account, CREDENTIAL.hosts[0], CREDENTIAL.service))
+        .to.be.rejectedWith(/No auth found|No credentials found/)
     })
   })
 
@@ -113,34 +121,29 @@ describe('credential-manager acceptance', function () {
       delete process.env.HEROKU_NETRC_WRITE
     })
 
-    afterEach(function () {
-      cleanupCredentialStore()
+    afterEach(async function () {
+      await cleanupCredentialStore()
     })
 
-    // We save with `hosts = []` to test the keychain-only path
     it('saves and retrieves an entry', async function () {
-      await saveAuth(CREDENTIAL.account, CREDENTIAL.token, [], CREDENTIAL.service)
+      await saveAuth(CREDENTIAL.account, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
 
-      const auth = await getAuth(CREDENTIAL.account, 'missing.host.example.com', CREDENTIAL.service)
+      const auth = await getAuth(CREDENTIAL.account, CREDENTIAL.hosts[0], CREDENTIAL.service)
       expect(auth).to.deep.equal({account: CREDENTIAL.account, token: CREDENTIAL.token})
     })
 
     it('removes an entry', async function () {
-      // suppressing the keychain warning message since it is not relevant to this test
-      process.env.HEROKU_KEYCHAIN_WARNINGS = 'off'
-      await saveAuth(CREDENTIAL.account, CREDENTIAL.token, [], CREDENTIAL.service)
-      await removeAuth(CREDENTIAL.account, [], CREDENTIAL.service)
+      await saveAuth(CREDENTIAL.account, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
+      await removeAuth(CREDENTIAL.account, CREDENTIAL.hosts, CREDENTIAL.service)
 
-      await expect(getAuth(CREDENTIAL.account, 'missing.host.example.com', CREDENTIAL.service)).to.be.rejectedWith(/No auth found|No credentials found/)
-
-      delete process.env.HEROKU_KEYCHAIN_WARNINGS
+      await expect(getAuth(CREDENTIAL.account, CREDENTIAL.hosts[0], CREDENTIAL.service)).to.be.rejectedWith(/No auth found|No credentials found/)
     })
 
     it('updates entry when account already has credentials', async function () {
-      await saveAuth(CREDENTIAL.account, CREDENTIAL.token, [], CREDENTIAL.service)
-      await saveAuth(CREDENTIAL.account, 'new-token', [], CREDENTIAL.service)
+      await saveAuth(CREDENTIAL.account, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
+      await saveAuth(CREDENTIAL.account, 'new-token', CREDENTIAL.hosts, CREDENTIAL.service)
 
-      const auth = await getAuth(CREDENTIAL.account, 'missing.host.example.com', CREDENTIAL.service)
+      const auth = await getAuth(CREDENTIAL.account, CREDENTIAL.hosts[0], CREDENTIAL.service)
       expect(auth).to.deep.equal({account: CREDENTIAL.account, token: 'new-token'})
     })
 
@@ -148,15 +151,30 @@ describe('credential-manager acceptance', function () {
       const accountA = CREDENTIAL.account
       const accountB = `second-${accountA}`
 
-      await saveAuth(accountA, CREDENTIAL.token, [], CREDENTIAL.service)
-      await saveAuth(accountB, CREDENTIAL.token, [], CREDENTIAL.service)
-      await saveAuth(CREDENTIAL_ALTERNATE_SERVICE.account, CREDENTIAL_ALTERNATE_SERVICE.token, [], CREDENTIAL_ALTERNATE_SERVICE.service)
+      await saveAuth(accountA, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
+      await saveAuth(accountB, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
+      await saveAuth(CREDENTIAL_ALTERNATE_SERVICE.account, CREDENTIAL_ALTERNATE_SERVICE.token, CREDENTIAL_ALTERNATE_SERVICE.hosts, CREDENTIAL_ALTERNATE_SERVICE.service)
 
-      const {accounts} = listCredentialStoreAccounts(CREDENTIAL.service)
+      const accounts = await listKeychainAccounts(CREDENTIAL.service)
       expect(accounts).to.have.lengthOf(2)
       expect(accounts).to.include(accountA)
       expect(accounts).to.include(accountB)
       expect(accounts).to.not.include(CREDENTIAL_ALTERNATE_SERVICE.account)
+    })
+
+    it('skips netrc', async function () {
+      let netrcHasCredentials = false
+      await saveAuth(CREDENTIAL.account, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
+
+      const netrc = new Netrc()
+      await netrc.load()
+      for (const host of CREDENTIAL.hosts) {
+        if (netrc.machines[host]) {
+          netrcHasCredentials = true
+        }
+      }
+
+      expect(netrcHasCredentials).to.be.false
     })
   })
 
@@ -166,37 +184,23 @@ describe('credential-manager acceptance', function () {
     })
 
     afterEach(async function () {
-      cleanupCredentialStore()
+      await cleanupCredentialStore()
       await cleanupDefaultNetrc()
     })
 
-    it('saves/retrieves via credential store and netrc', async function () {
-      await saveAuth(CREDENTIAL.account, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
-
-      const keychainAuth = await getAuth(CREDENTIAL.account, 'missing.host.example.com', CREDENTIAL.service)
-      const netrcAuth = await getAuth('missing-account@example.com', CREDENTIAL.hosts[0], CREDENTIAL.service)
-
-      const expected = {account: CREDENTIAL.account, token: CREDENTIAL.token}
-      expect(keychainAuth).to.deep.equal(expected)
-      expect(netrcAuth).to.deep.equal(expected)
-    })
-
-    it('removes via credential store and netrc', async function () {
-      await saveAuth(CREDENTIAL.account, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
-      await removeAuth(CREDENTIAL.account, CREDENTIAL.hosts, CREDENTIAL.service)
-
-      await expect(getAuth(CREDENTIAL.account, CREDENTIAL.hosts[0], CREDENTIAL.service))
-        .to.be.rejectedWith(/No auth found|No credentials found/)
-    })
-
-    it('removes native store when logout runs with HEROKU_NETRC_WRITE after dual-path login', async function () {
-      delete process.env.HEROKU_NETRC_WRITE
-      await saveAuth(CREDENTIAL.account, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
-
+    it('removes from both stores when switching from netrc mode to keychain mode', async function () {
+      // Login in netrc mode
       process.env.HEROKU_NETRC_WRITE = 'TRUE'
-      await removeAuth(CREDENTIAL.account, CREDENTIAL.hosts, CREDENTIAL.service)
+      await saveAuth(CREDENTIAL.account, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
       delete process.env.HEROKU_NETRC_WRITE
 
+      // Login in keychain mode (writes to keychain, old netrc credential remains)
+      await saveAuth(CREDENTIAL.account, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
+
+      // Logout should clean both stores
+      await removeAuth(CREDENTIAL.account, CREDENTIAL.hosts, CREDENTIAL.service)
+
+      // Verify both stores are cleaned
       await expect(getAuth(CREDENTIAL.account, CREDENTIAL.hosts[0], CREDENTIAL.service))
         .to.be.rejectedWith(/No auth found|No credentials found/)
     })
@@ -218,37 +222,6 @@ describe('credential-manager acceptance', function () {
       } finally {
         fakeSetup?.cleanup()
       }
-    })
-
-    it('retrieves via netrc when credential store fails', async function () {
-      await saveAuth(CREDENTIAL.account, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
-
-      const netrcAuth = await getAuth('missing-account@example.com', CREDENTIAL.hosts[0], CREDENTIAL.service)
-      expect(netrcAuth).to.deep.equal({account: CREDENTIAL.account, token: CREDENTIAL.token})
-    })
-
-    it('removes via netrc when credential store fails', async function () {
-      await saveAuth(CREDENTIAL.account, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
-      await removeAuth('missing-account@example.com', CREDENTIAL.hosts, CREDENTIAL.service)
-
-      await expect(getAuth('missing-account@example.com', CREDENTIAL.hosts[0], CREDENTIAL.service))
-        .to.be.rejectedWith(/No auth found|No credentials found/)
-    })
-
-    it('retrieves via netrc when account is undefined and no accounts are found', async function () {
-      await saveAuth(CREDENTIAL.account, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
-      await removeAuth(CREDENTIAL.account, [], CREDENTIAL.service)
-
-      const netrcAuth = await getAuth(undefined, CREDENTIAL.hosts[0], CREDENTIAL.service)
-      expect(netrcAuth).to.deep.equal({account: CREDENTIAL.account, token: CREDENTIAL.token})
-    })
-
-    it('removes via netrc when account is undefined', async function () {
-      await saveAuth(CREDENTIAL.account, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
-      await removeAuth(undefined, CREDENTIAL.hosts, CREDENTIAL.service)
-
-      await expect(getAuth('missing-account@example.com', CREDENTIAL.hosts[0], CREDENTIAL.service))
-        .to.be.rejectedWith(/No auth found|No credentials found/)
     })
 
     it('errors when credentials are missing from credential store and netrc', async function () {

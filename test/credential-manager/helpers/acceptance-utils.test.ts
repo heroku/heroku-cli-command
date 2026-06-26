@@ -15,7 +15,6 @@ import {
   isPowerShellAvailable,
   isSecretToolAvailable,
   isSecurityAvailable,
-  listCredentialStoreAccounts,
   SERVICE_NAME,
   setupFakeCredentialStore,
   skipUnlessAcceptance,
@@ -80,30 +79,6 @@ describe('acceptance utils', function () {
     })
   })
 
-  describe('listCredentialStoreAccounts', function () {
-    beforeEach(function () {
-      sinon.stub(process, 'platform').value('darwin')
-      sinon.stub(process, 'env').value({...process.env})
-    })
-
-    it('returns an empty list when credential store is disabled', function () {
-      process.env.HEROKU_NETRC_WRITE = 'true'
-
-      const result = listCredentialStoreAccounts(SERVICE_NAME)
-      expect(result).to.deep.equal({accounts: []})
-    })
-
-    it('returns handler and accounts when credential store is enabled', function () {
-      delete process.env.HEROKU_NETRC_WRITE
-      sinon.stub(MacOSHandler.prototype, 'listAccounts').returns(['test@example.com'])
-
-      const result = listCredentialStoreAccounts(SERVICE_NAME)
-
-      expect(result.handler).to.be.instanceOf(MacOSHandler)
-      expect(result.accounts).to.deep.equal(['test@example.com'])
-    })
-  })
-
   describe('cleanupCredentialStore', function () {
     let listAccountsStub: sinon.SinonStub
     let removeAuthStub: sinon.SinonStub
@@ -116,20 +91,20 @@ describe('acceptance utils', function () {
       removeAuthStub = sinon.stub(MacOSHandler.prototype, 'removeAuth')
     })
 
-    it('is a no-op when credential store is disabled', function () {
+    it('is a no-op when HEROKU_NETRC_WRITE is true', async function () {
       process.env.HEROKU_NETRC_WRITE = 'true'
 
-      expect(() => cleanupCredentialStore()).to.not.throw()
+      await expect(cleanupCredentialStore()).to.not.be.rejected
       expect(listAccountsStub.notCalled).to.equal(true)
       expect(removeAuthStub.notCalled).to.equal(true)
     })
 
-    it('removes all accounts for all fixture services', function () {
+    it('removes all accounts for all fixture services', async function () {
       delete process.env.HEROKU_NETRC_WRITE
       listAccountsStub.withArgs(SERVICE_NAME).returns(['test@example.com', 'second@example.com'])
       listAccountsStub.withArgs(ALTERNATE_SERVICE_NAME).returns(['third@example.com'])
 
-      cleanupCredentialStore()
+      await cleanupCredentialStore()
 
       expect(removeAuthStub.callCount).to.equal(3)
       expect(removeAuthStub.calledWith('test@example.com', SERVICE_NAME)).to.equal(true)
@@ -137,11 +112,11 @@ describe('acceptance utils', function () {
       expect(removeAuthStub.calledWith('third@example.com', ALTERNATE_SERVICE_NAME)).to.equal(true)
     })
 
-    it('does nothing when there are no accounts to remove', function () {
+    it('does nothing when there are no accounts to remove', async function () {
       delete process.env.HEROKU_NETRC_WRITE
       listAccountsStub.returns([])
 
-      cleanupCredentialStore()
+      await cleanupCredentialStore()
       expect(removeAuthStub.notCalled).to.equal(true)
     })
   })
