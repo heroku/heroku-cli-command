@@ -1,136 +1,205 @@
 ## [12.2.2](https://github.com/heroku/heroku-cli-command/compare/command-v12.2.1...command-v12.2.2) (2026-03-25)
 
-
 ### Bug Fixes
 
-* Ctrl-C cancels login process ([#305](https://github.com/heroku/heroku-cli-command/issues/305)) ([bea43c5](https://github.com/heroku/heroku-cli-command/commit/bea43c5df7e1bf218baa35a99fc7c40430986855))
-
+- Ctrl-C cancels login process ([#305](https://github.com/heroku/heroku-cli-command/issues/305)) ([bea43c5](https://github.com/heroku/heroku-cli-command/commit/bea43c5df7e1bf218baa35a99fc7c40430986855))
 
 ### Miscellaneous Chores
 
-* adopt @heroku-cli/test-utils and modernize test setup ([#308](https://github.com/heroku/heroku-cli-command/issues/308)) ([db7be8e](https://github.com/heroku/heroku-cli-command/commit/db7be8eb0e84422e40240c5df5d063513dbe528f))
+- adopt @heroku-cli/test-utils and modernize test setup ([#308](https://github.com/heroku/heroku-cli-command/issues/308)) ([db7be8e](https://github.com/heroku/heroku-cli-command/commit/db7be8eb0e84422e40240c5df5d063513dbe528f))
 
-## [12.4.2](https://github.com/heroku/heroku-cli-command/compare/command-v12.4.1...command-v12.4.2) (2026-06-15)
+## [13.0.0-beta.6](https://github.com/heroku/heroku-cli-command/compare/command-v12.4.2-beta.0...command-v13.0.0-beta.6) (2026-07-01)
 
+### ⚠ BREAKING CHANGES
 
-### Bug Fixes
+With this major version release we will be improving the security by storing authentication credentials in your system keychain by default. We will no longer save authentication credentials to `.netrc` files by default, though we will continue to support `.netrc` files as a fall-back if a supported keychain is not available or if the user's keychain returns an error. Users will also be able to force the use of the `.netrc` file by setting the environment variable `HEROKU_NETRC_WRITE=true`. The user's token can also be provided directly by setting `HEROKU_API_TOKEN=<token>`.
 
-* remove .netrc warnings from the credential manager ([#384](https://github.com/heroku/heroku-cli-command/issues/384)) ([c331236](https://github.com/heroku/heroku-cli-command/commit/c3312367d2213cdcf9055337cc753185c5a35b32))
-* update login state file for both keychain and .netrc ([#381](https://github.com/heroku/heroku-cli-command/issues/381)) ([036a6cc](https://github.com/heroku/heroku-cli-command/commit/036a6cc2a2e37ce1b46209853d46a9cb26916f73))
-* update netrc fallback warning behavior ([#383](https://github.com/heroku/heroku-cli-command/issues/383)) ([900d87c](https://github.com/heroku/heroku-cli-command/commit/900d87c497530b52675a025f3930e56a534ff54c))
-
-## [12.4.1](https://github.com/heroku/heroku-cli-command/compare/command-v12.4.0...command-v12.4.1) (2026-06-08)
-
-
-### Dependencies
-
-* bump @oclif/core from 4.10.0 to 4.11.4 ([#367](https://github.com/heroku/heroku-cli-command/issues/367)) ([cdca6d4](https://github.com/heroku/heroku-cli-command/commit/cdca6d40ca7da8e87f5bb8450c3e1a5a5b9a74f2))
-* bump picomatch from 4.0.3 to 4.0.4 ([#374](https://github.com/heroku/heroku-cli-command/issues/374)) ([15bd660](https://github.com/heroku/heroku-cli-command/commit/15bd660ea947d2d102faccd18cb6e38c6ffcfd05))
-* bump serialize-javascript to 7.0.5 and diff to 8.0.3 ([#379](https://github.com/heroku/heroku-cli-command/issues/379)) ([80c37fc](https://github.com/heroku/heroku-cli-command/commit/80c37fcafee7b075afe2be7d2e27afc4bf4b0ec0))
-* update @heroku/http-call to v5.5.2 ([#380](https://github.com/heroku/heroku-cli-command/issues/380)) ([88ebe3a](https://github.com/heroku/heroku-cli-command/commit/88ebe3ac0e70371b54da6ba076fee0561820b70b))
-
-## [12.4.0](https://github.com/heroku/heroku-cli-command/compare/command-v12.3.3...command-v12.4.0) (2026-05-28)
-
+- remove dual write for credential storage ([#389](https://github.com/heroku/heroku-cli-command/issues/389))
+- avoid duplicate account prompt on logout ([#332](https://github.com/heroku/heroku-cli-command/issues/332))
 
 ### Features
 
-* add Heroku credential manager functionality ([#372](https://github.com/heroku/heroku-cli-command/issues/372)) ([91bcd40](https://github.com/heroku/heroku-cli-command/commit/91bcd4017d4015071009aa953f7c0f7853c7240a))
-* update login to no longer logout as part of the process ([#357](https://github.com/heroku/heroku-cli-command/issues/357)) ([0077ccb](https://github.com/heroku/heroku-cli-command/commit/0077ccb05eb8f37c25e6bd98a3c1236371e2747e))
-
-
-### Bug Fixes
-
-* re-add auth setter ([2f8c11f](https://github.com/heroku/heroku-cli-command/commit/2f8c11fdd55dbfd91064aff299d79f78a905130d))
-* re-add auth setter ([#377](https://github.com/heroku/heroku-cli-command/issues/377)) ([a5ef794](https://github.com/heroku/heroku-cli-command/commit/a5ef794c328056ec20b5a5ab4bbea8e655928f71))
-
-
-### Code Refactoring
-
-* update check for 401 error to only look at error code ([#358](https://github.com/heroku/heroku-cli-command/issues/358)) ([160741a](https://github.com/heroku/heroku-cli-command/commit/160741a3fc533e1626dfb0f8524d6229c39e1c5f))
-
-## [12.3.3](https://github.com/heroku/heroku-cli-command/compare/command-v12.3.2...command-v12.3.3) (2026-05-06)
-
+- add --no-wrap flag for table rendering ([#324](https://github.com/heroku/heroku-cli-command/issues/324)) ([1ed23a7](https://github.com/heroku/heroku-cli-command/commit/1ed23a70779853bcfa166af88fa0b1d56a98435d))
+- add global --prompt flag for interactive command execution ([#269](https://github.com/heroku/heroku-cli-command/issues/269)) ([c73322b](https://github.com/heroku/heroku-cli-command/commit/c73322be0700709f8d2a809f9538bc6b06612db9))
+- add Heroku credential manager functionality ([#372](https://github.com/heroku/heroku-cli-command/issues/372)) ([91bcd40](https://github.com/heroku/heroku-cli-command/commit/91bcd4017d4015071009aa953f7c0f7853c7240a))
+- add listKeychainAccounts function ([#353](https://github.com/heroku/heroku-cli-command/issues/353)) ([2c8df88](https://github.com/heroku/heroku-cli-command/commit/2c8df88cdc4e944acc45dcf3b511d6954470d6f6))
+- add sentry reporting ([#297](https://github.com/heroku/heroku-cli-command/issues/297)) ([0d815d0](https://github.com/heroku/heroku-cli-command/commit/0d815d0660493bd16c4aab681ecacf2df416d9ba))
+- add warning messages when credential manager keychain ops fail ([#317](https://github.com/heroku/heroku-cli-command/issues/317)) ([0de746a](https://github.com/heroku/heroku-cli-command/commit/0de746adbfb5e61bbf98dd3198e09ec9f021b8d4))
+- bring in heroku-credential-manager logic ([#296](https://github.com/heroku/heroku-cli-command/issues/296)) ([a167022](https://github.com/heroku/heroku-cli-command/commit/a16702295b0f8e505871a9b858437a7b9e1b8a43))
+- cache account hint in login.json for native credential store ([#342](https://github.com/heroku/heroku-cli-command/issues/342)) ([cf0544a](https://github.com/heroku/heroku-cli-command/commit/cf0544ad3d00c4e33de0677c7d509cddec36d799))
+- env var keychain bool ([#340](https://github.com/heroku/heroku-cli-command/issues/340)) ([ec16c2a](https://github.com/heroku/heroku-cli-command/commit/ec16c2a3615e403a1db3bc3c538e885227efadbc))
+- leverage the heroku credential manager for auth ([#291](https://github.com/heroku/heroku-cli-command/issues/291)) ([de1bf43](https://github.com/heroku/heroku-cli-command/commit/de1bf431094137669c092d2f568b32dc1ac065dd))
+- remove dual write for credential storage ([#389](https://github.com/heroku/heroku-cli-command/issues/389)) ([e50b5be](https://github.com/heroku/heroku-cli-command/commit/e50b5be106f7997d85f7a5a53ff06ff1eadecb9c))
+- revoke OAuth tokens on logout with optional flag ([#352](https://github.com/heroku/heroku-cli-command/issues/352)) ([8f84462](https://github.com/heroku/heroku-cli-command/commit/8f844624ddd0403ee5b5b7bd1e1cc349f5cf4fd7))
+- update login to no longer logout as part of the process ([#357](https://github.com/heroku/heroku-cli-command/issues/357)) ([0077ccb](https://github.com/heroku/heroku-cli-command/commit/0077ccb05eb8f37c25e6bd98a3c1236371e2747e))
 
 ### Bug Fixes
 
-* **prompter:** route inquirer prompt UI to stderr by default ([#354](https://github.com/heroku/heroku-cli-command/issues/354)) ([a01f9ee](https://github.com/heroku/heroku-cli-command/commit/a01f9eeaacdcc9bc187ad563f7b426fb248d0b71))
-
-## [12.3.2](https://github.com/heroku/heroku-cli-command/compare/command-v12.3.1...command-v12.3.2) (2026-04-29)
-
-
-### Bug Fixes
-
-* dedupe API warning headers within one client invocation ([#343](https://github.com/heroku/heroku-cli-command/issues/343)) ([ac1717a](https://github.com/heroku/heroku-cli-command/commit/ac1717a69a86935a6e75f4c2bcbe77f35ec2e20c))
-
-## [12.3.1](https://github.com/heroku/heroku-cli-command/compare/command-v12.2.2...command-v12.3.1) (2026-04-03)
-
-
-### Features
-
-* add --no-wrap flag for table rendering ([#324](https://github.com/heroku/heroku-cli-command/issues/324)) ([1ed23a7](https://github.com/heroku/heroku-cli-command/commit/1ed23a70779853bcfa166af88fa0b1d56a98435d))
-
+- Add default help text hook so that display default app value in --help ([#268](https://github.com/heroku/heroku-cli-command/issues/268)) ([d45dc5c](https://github.com/heroku/heroku-cli-command/commit/d45dc5c5361ead501dc3d07c04b4e84121db85c0))
+- avoid duplicate account prompt on logout ([#332](https://github.com/heroku/heroku-cli-command/issues/332)) ([d28e371](https://github.com/heroku/heroku-cli-command/commit/d28e3719bfd74c46309bc9fe612d487bc1dd9772))
+- clear native store on logout regarless of HEROKU_NETRC_WRITE ([#331](https://github.com/heroku/heroku-cli-command/issues/331)) ([72f4245](https://github.com/heroku/heroku-cli-command/commit/72f42452c4c71ac5c758503f611db5da4be81ee2))
+- Ctrl-C cancels login process ([#305](https://github.com/heroku/heroku-cli-command/issues/305)) ([bea43c5](https://github.com/heroku/heroku-cli-command/commit/bea43c5df7e1bf218baa35a99fc7c40430986855))
+- dedupe API warning headers within one client invocation ([#343](https://github.com/heroku/heroku-cli-command/issues/343)) ([ac1717a](https://github.com/heroku/heroku-cli-command/commit/ac1717a69a86935a6e75f4c2bcbe77f35ec2e20c))
+- **deps:** bump lodash from 4.17.21 to 4.17.23 ([#255](https://github.com/heroku/heroku-cli-command/issues/255)) ([f056708](https://github.com/heroku/heroku-cli-command/commit/f056708bc5cd4858597afb95495cf3024791d578))
+- **deps:** bump the patch-dependencies group across 1 directory with 3 updates ([#260](https://github.com/heroku/heroku-cli-command/issues/260)) ([548fab1](https://github.com/heroku/heroku-cli-command/commit/548fab1f0becfe089e4956ac84ac1750e820316b))
+- exclude workflows-repo from eslint ([#286](https://github.com/heroku/heroku-cli-command/issues/286)) ([093706f](https://github.com/heroku/heroku-cli-command/commit/093706fb5f912848acce8eb4da9c414ad24c9442))
+- improve --prompt flag help text implementation ([#276](https://github.com/heroku/heroku-cli-command/issues/276)) ([f870d8b](https://github.com/heroku/heroku-cli-command/commit/f870d8b8f68ae78e8ab8ef9c4c9d49e7ae5f87e3))
+- **prompter:** route inquirer prompt UI to stderr by default ([#354](https://github.com/heroku/heroku-cli-command/issues/354)) ([a01f9ee](https://github.com/heroku/heroku-cli-command/commit/a01f9eeaacdcc9bc187ad563f7b426fb248d0b71))
+- re-add auth setter ([2f8c11f](https://github.com/heroku/heroku-cli-command/commit/2f8c11fdd55dbfd91064aff299d79f78a905130d))
+- re-add auth setter ([#377](https://github.com/heroku/heroku-cli-command/issues/377)) ([a5ef794](https://github.com/heroku/heroku-cli-command/commit/a5ef794c328056ec20b5a5ab4bbea8e655928f71))
+- remove .netrc warnings from the credential manager ([#384](https://github.com/heroku/heroku-cli-command/issues/384)) ([c331236](https://github.com/heroku/heroku-cli-command/commit/c3312367d2213cdcf9055337cc753185c5a35b32))
+- remove account selector logic for credential manager ([#350](https://github.com/heroku/heroku-cli-command/issues/350)) ([71efb94](https://github.com/heroku/heroku-cli-command/commit/71efb94d3bd5897a5e564ca1b816a7096489c33a))
+- remove extra newline from warning output ([#284](https://github.com/heroku/heroku-cli-command/issues/284)) ([94f6d94](https://github.com/heroku/heroku-cli-command/commit/94f6d946da772c852ed1589d1dcd72b4c507b527))
+- remove vulns and repeated warning headings (W-17068244) ([#233](https://github.com/heroku/heroku-cli-command/issues/233)) ([7edf773](https://github.com/heroku/heroku-cli-command/commit/7edf7730cb44af96f1475f32d2a4ae614ab43e27))
+- reword credential storage netrc warnings ([#351](https://github.com/heroku/heroku-cli-command/issues/351)) ([b5578ca](https://github.com/heroku/heroku-cli-command/commit/b5578ca06b2dfdd1fe6161a63d9b22c4e64f23f7))
+- silence redundant console.error on netrc logout ([#335](https://github.com/heroku/heroku-cli-command/issues/335)) ([a9200ba](https://github.com/heroku/heroku-cli-command/commit/a9200ba024140fafba2c97d47b030dfbdf9d91b8))
+- stop removeauth error no acct ([#341](https://github.com/heroku/heroku-cli-command/issues/341)) ([40642b9](https://github.com/heroku/heroku-cli-command/commit/40642b9c0049a679df9dd474ad26894202383a77))
+- throw an error when account is not resolved ([#339](https://github.com/heroku/heroku-cli-command/issues/339)) ([2986154](https://github.com/heroku/heroku-cli-command/commit/298615482eb0f44e5221486948bd330f1ab2fef7))
+- update login state file for both keychain and .netrc ([#381](https://github.com/heroku/heroku-cli-command/issues/381)) ([036a6cc](https://github.com/heroku/heroku-cli-command/commit/036a6cc2a2e37ce1b46209853d46a9cb26916f73))
+- update netrc fallback warning behavior ([#383](https://github.com/heroku/heroku-cli-command/issues/383)) ([900d87c](https://github.com/heroku/heroku-cli-command/commit/900d87c497530b52675a025f3930e56a534ff54c))
 
 ### Performance Improvements
 
-* lazy-load heavy modules to improve CLI startup time ([#318](https://github.com/heroku/heroku-cli-command/issues/318)) ([2f4207d](https://github.com/heroku/heroku-cli-command/commit/2f4207d91f066b900dff069f66a3659198094f59))
+- lazy-load heavy modules to improve CLI startup time ([#318](https://github.com/heroku/heroku-cli-command/issues/318)) ([2f4207d](https://github.com/heroku/heroku-cli-command/commit/2f4207d91f066b900dff069f66a3659198094f59))
 
+### Dependencies
+
+- bump @oclif/core from 4.10.0 to 4.11.4 ([#367](https://github.com/heroku/heroku-cli-command/issues/367)) ([cdca6d4](https://github.com/heroku/heroku-cli-command/commit/cdca6d40ca7da8e87f5bb8450c3e1a5a5b9a74f2))
+- bump @oclif/core from 4.8.0 to 4.8.3 ([#282](https://github.com/heroku/heroku-cli-command/issues/282)) ([75a3f7d](https://github.com/heroku/heroku-cli-command/commit/75a3f7d46301e9999588ca32e0f06a9f363cf634))
+- bump @oclif/core from 4.8.3 to 4.10.3 ([#315](https://github.com/heroku/heroku-cli-command/issues/315)) ([30977f9](https://github.com/heroku/heroku-cli-command/commit/30977f962f53198f045f48bd777a6d8c7c3356f0))
+- bump actions/create-github-app-token from 2 to 3 ([#287](https://github.com/heroku/heroku-cli-command/issues/287)) ([af51621](https://github.com/heroku/heroku-cli-command/commit/af516212536b4200902caaa66c194f3f3878b921))
+- bump brace-expansion from 1.1.12 to 1.1.13 ([#312](https://github.com/heroku/heroku-cli-command/issues/312)) ([08b784b](https://github.com/heroku/heroku-cli-command/commit/08b784b7ff3fc48b0e9eb51eb69e836ef566fd43))
+- bump chai from 5.2.0 to 6.2.2 ([#273](https://github.com/heroku/heroku-cli-command/issues/273)) ([7d62170](https://github.com/heroku/heroku-cli-command/commit/7d6217072e8bca272a6ed375da900cf68cdb4914))
+- bump flatted from 3.3.4 to 3.4.2 ([#294](https://github.com/heroku/heroku-cli-command/issues/294)) ([cdd74e6](https://github.com/heroku/heroku-cli-command/commit/cdd74e6e81d77c3687100695ff4df8ccf723763e))
+- bump picomatch from 4.0.3 to 4.0.4 ([#374](https://github.com/heroku/heroku-cli-command/issues/374)) ([15bd660](https://github.com/heroku/heroku-cli-command/commit/15bd660ea947d2d102faccd18cb6e38c6ffcfd05))
+- bump serialize-javascript to 7.0.5 and diff to 8.0.3 ([#379](https://github.com/heroku/heroku-cli-command/issues/379)) ([80c37fc](https://github.com/heroku/heroku-cli-command/commit/80c37fcafee7b075afe2be7d2e27afc4bf4b0ec0))
+- bump the dev-patch-minor-dependencies group across 1 directory with 4 updates ([#320](https://github.com/heroku/heroku-cli-command/issues/320)) ([bf83521](https://github.com/heroku/heroku-cli-command/commit/bf83521276b9368438e9f5dd0b12cb9951eac9b2))
+- bump the dev-patch-minor-dependencies group across 1 directory with 6 updates ([#283](https://github.com/heroku/heroku-cli-command/issues/283)) ([0e8966f](https://github.com/heroku/heroku-cli-command/commit/0e8966f6dd8989aa4d34105a7a0bbdbc081ba8b0))
+- update @heroku/http-call to v5.5.2 ([#380](https://github.com/heroku/heroku-cli-command/issues/380)) ([88ebe3a](https://github.com/heroku/heroku-cli-command/commit/88ebe3ac0e70371b54da6ba076fee0561820b70b))
+
+### Code Refactoring
+
+- improve prompt mode activation logic ([#277](https://github.com/heroku/heroku-cli-command/issues/277)) ([7fee4ed](https://github.com/heroku/heroku-cli-command/commit/7fee4ed35fde6862197d4ffcb48bf0d59e101fd9))
+- update check for 401 error to only look at error code ([#358](https://github.com/heroku/heroku-cli-command/issues/358)) ([160741a](https://github.com/heroku/heroku-cli-command/commit/160741a3fc533e1626dfb0f8524d6229c39e1c5f))
+- use granular imports from @oclif/core ([#309](https://github.com/heroku/heroku-cli-command/issues/309)) ([8b9fd4b](https://github.com/heroku/heroku-cli-command/commit/8b9fd4b40ea1f7136c3cb2c1e5696bb766028ca5))
 
 ### Miscellaneous Chores
 
-* release 12.2.4 ([#323](https://github.com/heroku/heroku-cli-command/issues/323)) ([339c6da](https://github.com/heroku/heroku-cli-command/commit/339c6da70b2094aebabde16cf47d24255f8be2c2))
-* release 12.3.0 ([#326](https://github.com/heroku/heroku-cli-command/issues/326)) ([11e46ea](https://github.com/heroku/heroku-cli-command/commit/11e46eab79c1b3d909621df457a5fd5c71dd866e))
-* release 12.3.1 ([#327](https://github.com/heroku/heroku-cli-command/issues/327)) ([72dff13](https://github.com/heroku/heroku-cli-command/commit/72dff13855ee6fc10610f2ac27eeb1a4b4684272))
+- release 12.2.2 ([#307](https://github.com/heroku/heroku-cli-command/issues/307)) ([32f1aec](https://github.com/heroku/heroku-cli-command/commit/32f1aecf0111c97e739ec8a178a4e872b056d129))
+- release 12.2.4 ([#323](https://github.com/heroku/heroku-cli-command/issues/323)) ([339c6da](https://github.com/heroku/heroku-cli-command/commit/339c6da70b2094aebabde16cf47d24255f8be2c2))
+- release 12.3.0 ([#326](https://github.com/heroku/heroku-cli-command/issues/326)) ([11e46ea](https://github.com/heroku/heroku-cli-command/commit/11e46eab79c1b3d909621df457a5fd5c71dd866e))
+- release 12.3.1 ([#327](https://github.com/heroku/heroku-cli-command/issues/327)) ([72dff13](https://github.com/heroku/heroku-cli-command/commit/72dff13855ee6fc10610f2ac27eeb1a4b4684272))
+- release 12.4.2-beta.0 ([6af0ace](https://github.com/heroku/heroku-cli-command/commit/6af0ace33992b756b1948ae817a66381a77d2f2d))
+- release 12.4.2-beta.1 ([40f137a](https://github.com/heroku/heroku-cli-command/commit/40f137aa9daed0208268f130165ff7e824679a34))
+- release 12.4.2-beta.2 ([347f9a3](https://github.com/heroku/heroku-cli-command/commit/347f9a324e19c55c80fa11e399f1b04791acd685))
+- release 13.0.0-beta.5 ([1c43b41](https://github.com/heroku/heroku-cli-command/commit/1c43b413c292aba6a8bbfc27e338ce2b27abd8e7))
+- release 13.0.0-beta.6 ([2d6c117](https://github.com/heroku/heroku-cli-command/commit/2d6c11701062595661297e4a9ee2e259c830d2a9))
 
-## [12.2.1](https://github.com/heroku/heroku-cli-command/compare/command-v12.2.0...command-v12.2.1) (2026-03-11)
-
+## [12.4.2](https://github.com/heroku/heroku-cli-command/compare/command-v12.4.1...command-v12.4.2) (2026-06-15)
 
 ### Bug Fixes
 
-* exclude workflows-repo from eslint ([#286](https://github.com/heroku/heroku-cli-command/issues/286)) ([093706f](https://github.com/heroku/heroku-cli-command/commit/093706fb5f912848acce8eb4da9c414ad24c9442))
-* remove extra newline from warning output ([#284](https://github.com/heroku/heroku-cli-command/issues/284)) ([94f6d94](https://github.com/heroku/heroku-cli-command/commit/94f6d946da772c852ed1589d1dcd72b4c507b527))
+- remove .netrc warnings from the credential manager ([#384](https://github.com/heroku/heroku-cli-command/issues/384)) ([c331236](https://github.com/heroku/heroku-cli-command/commit/c3312367d2213cdcf9055337cc753185c5a35b32))
+- update login state file for both keychain and .netrc ([#381](https://github.com/heroku/heroku-cli-command/issues/381)) ([036a6cc](https://github.com/heroku/heroku-cli-command/commit/036a6cc2a2e37ce1b46209853d46a9cb26916f73))
+- update netrc fallback warning behavior ([#383](https://github.com/heroku/heroku-cli-command/issues/383)) ([900d87c](https://github.com/heroku/heroku-cli-command/commit/900d87c497530b52675a025f3930e56a534ff54c))
 
-## [12.2.0](https://github.com/heroku/heroku-cli-command/compare/command-v12.1.3...command-v12.2.0) (2026-02-26)
+## [12.4.1](https://github.com/heroku/heroku-cli-command/compare/command-v12.4.0...command-v12.4.1) (2026-06-08)
 
+### Dependencies
+
+- bump @oclif/core from 4.10.0 to 4.11.4 ([#367](https://github.com/heroku/heroku-cli-command/issues/367)) ([cdca6d4](https://github.com/heroku/heroku-cli-command/commit/cdca6d40ca7da8e87f5bb8450c3e1a5a5b9a74f2))
+- bump picomatch from 4.0.3 to 4.0.4 ([#374](https://github.com/heroku/heroku-cli-command/issues/374)) ([15bd660](https://github.com/heroku/heroku-cli-command/commit/15bd660ea947d2d102faccd18cb6e38c6ffcfd05))
+- bump serialize-javascript to 7.0.5 and diff to 8.0.3 ([#379](https://github.com/heroku/heroku-cli-command/issues/379)) ([80c37fc](https://github.com/heroku/heroku-cli-command/commit/80c37fcafee7b075afe2be7d2e27afc4bf4b0ec0))
+- update @heroku/http-call to v5.5.2 ([#380](https://github.com/heroku/heroku-cli-command/issues/380)) ([88ebe3a](https://github.com/heroku/heroku-cli-command/commit/88ebe3ac0e70371b54da6ba076fee0561820b70b))
+
+## [12.4.0](https://github.com/heroku/heroku-cli-command/compare/command-v12.3.3...command-v12.4.0) (2026-05-28)
 
 ### Features
 
-* add global --prompt flag for interactive command execution ([#269](https://github.com/heroku/heroku-cli-command/issues/269)) ([c73322b](https://github.com/heroku/heroku-cli-command/commit/c73322be0700709f8d2a809f9538bc6b06612db9))
-
-
-### Bug Fixes
-
-* improve --prompt flag help text implementation ([#276](https://github.com/heroku/heroku-cli-command/issues/276)) ([f870d8b](https://github.com/heroku/heroku-cli-command/commit/f870d8b8f68ae78e8ab8ef9c4c9d49e7ae5f87e3))
-
-## [12.1.3](https://github.com/heroku/heroku-cli-command/compare/command-v12.1.2...command-v12.1.3) (2026-02-24)
-
+- add Heroku credential manager functionality ([#372](https://github.com/heroku/heroku-cli-command/issues/372)) ([91bcd40](https://github.com/heroku/heroku-cli-command/commit/91bcd4017d4015071009aa953f7c0f7853c7240a))
+- update login to no longer logout as part of the process ([#357](https://github.com/heroku/heroku-cli-command/issues/357)) ([0077ccb](https://github.com/heroku/heroku-cli-command/commit/0077ccb05eb8f37c25e6bd98a3c1236371e2747e))
 
 ### Bug Fixes
 
-* Add default help text hook so that display default app value in --help ([#268](https://github.com/heroku/heroku-cli-command/issues/268)) ([d45dc5c](https://github.com/heroku/heroku-cli-command/commit/d45dc5c5361ead501dc3d07c04b4e84121db85c0))
-* **deps:** bump the patch-dependencies group across 1 directory with 3 updates ([#260](https://github.com/heroku/heroku-cli-command/issues/260)) ([548fab1](https://github.com/heroku/heroku-cli-command/commit/548fab1f0becfe089e4956ac84ac1750e820316b))
+- re-add auth setter ([2f8c11f](https://github.com/heroku/heroku-cli-command/commit/2f8c11fdd55dbfd91064aff299d79f78a905130d))
+- re-add auth setter ([#377](https://github.com/heroku/heroku-cli-command/issues/377)) ([a5ef794](https://github.com/heroku/heroku-cli-command/commit/a5ef794c328056ec20b5a5ab4bbea8e655928f71))
 
-## [12.1.2](https://github.com/heroku/heroku-cli-command/compare/command-v12.1.1...command-v12.1.2) (2026-01-29)
+### Code Refactoring
 
+- update check for 401 error to only look at error code ([#358](https://github.com/heroku/heroku-cli-command/issues/358)) ([160741a](https://github.com/heroku/heroku-cli-command/commit/160741a3fc533e1626dfb0f8524d6229c39e1c5f))
+
+## [12.3.3](https://github.com/heroku/heroku-cli-command/compare/command-v12.3.2...command-v12.3.3) (2026-05-06)
 
 ### Bug Fixes
 
-* **deps:** bump lodash from 4.17.21 to 4.17.23 ([#255](https://github.com/heroku/heroku-cli-command/issues/255)) ([f056708](https://github.com/heroku/heroku-cli-command/commit/f056708bc5cd4858597afb95495cf3024791d578))
-* remove vulns and repeated warning headings (W-17068244) ([#233](https://github.com/heroku/heroku-cli-command/issues/233)) ([7edf773](https://github.com/heroku/heroku-cli-command/commit/7edf7730cb44af96f1475f32d2a4ae614ab43e27))
+- **prompter:** route inquirer prompt UI to stderr by default ([#354](https://github.com/heroku/heroku-cli-command/issues/354)) ([a01f9ee](https://github.com/heroku/heroku-cli-command/commit/a01f9eeaacdcc9bc187ad563f7b426fb248d0b71))
 
+## [12.3.2](https://github.com/heroku/heroku-cli-command/compare/command-v12.3.1...command-v12.3.2) (2026-04-29)
+
+### Bug Fixes
+
+- dedupe API warning headers within one client invocation ([#343](https://github.com/heroku/heroku-cli-command/issues/343)) ([ac1717a](https://github.com/heroku/heroku-cli-command/commit/ac1717a69a86935a6e75f4c2bcbe77f35ec2e20c))
+
+## [12.3.1](https://github.com/heroku/heroku-cli-command/compare/command-v12.2.2...command-v12.3.1) (2026-04-03)
+
+### Features
+
+- add --no-wrap flag for table rendering ([#324](https://github.com/heroku/heroku-cli-command/issues/324)) ([1ed23a7](https://github.com/heroku/heroku-cli-command/commit/1ed23a70779853bcfa166af88fa0b1d56a98435d))
+
+### Performance Improvements
+
+- lazy-load heavy modules to improve CLI startup time ([#318](https://github.com/heroku/heroku-cli-command/issues/318)) ([2f4207d](https://github.com/heroku/heroku-cli-command/commit/2f4207d91f066b900dff069f66a3659198094f59))
 
 ### Miscellaneous Chores
 
-* bump actions/checkout from 4 to 6 ([#249](https://github.com/heroku/heroku-cli-command/issues/249)) ([e08b9a2](https://github.com/heroku/heroku-cli-command/commit/e08b9a205b4cb181b70309b2ce4cbd4d02d7e43e))
-* **deps:** bump @oclif/core from 4.3.0 to 4.7.2 ([#240](https://github.com/heroku/heroku-cli-command/issues/240)) ([394ecb1](https://github.com/heroku/heroku-cli-command/commit/394ecb1291c8ae50abac5dbf9695b98f67ddea72))
-* **deps:** bump actions/checkout from 4 to 5 ([#221](https://github.com/heroku/heroku-cli-command/issues/221)) ([de1e693](https://github.com/heroku/heroku-cli-command/commit/de1e693bc47f2c73a7f83a9f361a712512cf4b81))
-* **deps:** bump actions/checkout from 5 to 6 ([#244](https://github.com/heroku/heroku-cli-command/issues/244)) ([b8ec182](https://github.com/heroku/heroku-cli-command/commit/b8ec18251c34e1c8ce4ea68eb79bbf1c546544b4))
-* **deps:** bump actions/setup-node from 4 to 5 ([#227](https://github.com/heroku/heroku-cli-command/issues/227)) ([ba71066](https://github.com/heroku/heroku-cli-command/commit/ba7106650a0e7927cbae9a76c5bff4bba5513f47))
-* **deps:** bump actions/setup-node from 5 to 6 ([#239](https://github.com/heroku/heroku-cli-command/issues/239)) ([9b66ef4](https://github.com/heroku/heroku-cli-command/commit/9b66ef4264a59021867d3a85babe7d76cce5928b))
-* **deps:** bump debug in the patch-dependencies group ([#234](https://github.com/heroku/heroku-cli-command/issues/234)) ([1291d55](https://github.com/heroku/heroku-cli-command/commit/1291d5580d2e63ee1e78e0f70eaf46c48c30e5ac))
-* **deps:** bump open from 10.1.2 to 10.2.0 ([#236](https://github.com/heroku/heroku-cli-command/issues/236)) ([cab484c](https://github.com/heroku/heroku-cli-command/commit/cab484cb9ebe244dd3550d209da3103542de7b68))
-* onboard shared workflows ([#248](https://github.com/heroku/heroku-cli-command/issues/248)) ([109c763](https://github.com/heroku/heroku-cli-command/commit/109c763173c5faf88783b0e829024a72379658f7))
-* onboard shared workflows ([#254](https://github.com/heroku/heroku-cli-command/issues/254)) ([677585c](https://github.com/heroku/heroku-cli-command/commit/677585c2c33ed285e29dea483d63cc4baf60224f))
-* update changelog ([#232](https://github.com/heroku/heroku-cli-command/issues/232)) ([2420b09](https://github.com/heroku/heroku-cli-command/commit/2420b09c16a79454580058bdc1148992a616d6bc))
+- release 12.2.4 ([#323](https://github.com/heroku/heroku-cli-command/issues/323)) ([339c6da](https://github.com/heroku/heroku-cli-command/commit/339c6da70b2094aebabde16cf47d24255f8be2c2))
+- release 12.3.0 ([#326](https://github.com/heroku/heroku-cli-command/issues/326)) ([11e46ea](https://github.com/heroku/heroku-cli-command/commit/11e46eab79c1b3d909621df457a5fd5c71dd866e))
+- release 12.3.1 ([#327](https://github.com/heroku/heroku-cli-command/issues/327)) ([72dff13](https://github.com/heroku/heroku-cli-command/commit/72dff13855ee6fc10610f2ac27eeb1a4b4684272))
+
+## [12.2.1](https://github.com/heroku/heroku-cli-command/compare/command-v12.2.0...command-v12.2.1) (2026-03-11)
+
+### Bug Fixes
+
+- exclude workflows-repo from eslint ([#286](https://github.com/heroku/heroku-cli-command/issues/286)) ([093706f](https://github.com/heroku/heroku-cli-command/commit/093706fb5f912848acce8eb4da9c414ad24c9442))
+- remove extra newline from warning output ([#284](https://github.com/heroku/heroku-cli-command/issues/284)) ([94f6d94](https://github.com/heroku/heroku-cli-command/commit/94f6d946da772c852ed1589d1dcd72b4c507b527))
+
+## [12.2.0](https://github.com/heroku/heroku-cli-command/compare/command-v12.1.3...command-v12.2.0) (2026-02-26)
+
+### Features
+
+- add global --prompt flag for interactive command execution ([#269](https://github.com/heroku/heroku-cli-command/issues/269)) ([c73322b](https://github.com/heroku/heroku-cli-command/commit/c73322be0700709f8d2a809f9538bc6b06612db9))
+
+### Bug Fixes
+
+- improve --prompt flag help text implementation ([#276](https://github.com/heroku/heroku-cli-command/issues/276)) ([f870d8b](https://github.com/heroku/heroku-cli-command/commit/f870d8b8f68ae78e8ab8ef9c4c9d49e7ae5f87e3))
+
+## [12.1.3](https://github.com/heroku/heroku-cli-command/compare/command-v12.1.2...command-v12.1.3) (2026-02-24)
+
+### Bug Fixes
+
+- Add default help text hook so that display default app value in --help ([#268](https://github.com/heroku/heroku-cli-command/issues/268)) ([d45dc5c](https://github.com/heroku/heroku-cli-command/commit/d45dc5c5361ead501dc3d07c04b4e84121db85c0))
+- **deps:** bump the patch-dependencies group across 1 directory with 3 updates ([#260](https://github.com/heroku/heroku-cli-command/issues/260)) ([548fab1](https://github.com/heroku/heroku-cli-command/commit/548fab1f0becfe089e4956ac84ac1750e820316b))
+
+## [12.1.2](https://github.com/heroku/heroku-cli-command/compare/command-v12.1.1...command-v12.1.2) (2026-01-29)
+
+### Bug Fixes
+
+- **deps:** bump lodash from 4.17.21 to 4.17.23 ([#255](https://github.com/heroku/heroku-cli-command/issues/255)) ([f056708](https://github.com/heroku/heroku-cli-command/commit/f056708bc5cd4858597afb95495cf3024791d578))
+- remove vulns and repeated warning headings (W-17068244) ([#233](https://github.com/heroku/heroku-cli-command/issues/233)) ([7edf773](https://github.com/heroku/heroku-cli-command/commit/7edf7730cb44af96f1475f32d2a4ae614ab43e27))
+
+### Miscellaneous Chores
+
+- bump actions/checkout from 4 to 6 ([#249](https://github.com/heroku/heroku-cli-command/issues/249)) ([e08b9a2](https://github.com/heroku/heroku-cli-command/commit/e08b9a205b4cb181b70309b2ce4cbd4d02d7e43e))
+- **deps:** bump @oclif/core from 4.3.0 to 4.7.2 ([#240](https://github.com/heroku/heroku-cli-command/issues/240)) ([394ecb1](https://github.com/heroku/heroku-cli-command/commit/394ecb1291c8ae50abac5dbf9695b98f67ddea72))
+- **deps:** bump actions/checkout from 4 to 5 ([#221](https://github.com/heroku/heroku-cli-command/issues/221)) ([de1e693](https://github.com/heroku/heroku-cli-command/commit/de1e693bc47f2c73a7f83a9f361a712512cf4b81))
+- **deps:** bump actions/checkout from 5 to 6 ([#244](https://github.com/heroku/heroku-cli-command/issues/244)) ([b8ec182](https://github.com/heroku/heroku-cli-command/commit/b8ec18251c34e1c8ce4ea68eb79bbf1c546544b4))
+- **deps:** bump actions/setup-node from 4 to 5 ([#227](https://github.com/heroku/heroku-cli-command/issues/227)) ([ba71066](https://github.com/heroku/heroku-cli-command/commit/ba7106650a0e7927cbae9a76c5bff4bba5513f47))
+- **deps:** bump actions/setup-node from 5 to 6 ([#239](https://github.com/heroku/heroku-cli-command/issues/239)) ([9b66ef4](https://github.com/heroku/heroku-cli-command/commit/9b66ef4264a59021867d3a85babe7d76cce5928b))
+- **deps:** bump debug in the patch-dependencies group ([#234](https://github.com/heroku/heroku-cli-command/issues/234)) ([1291d55](https://github.com/heroku/heroku-cli-command/commit/1291d5580d2e63ee1e78e0f70eaf46c48c30e5ac))
+- **deps:** bump open from 10.1.2 to 10.2.0 ([#236](https://github.com/heroku/heroku-cli-command/issues/236)) ([cab484c](https://github.com/heroku/heroku-cli-command/commit/cab484cb9ebe244dd3550d209da3103542de7b68))
+- onboard shared workflows ([#248](https://github.com/heroku/heroku-cli-command/issues/248)) ([109c763](https://github.com/heroku/heroku-cli-command/commit/109c763173c5faf88783b0e829024a72379658f7))
+- onboard shared workflows ([#254](https://github.com/heroku/heroku-cli-command/issues/254)) ([677585c](https://github.com/heroku/heroku-cli-command/commit/677585c2c33ed285e29dea483d63cc4baf60224f))
+- update changelog ([#232](https://github.com/heroku/heroku-cli-command/issues/232)) ([2420b09](https://github.com/heroku/heroku-cli-command/commit/2420b09c16a79454580058bdc1148992a616d6bc))
 
 ## [12.1.1](https://github.com/heroku/heroku-cli-command/compare/v12.1.0...v12.1.1) (2025-09-30)
 
@@ -138,434 +207,579 @@
 
 ### Features
 
-* **W-19264912** add domain name validation for outgoing requests ([#159](https://github.com/heroku/heroku-cli-command/issues/218)) ([c710d42](https://github.com/heroku/heroku-cli-command/commit/c710d4278cb429635b638083dbabf1db6420a438))
+- **W-19264912** add domain name validation for outgoing requests ([#159](https://github.com/heroku/heroku-cli-command/issues/218)) ([c710d42](https://github.com/heroku/heroku-cli-command/commit/c710d4278cb429635b638083dbabf1db6420a438))
 
 ## [12.0.2](https://github.com/heroku/heroku-cli-command/compare/v12.0.1...v12.0.2) (2025-08-07)
 
 ### Bug Fixes
 
-* convert to esm ([#196](https://github.com/heroku/heroku-cli-command/issues/196)) ([33eaf26](https://github.com/heroku/heroku-cli-command/commit/33eaf26ca4725f9f8e1deeb5f078e342a06bfbe0))
+- convert to esm ([#196](https://github.com/heroku/heroku-cli-command/issues/196)) ([33eaf26](https://github.com/heroku/heroku-cli-command/commit/33eaf26ca4725f9f8e1deeb5f078e342a06bfbe0))
+
 ## [12.0.1](https://github.com/heroku/heroku-cli-command/compare/v11.3.0...v12.0.1) (2025-05-23)
 
 ### ⚠ BREAKING CHANGES
 
-* upgrade to oclif/core v4 (#180)
+- upgrade to oclif/core v4 (#180)
 
 ### Features
 
-* Upgrade to node 20, look for "request-id" when tracking requests ([#160](https://github.com/heroku/heroku-cli-command/issues/160)) ([58f0d49](https://github.com/heroku/heroku-cli-command/commit/58f0d49539f39e2e4e10202ea3f6421298242791))
-* upgrade to oclif/core v4 ([#180](https://github.com/heroku/heroku-cli-command/issues/180)) ([ca0667b](https://github.com/heroku/heroku-cli-command/commit/ca0667b0c4a773509d7a663fe545bae41459fb09))
+- Upgrade to node 20, look for "request-id" when tracking requests ([#160](https://github.com/heroku/heroku-cli-command/issues/160)) ([58f0d49](https://github.com/heroku/heroku-cli-command/commit/58f0d49539f39e2e4e10202ea3f6421298242791))
+- upgrade to oclif/core v4 ([#180](https://github.com/heroku/heroku-cli-command/issues/180)) ([ca0667b](https://github.com/heroku/heroku-cli-command/commit/ca0667b0c4a773509d7a663fe545bae41459fb09))
 
 ### Bug Fixes
 
-* update versions of @heroku/http-call and debug ([#156](https://github.com/heroku/heroku-cli-command/issues/156)) ([221239d](https://github.com/heroku/heroku-cli-command/commit/221239d7e7a2e3b45d3040cc96d1c7198cc135c2))
-* **W-17812967:** Heroku-cli-command: Header overflow ([#159](https://github.com/heroku/heroku-cli-command/issues/159)) ([5379d04](https://github.com/heroku/heroku-cli-command/commit/5379d0448f934090091c93703b56b75e7c00faa5))
+- update versions of @heroku/http-call and debug ([#156](https://github.com/heroku/heroku-cli-command/issues/156)) ([221239d](https://github.com/heroku/heroku-cli-command/commit/221239d7e7a2e3b45d3040cc96d1c7198cc135c2))
+- **W-17812967:** Heroku-cli-command: Header overflow ([#159](https://github.com/heroku/heroku-cli-command/issues/159)) ([5379d04](https://github.com/heroku/heroku-cli-command/commit/5379d0448f934090091c93703b56b75e7c00faa5))
+
 ## [11.3.0](https://github.com/heroku/heroku-cli-command/compare/v11.2.2...v11.3.0) (2024-08-19)
+
 ## [11.2.2](https://github.com/heroku/heroku-cli-command/compare/v11.2.0...v11.2.2) (2024-08-13)
 
 ### Bug Fixes
 
-* **W-16338640:** Update backwards compatibility for CLI commands ([#138](https://github.com/heroku/heroku-cli-command/issues/138)) ([1204334](https://github.com/heroku/heroku-cli-command/commit/120433424a759dd7a5e90a4dd864454b97678c3e))
-* **W-16338640:** Update logic for backwards compatibility for CLI commands ([#139](https://github.com/heroku/heroku-cli-command/issues/139)) ([2c30939](https://github.com/heroku/heroku-cli-command/commit/2c30939207d6e44b4e296b97ab5bccb3f3890809))
+- **W-16338640:** Update backwards compatibility for CLI commands ([#138](https://github.com/heroku/heroku-cli-command/issues/138)) ([1204334](https://github.com/heroku/heroku-cli-command/commit/120433424a759dd7a5e90a4dd864454b97678c3e))
+- **W-16338640:** Update logic for backwards compatibility for CLI commands ([#139](https://github.com/heroku/heroku-cli-command/issues/139)) ([2c30939](https://github.com/heroku/heroku-cli-command/commit/2c30939207d6e44b4e296b97ab5bccb3f3890809))
+
 ## [11.2.0](https://github.com/heroku/heroku-cli-command/compare/v11.1.2...v11.2.0) (2024-08-08)
 
 ### Bug Fixes
 
-* **W-16338640:** Backward compatibility for CLI commands ([#137](https://github.com/heroku/heroku-cli-command/issues/137)) ([45632b3](https://github.com/heroku/heroku-cli-command/commit/45632b399af04c3c420e9cdb580bbf615d30d536))
+- **W-16338640:** Backward compatibility for CLI commands ([#137](https://github.com/heroku/heroku-cli-command/issues/137)) ([45632b3](https://github.com/heroku/heroku-cli-command/commit/45632b399af04c3c420e9cdb580bbf615d30d536))
+
 ## [11.1.2](https://github.com/heroku/heroku-cli-command/compare/v11.1.1...v11.1.2) (2024-06-12)
+
 ## [11.1.1](https://github.com/heroku/heroku-cli-command/compare/v11.1.0...v11.1.1) (2024-06-12)
+
 ## [11.1.0](https://github.com/heroku/heroku-cli-command/compare/v11.0.0...v11.1.0) (2024-06-12)
+
 ## [11.0.0](https://github.com/heroku/heroku-cli-command/compare/v10.0.0...v11.0.0) (2024-05-13)
+
 ## [10.0.0](https://github.com/heroku/heroku-cli-command/compare/v9.0.2...v10.0.0) (2023-07-06)
+
 ## [9.0.2](https://github.com/heroku/heroku-cli-command/compare/v9.0.1...v9.0.2) (2023-02-22)
+
 ## [9.0.1](https://github.com/heroku/heroku-cli-command/compare/v9.0.0...v9.0.1) (2022-12-09)
+
 ## [9.0.0](https://github.com/heroku/heroku-cli-command/compare/v8.5.0...v9.0.0) (2022-12-06)
+
 ## [8.5.0](https://github.com/heroku/heroku-cli-command/compare/v8.4.1...v8.5.0) (2021-05-04)
+
 ## [8.4.1](https://github.com/heroku/heroku-cli-command/compare/v8.4.0...v8.4.1) (2021-02-18)
+
 ## [8.4.0](https://github.com/heroku/heroku-cli-command/compare/v8.3.2...v8.4.0) (2020-09-09)
 
 ### Features
 
-* add request ID threading ([#78](https://github.com/heroku/heroku-cli-command/issues/78)) ([9c9d66e](https://github.com/heroku/heroku-cli-command/commit/9c9d66edf40f5385978c9a37a064c7c74d6f57e3))
+- add request ID threading ([#78](https://github.com/heroku/heroku-cli-command/issues/78)) ([9c9d66e](https://github.com/heroku/heroku-cli-command/commit/9c9d66edf40f5385978c9a37a064c7c74d6f57e3))
+
 ## [8.3.2](https://github.com/heroku/heroku-cli-command/compare/v8.3.1...v8.3.2) (2020-08-31)
 
 ### Bug Fixes
 
-* default http call url options ([#74](https://github.com/heroku/heroku-cli-command/issues/74)) ([f1a5504](https://github.com/heroku/heroku-cli-command/commit/f1a5504fc5d0a693c0eac523edc2f557a10a46bc))
-* **login:** put url on a separate line to make it easier to click in supporting terminals ([#72](https://github.com/heroku/heroku-cli-command/issues/72)) ([72f7d50](https://github.com/heroku/heroku-cli-command/commit/72f7d50c6b52ae6e3303637cdf2d12eb9b624460))
+- default http call url options ([#74](https://github.com/heroku/heroku-cli-command/issues/74)) ([f1a5504](https://github.com/heroku/heroku-cli-command/commit/f1a5504fc5d0a693c0eac523edc2f557a10a46bc))
+- **login:** put url on a separate line to make it easier to click in supporting terminals ([#72](https://github.com/heroku/heroku-cli-command/issues/72)) ([72f7d50](https://github.com/heroku/heroku-cli-command/commit/72f7d50c6b52ae6e3303637cdf2d12eb9b624460))
+
 ## [8.3.1](https://github.com/heroku/heroku-cli-command/compare/v8.3.0...v8.3.1) (2020-08-14)
 
 ### Bug Fixes
 
-* **login:** show URL for legacy SSO flow ([#71](https://github.com/heroku/heroku-cli-command/issues/71)) ([b32d733](https://github.com/heroku/heroku-cli-command/commit/b32d733bad9d581291dc0953937ab354d1a768cf))
+- **login:** show URL for legacy SSO flow ([#71](https://github.com/heroku/heroku-cli-command/issues/71)) ([b32d733](https://github.com/heroku/heroku-cli-command/commit/b32d733bad9d581291dc0953937ab354d1a768cf))
+
 ## [8.3.0](https://github.com/heroku/heroku-cli-command/compare/v8.2.15...v8.3.0) (2020-02-03)
 
 ### Features
 
-* Override error message for login device_trust_required ([#68](https://github.com/heroku/heroku-cli-command/issues/68)) ([f5ad3bd](https://github.com/heroku/heroku-cli-command/commit/f5ad3bd61744bc34c4abcc3d21ccf98c4e994b9e))
+- Override error message for login device_trust_required ([#68](https://github.com/heroku/heroku-cli-command/issues/68)) ([f5ad3bd](https://github.com/heroku/heroku-cli-command/commit/f5ad3bd61744bc34c4abcc3d21ccf98c4e994b9e))
+
 ## [8.2.15](https://github.com/heroku/heroku-cli-command/compare/v8.2.14...v8.2.15) (2019-11-04)
+
 ## [8.2.14](https://github.com/heroku/heroku-cli-command/compare/v8.2.13...v8.2.14) (2019-08-08)
+
 ## [8.2.13](https://github.com/heroku/heroku-cli-command/compare/v8.2.12...v8.2.13) (2019-07-29)
+
 ## [8.2.12](https://github.com/heroku/heroku-cli-command/compare/v8.2.11...v8.2.12) (2019-06-19)
 
 ### Bug Fixes
 
-* prioritize flags above env variables for the team flag default value ([#61](https://github.com/heroku/heroku-cli-command/issues/61)) ([b5a7831](https://github.com/heroku/heroku-cli-command/commit/b5a783122dac7b262d976900f4329e978d95a7d1))
+- prioritize flags above env variables for the team flag default value ([#61](https://github.com/heroku/heroku-cli-command/issues/61)) ([b5a7831](https://github.com/heroku/heroku-cli-command/commit/b5a783122dac7b262d976900f4329e978d95a7d1))
+
 ## [8.2.11](https://github.com/heroku/heroku-cli-command/compare/v8.2.10...v8.2.11) (2019-04-25)
+
 ## [8.2.10](https://github.com/heroku/heroku-cli-command/compare/v8.2.9...v8.2.10) (2019-03-14)
 
 ### Bug Fixes
 
-* browser open message should be on stderr ([6e40377](https://github.com/heroku/heroku-cli-command/commit/6e403770ce3dd89b0939a96a0228a318e1b0e787))
+- browser open message should be on stderr ([6e40377](https://github.com/heroku/heroku-cli-command/commit/6e403770ce3dd89b0939a96a0228a318e1b0e787))
+
 ## [8.2.9](https://github.com/heroku/heroku-cli-command/compare/v8.2.8...v8.2.9) (2019-03-14)
 
 ### Bug Fixes
 
-* remove ellipses after login url ([50bd689](https://github.com/heroku/heroku-cli-command/commit/50bd689b81548e25c2386e235cae0260244da6f5))
+- remove ellipses after login url ([50bd689](https://github.com/heroku/heroku-cli-command/commit/50bd689b81548e25c2386e235cae0260244da6f5))
+
 ## [8.2.8](https://github.com/heroku/heroku-cli-command/compare/v8.2.7...v8.2.8) (2019-03-05)
 
 ### Bug Fixes
 
-* always show login url ([#60](https://github.com/heroku/heroku-cli-command/issues/60)) ([fdca50c](https://github.com/heroku/heroku-cli-command/commit/fdca50c7b58271f7708b8ebc8b3f8c0d388551c4))
+- always show login url ([#60](https://github.com/heroku/heroku-cli-command/issues/60)) ([fdca50c](https://github.com/heroku/heroku-cli-command/commit/fdca50c7b58271f7708b8ebc8b3f8c0d388551c4))
+
 ## [8.2.7](https://github.com/heroku/heroku-cli-command/compare/v8.2.6...v8.2.7) (2019-02-27)
+
 ## [8.2.6](https://github.com/heroku/heroku-cli-command/compare/v8.2.5...v8.2.6) (2018-12-04)
 
 ### Bug Fixes
 
-* remove warning ([a517594](https://github.com/heroku/heroku-cli-command/commit/a5175942663afe3a16cd3205e78336d356202b88))
+- remove warning ([a517594](https://github.com/heroku/heroku-cli-command/commit/a5175942663afe3a16cd3205e78336d356202b88))
+
 ## [8.2.5](https://github.com/heroku/heroku-cli-command/compare/v8.2.4...v8.2.5) (2018-12-03)
 
 ### Bug Fixes
 
-* sso login ([c19df48](https://github.com/heroku/heroku-cli-command/commit/c19df487a5c342880ea21e8ddb385b55e0dd719f))
+- sso login ([c19df48](https://github.com/heroku/heroku-cli-command/commit/c19df487a5c342880ea21e8ddb385b55e0dd719f))
+
 ## [8.2.4](https://github.com/heroku/heroku-cli-command/compare/v8.2.3...v8.2.4) (2018-12-03)
 
 ### Bug Fixes
 
-* use SSO when HEROKU_LEGACY_SSO is set ([ae031d9](https://github.com/heroku/heroku-cli-command/commit/ae031d9807f865b0c0ca2dffbff4bee4142bb3eb))
+- use SSO when HEROKU_LEGACY_SSO is set ([ae031d9](https://github.com/heroku/heroku-cli-command/commit/ae031d9807f865b0c0ca2dffbff4bee4142bb3eb))
+
 ## [8.2.3](https://github.com/heroku/heroku-cli-command/compare/v8.2.2...v8.2.3) (2018-11-26)
 
 ### Bug Fixes
 
-* always show warning ([b5a5db0](https://github.com/heroku/heroku-cli-command/commit/b5a5db0615404292aa8bb6587e7a4c93d14a1e54))
+- always show warning ([b5a5db0](https://github.com/heroku/heroku-cli-command/commit/b5a5db0615404292aa8bb6587e7a4c93d14a1e54))
+
 ## [8.2.2](https://github.com/heroku/heroku-cli-command/compare/v8.2.1...v8.2.2) (2018-11-15)
 
 ### Bug Fixes
 
-* timeout and warn if browser fails to render ([e15c0b6](https://github.com/heroku/heroku-cli-command/commit/e15c0b61551e31555ae73151ddfc49e39c56a885))
+- timeout and warn if browser fails to render ([e15c0b6](https://github.com/heroku/heroku-cli-command/commit/e15c0b61551e31555ae73151ddfc49e39c56a885))
+
 ## [8.2.1](https://github.com/heroku/heroku-cli-command/compare/v8.2.0...v8.2.1) (2018-11-12)
 
 ### Bug Fixes
 
-* enable login on stable ([e782654](https://github.com/heroku/heroku-cli-command/commit/e7826545a0a7a536dd45ee43fa5ceba78683c1d9))
+- enable login on stable ([e782654](https://github.com/heroku/heroku-cli-command/commit/e7826545a0a7a536dd45ee43fa5ceba78683c1d9))
+
 ## [8.2.0](https://github.com/heroku/heroku-cli-command/compare/v8.1.29...v8.2.0) (2018-10-08)
 
 ### Bug Fixes
 
-* use browser login in beta ([d2abba1](https://github.com/heroku/heroku-cli-command/commit/d2abba1b70500a83dc151611bcd96e272d14e576))
+- use browser login in beta ([d2abba1](https://github.com/heroku/heroku-cli-command/commit/d2abba1b70500a83dc151611bcd96e272d14e576))
+
 ## [8.1.29](https://github.com/heroku/heroku-cli-command/compare/v8.1.28...v8.1.29) (2018-09-14)
 
 ### Bug Fixes
 
-* updated deps ([4eb89cf](https://github.com/heroku/heroku-cli-command/commit/4eb89cff2c8948bf8a87d875a131aa4e7d7dfbe9))
+- updated deps ([4eb89cf](https://github.com/heroku/heroku-cli-command/commit/4eb89cff2c8948bf8a87d875a131aa4e7d7dfbe9))
+
 ## [8.1.28](https://github.com/heroku/heroku-cli-command/compare/v8.1.27...v8.1.28) (2018-08-28)
 
 ### Bug Fixes
 
-* description of login token ([c8e7975](https://github.com/heroku/heroku-cli-command/commit/c8e79753977477c0544bb8133156c960256d958a))
+- description of login token ([c8e7975](https://github.com/heroku/heroku-cli-command/commit/c8e79753977477c0544bb8133156c960256d958a))
+
 ## [8.1.27](https://github.com/heroku/heroku-cli-command/compare/v8.1.26...v8.1.27) (2018-08-28)
 
 ### Bug Fixes
 
-* add hostname to browser auth ([0dc9248](https://github.com/heroku/heroku-cli-command/commit/0dc9248bf1399e15cc5d59b4762d056b77e6461e))
-* **login:** retry browser auth up to 3 times on 5xx ([5f7b570](https://github.com/heroku/heroku-cli-command/commit/5f7b5705c0c4e8fffd9ed6690069137c8f93b1cc))
+- add hostname to browser auth ([0dc9248](https://github.com/heroku/heroku-cli-command/commit/0dc9248bf1399e15cc5d59b4762d056b77e6461e))
+- **login:** retry browser auth up to 3 times on 5xx ([5f7b570](https://github.com/heroku/heroku-cli-command/commit/5f7b5705c0c4e8fffd9ed6690069137c8f93b1cc))
+
 ## [8.1.26](https://github.com/heroku/heroku-cli-command/compare/v8.1.25...v8.1.26) (2018-06-18)
 
 ### Bug Fixes
 
-* updated deps ([74071f9](https://github.com/heroku/heroku-cli-command/commit/74071f97f75e95e812c6b110022cb7e0ab736bb4))
+- updated deps ([74071f9](https://github.com/heroku/heroku-cli-command/commit/74071f97f75e95e812c6b110022cb7e0ab736bb4))
 
 ### Reverts
 
-* Revert "remove completions (#41)" ([1c5ef0e](https://github.com/heroku/heroku-cli-command/commit/1c5ef0e3dfa9c02607dcdbe883a70a9fd1e97d94)), closes [#41](https://github.com/heroku/heroku-cli-command/issues/41)
+- Revert "remove completions (#41)" ([1c5ef0e](https://github.com/heroku/heroku-cli-command/commit/1c5ef0e3dfa9c02607dcdbe883a70a9fd1e97d94)), closes [#41](https://github.com/heroku/heroku-cli-command/issues/41)
+
 ## [8.1.25](https://github.com/heroku/heroku-cli-command/compare/v8.1.24...v8.1.25) (2018-06-18)
 
 ### Bug Fixes
 
-* only use browser login when available ([#44](https://github.com/heroku/heroku-cli-command/issues/44)) ([b178343](https://github.com/heroku/heroku-cli-command/commit/b1783435d57d258e74eaf5db8bde4132e4911b70))
+- only use browser login when available ([#44](https://github.com/heroku/heroku-cli-command/issues/44)) ([b178343](https://github.com/heroku/heroku-cli-command/commit/b1783435d57d258e74eaf5db8bde4132e4911b70))
+
 ## [8.1.24](https://github.com/heroku/heroku-cli-command/compare/v8.1.23...v8.1.24) (2018-06-09)
 
 ### Bug Fixes
 
-* ensure error is defined ([22175e1](https://github.com/heroku/heroku-cli-command/commit/22175e1a170f9993186e467558aa403eca234a3c))
+- ensure error is defined ([22175e1](https://github.com/heroku/heroku-cli-command/commit/22175e1a170f9993186e467558aa403eca234a3c))
+
 ## [8.1.23](https://github.com/heroku/heroku-cli-command/compare/v8.1.22...v8.1.23) (2018-06-01)
 
 ### Bug Fixes
 
-* allow specifying Authorization for header ([#42](https://github.com/heroku/heroku-cli-command/issues/42)) ([a522961](https://github.com/heroku/heroku-cli-command/commit/a522961164731a3c7ca94a3dcfd2d0505f9fadeb))
+- allow specifying Authorization for header ([#42](https://github.com/heroku/heroku-cli-command/issues/42)) ([a522961](https://github.com/heroku/heroku-cli-command/commit/a522961164731a3c7ca94a3dcfd2d0505f9fadeb))
+
 ## [8.1.22](https://github.com/heroku/heroku-cli-command/compare/v8.1.21...v8.1.22) (2018-05-31)
 
 ### Bug Fixes
 
-* typescript 2.9 ([29daebc](https://github.com/heroku/heroku-cli-command/commit/29daebc9f8d516076b38b021deb96b1aa4794863))
+- typescript 2.9 ([29daebc](https://github.com/heroku/heroku-cli-command/commit/29daebc9f8d516076b38b021deb96b1aa4794863))
+
 ## [8.1.21](https://github.com/heroku/heroku-cli-command/compare/v8.1.20...v8.1.21) (2018-05-31)
 
 ### Bug Fixes
 
-* use settings file for login insted of netrc ([a8340b4](https://github.com/heroku/heroku-cli-command/commit/a8340b42b356ceb4e6267268b55ee6356a61ec4d))
+- use settings file for login insted of netrc ([a8340b4](https://github.com/heroku/heroku-cli-command/commit/a8340b42b356ceb4e6267268b55ee6356a61ec4d))
+
 ## [8.1.20](https://github.com/heroku/heroku-cli-command/compare/v8.1.19...v8.1.20) (2018-05-25)
 
 ### Bug Fixes
 
-* add generic types to requests ([4b7e5d9](https://github.com/heroku/heroku-cli-command/commit/4b7e5d9d3c0f0fb01acbf1b23836cf0543a544ae))
+- add generic types to requests ([4b7e5d9](https://github.com/heroku/heroku-cli-command/commit/4b7e5d9d3c0f0fb01acbf1b23836cf0543a544ae))
+
 ## [8.1.19](https://github.com/heroku/heroku-cli-command/compare/v8.1.18...v8.1.19) (2018-05-24)
 
 ### Bug Fixes
 
-* logout ([5da3071](https://github.com/heroku/heroku-cli-command/commit/5da30710975f6155ca72db8fede2636eb9800ae7))
+- logout ([5da3071](https://github.com/heroku/heroku-cli-command/commit/5da30710975f6155ca72db8fede2636eb9800ae7))
+
 ## [8.1.18](https://github.com/heroku/heroku-cli-command/compare/v8.1.17...v8.1.18) (2018-05-21)
 
 ### Bug Fixes
 
-* consolidate completions ([#38](https://github.com/heroku/heroku-cli-command/issues/38)) ([da45bf8](https://github.com/heroku/heroku-cli-command/commit/da45bf8d17c3d4b8ee55604990bd625874d316aa))
+- consolidate completions ([#38](https://github.com/heroku/heroku-cli-command/issues/38)) ([da45bf8](https://github.com/heroku/heroku-cli-command/commit/da45bf8d17c3d4b8ee55604990bd625874d316aa))
+
 ## [8.1.17](https://github.com/heroku/heroku-cli-command/compare/v8.1.16...v8.1.17) (2018-05-15)
 
 ### Bug Fixes
 
-* use caret versions ([0f38127](https://github.com/heroku/heroku-cli-command/commit/0f38127fdc6776dd40603fd9e3002365137a2085))
+- use caret versions ([0f38127](https://github.com/heroku/heroku-cli-command/commit/0f38127fdc6776dd40603fd9e3002365137a2085))
+
 ## [8.1.16](https://github.com/heroku/heroku-cli-command/compare/v8.1.15...v8.1.16) (2018-05-11)
 
 ### Bug Fixes
 
-* use CLIError for git error ([0915f57](https://github.com/heroku/heroku-cli-command/commit/0915f575475b8ad9f5bea0f706a43c2d426aebca))
+- use CLIError for git error ([0915f57](https://github.com/heroku/heroku-cli-command/commit/0915f575475b8ad9f5bea0f706a43c2d426aebca))
+
 ## [8.1.15](https://github.com/heroku/heroku-cli-command/compare/v8.1.14...v8.1.15) (2018-05-10)
 
 ### Bug Fixes
 
-* return request ([d9ae506](https://github.com/heroku/heroku-cli-command/commit/d9ae5067495bf405040d65cbe48b74e945828589))
+- return request ([d9ae506](https://github.com/heroku/heroku-cli-command/commit/d9ae5067495bf405040d65cbe48b74e945828589))
+
 ## [8.1.14](https://github.com/heroku/heroku-cli-command/compare/v8.1.13...v8.1.14) (2018-05-10)
 
 ### Bug Fixes
 
-* do login first to fix sso login with browser ([1785ded](https://github.com/heroku/heroku-cli-command/commit/1785deda84298b0dbd6df57fbefe12482bab7035))
+- do login first to fix sso login with browser ([1785ded](https://github.com/heroku/heroku-cli-command/commit/1785deda84298b0dbd6df57fbefe12482bab7035))
+
 ## [8.1.13](https://github.com/heroku/heroku-cli-command/compare/v8.1.12...v8.1.13) (2018-05-10)
 
 ### Bug Fixes
 
-* add retryAuth option ([0c2634a](https://github.com/heroku/heroku-cli-command/commit/0c2634a1d890d937247fdd0eb1d65ade08f3a737))
+- add retryAuth option ([0c2634a](https://github.com/heroku/heroku-cli-command/commit/0c2634a1d890d937247fdd0eb1d65ade08f3a737))
+
 ## [8.1.12](https://github.com/heroku/heroku-cli-command/compare/v8.1.11...v8.1.12) (2018-05-09)
 
 ### Bug Fixes
 
-* show url when HEROKU_TESTING_HEADLESS_LOGIN is set ([c3a3f01](https://github.com/heroku/heroku-cli-command/commit/c3a3f01951261fdf892455e4b3204d3fc8a71e69))
+- show url when HEROKU_TESTING_HEADLESS_LOGIN is set ([c3a3f01](https://github.com/heroku/heroku-cli-command/commit/c3a3f01951261fdf892455e4b3204d3fc8a71e69))
+
 ## [8.1.11](https://github.com/heroku/heroku-cli-command/compare/v8.1.10...v8.1.11) (2018-05-09)
 
 ### Bug Fixes
 
-* show error when opn fails ([6c9fead](https://github.com/heroku/heroku-cli-command/commit/6c9feade2435b1dd1baa01c4ec29fdbf057f1a43))
+- show error when opn fails ([6c9fead](https://github.com/heroku/heroku-cli-command/commit/6c9feade2435b1dd1baa01c4ec29fdbf057f1a43))
+
 ## [8.1.10](https://github.com/heroku/heroku-cli-command/compare/v8.1.9...v8.1.10) (2018-05-08)
 
 ### Bug Fixes
 
-* throw plain errors ([a6a821a](https://github.com/heroku/heroku-cli-command/commit/a6a821ab50f17aee0d8be0edb973f16b42abedeb))
+- throw plain errors ([a6a821a](https://github.com/heroku/heroku-cli-command/commit/a6a821ab50f17aee0d8be0edb973f16b42abedeb))
+
 ## [8.1.9](https://github.com/heroku/heroku-cli-command/compare/v8.1.8...v8.1.9) (2018-05-08)
 
 ### Bug Fixes
 
-* sso logout ([102028a](https://github.com/heroku/heroku-cli-command/commit/102028a9cf18327bcc9061227dce7e0490e581d6))
+- sso logout ([102028a](https://github.com/heroku/heroku-cli-command/commit/102028a9cf18327bcc9061227dce7e0490e581d6))
+
 ## [8.1.8](https://github.com/heroku/heroku-cli-command/compare/v8.1.7...v8.1.8) (2018-05-08)
 
 ### Bug Fixes
 
-* sso login ([747ce09](https://github.com/heroku/heroku-cli-command/commit/747ce09d838dcdbabb26775fcf79b6a7798fc2a7))
+- sso login ([747ce09](https://github.com/heroku/heroku-cli-command/commit/747ce09d838dcdbabb26775fcf79b6a7798fc2a7))
+
 ## [8.1.7](https://github.com/heroku/heroku-cli-command/compare/v8.1.6...v8.1.7) (2018-05-08)
 
 ### Bug Fixes
 
-* prettify errors ([6192ae5](https://github.com/heroku/heroku-cli-command/commit/6192ae562b65e71be2886577000d44ce44b08e54))
+- prettify errors ([6192ae5](https://github.com/heroku/heroku-cli-command/commit/6192ae562b65e71be2886577000d44ce44b08e54))
+
 ## [8.1.6](https://github.com/heroku/heroku-cli-command/compare/v8.1.5...v8.1.6) (2018-05-08)
 
 ### Bug Fixes
 
-* add timeout ([6527877](https://github.com/heroku/heroku-cli-command/commit/65278773eae404bc0bd6e8ff776dfa304ba3c957))
-* unref() login timeout ([c7ea0ab](https://github.com/heroku/heroku-cli-command/commit/c7ea0ab0b8ea5c57211ac894dfd87a3afdbf3694))
+- add timeout ([6527877](https://github.com/heroku/heroku-cli-command/commit/65278773eae404bc0bd6e8ff776dfa304ba3c957))
+- unref() login timeout ([c7ea0ab](https://github.com/heroku/heroku-cli-command/commit/c7ea0ab0b8ea5c57211ac894dfd87a3afdbf3694))
+
 ## [8.1.5](https://github.com/heroku/heroku-cli-command/compare/v8.1.4...v8.1.5) (2018-05-08)
 
 ### Bug Fixes
 
-* do not error out if cannot logout ([8978ad4](https://github.com/heroku/heroku-cli-command/commit/8978ad473a47f5f16a8a59dcef05efc0011a7373))
+- do not error out if cannot logout ([8978ad4](https://github.com/heroku/heroku-cli-command/commit/8978ad473a47f5f16a8a59dcef05efc0011a7373))
+
 ## [8.1.4](https://github.com/heroku/heroku-cli-command/compare/v8.1.3...v8.1.4) (2018-05-08)
 
 ### Bug Fixes
 
-* make raw requests for http calls ([8629056](https://github.com/heroku/heroku-cli-command/commit/8629056985eb43359a979798a1834dacb4cdff49))
+- make raw requests for http calls ([8629056](https://github.com/heroku/heroku-cli-command/commit/8629056985eb43359a979798a1834dacb4cdff49))
+
 ## [8.1.3](https://github.com/heroku/heroku-cli-command/compare/v8.1.2...v8.1.3) (2018-05-07)
 
 ### Bug Fixes
 
-* use jwt auth on browser login ([3ba6ac7](https://github.com/heroku/heroku-cli-command/commit/3ba6ac7b54adfef487756d68cb0dbea9250abd72))
-* web -> browser ([2a78cc0](https://github.com/heroku/heroku-cli-command/commit/2a78cc07fdb3e93b3096ee45369ae9def38624fe))
+- use jwt auth on browser login ([3ba6ac7](https://github.com/heroku/heroku-cli-command/commit/3ba6ac7b54adfef487756d68cb0dbea9250abd72))
+- web -> browser ([2a78cc0](https://github.com/heroku/heroku-cli-command/commit/2a78cc07fdb3e93b3096ee45369ae9def38624fe))
+
 ## [8.1.2](https://github.com/heroku/heroku-cli-command/compare/v8.1.1...v8.1.2) (2018-05-06)
 
 ### Bug Fixes
 
-* error out on login when HEROKU_API_KEY is set ([eaad07f](https://github.com/heroku/heroku-cli-command/commit/eaad07fc18310d5a20a2e5003f57ded64eed39a2))
+- error out on login when HEROKU_API_KEY is set ([eaad07f](https://github.com/heroku/heroku-cli-command/commit/eaad07fc18310d5a20a2e5003f57ded64eed39a2))
+
 ## [8.1.1](https://github.com/heroku/heroku-cli-command/compare/v8.1.0...v8.1.1) (2018-05-06)
 
 ### Bug Fixes
 
-* added stubbed browser property ([09b54ad](https://github.com/heroku/heroku-cli-command/commit/09b54ad35d57ebbcde2f5a8a89582f0de096dca4))
+- added stubbed browser property ([09b54ad](https://github.com/heroku/heroku-cli-command/commit/09b54ad35d57ebbcde2f5a8a89582f0de096dca4))
+
 ## [8.1.0](https://github.com/heroku/heroku-cli-command/compare/v8.0.7...v8.1.0) (2018-05-06)
 
 ### Features
 
-* added login/logout ([#33](https://github.com/heroku/heroku-cli-command/issues/33)) ([c772322](https://github.com/heroku/heroku-cli-command/commit/c772322981a49226d4a37f2a6769aeb07baf1ade))
+- added login/logout ([#33](https://github.com/heroku/heroku-cli-command/issues/33)) ([c772322](https://github.com/heroku/heroku-cli-command/commit/c772322981a49226d4a37f2a6769aeb07baf1ade))
+
 ## [8.0.7](https://github.com/heroku/heroku-cli-command/compare/v8.0.6...v8.0.7) (2018-05-02)
 
 ### Bug Fixes
 
-* skip rewriting auth header ([#32](https://github.com/heroku/heroku-cli-command/issues/32)) ([f74245f](https://github.com/heroku/heroku-cli-command/commit/f74245fcc09539a8d714867053bb7cf2191271f8))
+- skip rewriting auth header ([#32](https://github.com/heroku/heroku-cli-command/issues/32)) ([f74245f](https://github.com/heroku/heroku-cli-command/commit/f74245fcc09539a8d714867053bb7cf2191271f8))
+
 ## [8.0.6](https://github.com/heroku/heroku-cli-command/compare/v8.0.5...v8.0.6) (2018-05-01)
 
 ### Bug Fixes
 
-* updated deps ([e8d6a78](https://github.com/heroku/heroku-cli-command/commit/e8d6a785f46abd62b045ac06a74b5b38ae5debe9))
+- updated deps ([e8d6a78](https://github.com/heroku/heroku-cli-command/commit/e8d6a785f46abd62b045ac06a74b5b38ae5debe9))
+
 ## [8.0.5](https://github.com/heroku/heroku-cli-command/compare/v8.0.4...v8.0.5) (2018-04-17)
 
 ### Bug Fixes
 
-* updated deps ([56ed61b](https://github.com/heroku/heroku-cli-command/commit/56ed61bd5df63c0c853b543a509cbfd038b3cb39))
+- updated deps ([56ed61b](https://github.com/heroku/heroku-cli-command/commit/56ed61bd5df63c0c853b543a509cbfd038b3cb39))
+
 ## [8.0.4](https://github.com/heroku/heroku-cli-command/compare/v8.0.3...v8.0.4) (2018-04-06)
 
 ### Bug Fixes
 
-* inherit errors from CLIError ([b590cd0](https://github.com/heroku/heroku-cli-command/commit/b590cd050ff8e2db177874006997ae65a240bc98))
+- inherit errors from CLIError ([b590cd0](https://github.com/heroku/heroku-cli-command/commit/b590cd050ff8e2db177874006997ae65a240bc98))
+
 ## [8.0.3](https://github.com/heroku/heroku-cli-command/compare/v8.0.2...v8.0.3) (2018-04-06)
 
 ### Bug Fixes
 
-* HEROKU_API_KEY ([7c7d31b](https://github.com/heroku/heroku-cli-command/commit/7c7d31b0121bf051a6cfaeffe4f5cd1f319f2884))
+- HEROKU_API_KEY ([7c7d31b](https://github.com/heroku/heroku-cli-command/commit/7c7d31b0121bf051a6cfaeffe4f5cd1f319f2884))
+
 ## [8.0.2](https://github.com/heroku/heroku-cli-command/compare/v8.0.1...v8.0.2) (2018-04-06)
 
 ### Bug Fixes
 
-* memoize auth token ([145f81e](https://github.com/heroku/heroku-cli-command/commit/145f81eba1f238625d966e08deceb19f2ab1230d))
+- memoize auth token ([145f81e](https://github.com/heroku/heroku-cli-command/commit/145f81eba1f238625d966e08deceb19f2ab1230d))
+
 ## [8.0.1](https://github.com/heroku/heroku-cli-command/compare/v8.0.0...v8.0.1) (2018-04-06)
+
 ## [8.0.0](https://github.com/heroku/heroku-cli-command/compare/v7.1.1...v8.0.0) (2018-04-06)
 
 ### ⚠ BREAKING CHANGES
 
-* this is the oclif version
+- this is the oclif version
 
 ### Features
 
-* oclif ([ee07cb1](https://github.com/heroku/heroku-cli-command/commit/ee07cb135c51904e30586f574bad5193de1c0596))
+- oclif ([ee07cb1](https://github.com/heroku/heroku-cli-command/commit/ee07cb135c51904e30586f574bad5193de1c0596))
+
 ## [7.1.1](https://github.com/heroku/heroku-cli-command/compare/v7.1.0...v7.1.1) (2018-04-06)
 
 ### Bug Fixes
 
-* updated metadata ([960d294](https://github.com/heroku/heroku-cli-command/commit/960d2942be969c2e29f4c9ae862ee3cdadb81a77))
+- updated metadata ([960d294](https://github.com/heroku/heroku-cli-command/commit/960d2942be969c2e29f4c9ae862ee3cdadb81a77))
+
 ## [7.1.0](https://github.com/heroku/heroku-cli-command/compare/v7.0.16...v7.1.0) (2018-04-06)
 
 ### Bug Fixes
 
-* fixed repo link ([9849b51](https://github.com/heroku/heroku-cli-command/commit/9849b511e141acb946fb597d47e4c7d7314cf0bc))
-* fixed tests ([525b0a7](https://github.com/heroku/heroku-cli-command/commit/525b0a7325fac3a94919c80966e380c0a28713e6))
-* ran oclif generator ([714d15e](https://github.com/heroku/heroku-cli-command/commit/714d15eeba873e1a3fdcc8c1d9341655c6972cab))
-* updated netrc-parser ([df72fd7](https://github.com/heroku/heroku-cli-command/commit/df72fd702fec2e2d499324f271969faf1d42edac))
+- fixed repo link ([9849b51](https://github.com/heroku/heroku-cli-command/commit/9849b511e141acb946fb597d47e4c7d7314cf0bc))
+- fixed tests ([525b0a7](https://github.com/heroku/heroku-cli-command/commit/525b0a7325fac3a94919c80966e380c0a28713e6))
+- ran oclif generator ([714d15e](https://github.com/heroku/heroku-cli-command/commit/714d15eeba873e1a3fdcc8c1d9341655c6972cab))
+- updated netrc-parser ([df72fd7](https://github.com/heroku/heroku-cli-command/commit/df72fd702fec2e2d499324f271969faf1d42edac))
+
 ## [8.0.0-oclif.2](https://github.com/heroku/heroku-cli-command/compare/v7.0.15...v8.0.0-oclif.2) (2018-02-13)
 
 ### Features
 
-* anycli conversion ([201f534](https://github.com/heroku/heroku-cli-command/commit/201f534bbbca0468e3425754beb34dca5b2c6567))
+- anycli conversion ([201f534](https://github.com/heroku/heroku-cli-command/commit/201f534bbbca0468e3425754beb34dca5b2c6567))
 
 ### Bug Fixes
 
-* oclif rename ([7fc9586](https://github.com/heroku/heroku-cli-command/commit/7fc958629abd3ae33014eaaee9b2b1ebdb49db80))
-* oclif rename ([f3bc43d](https://github.com/heroku/heroku-cli-command/commit/f3bc43dd2112794090046dfafd82635e8910af15))
+- oclif rename ([7fc9586](https://github.com/heroku/heroku-cli-command/commit/7fc958629abd3ae33014eaaee9b2b1ebdb49db80))
+- oclif rename ([f3bc43d](https://github.com/heroku/heroku-cli-command/commit/f3bc43dd2112794090046dfafd82635e8910af15))
+
 ## [7.0.16](https://github.com/heroku/heroku-cli-command/compare/v8.0.0-oclif.2...v7.0.16) (2018-03-19)
+
 ## [8.0.0-oclif.2](https://github.com/heroku/heroku-cli-command/compare/v7.0.15...v8.0.0-oclif.2) (2018-02-13)
 
 ### Features
 
-* anycli conversion ([201f534](https://github.com/heroku/heroku-cli-command/commit/201f534bbbca0468e3425754beb34dca5b2c6567))
+- anycli conversion ([201f534](https://github.com/heroku/heroku-cli-command/commit/201f534bbbca0468e3425754beb34dca5b2c6567))
 
 ### Bug Fixes
 
-* oclif rename ([7fc9586](https://github.com/heroku/heroku-cli-command/commit/7fc958629abd3ae33014eaaee9b2b1ebdb49db80))
-* oclif rename ([f3bc43d](https://github.com/heroku/heroku-cli-command/commit/f3bc43dd2112794090046dfafd82635e8910af15))
+- oclif rename ([7fc9586](https://github.com/heroku/heroku-cli-command/commit/7fc958629abd3ae33014eaaee9b2b1ebdb49db80))
+- oclif rename ([f3bc43d](https://github.com/heroku/heroku-cli-command/commit/f3bc43dd2112794090046dfafd82635e8910af15))
+
 ## [7.0.15](https://github.com/heroku/heroku-cli-command/compare/v7.0.14...v7.0.15) (2018-01-22)
+
 ## [7.0.14](https://github.com/heroku/heroku-cli-command/compare/v7.0.13...v7.0.14) (2018-01-16)
 
 ### Bug Fixes
 
-* added base ([933441d](https://github.com/heroku/heroku-cli-command/commit/933441df2fe8f39adf872a043f535d860f045d24))
+- added base ([933441d](https://github.com/heroku/heroku-cli-command/commit/933441df2fe8f39adf872a043f535d860f045d24))
+
 ## [7.0.13](https://github.com/heroku/heroku-cli-command/compare/v7.0.12...v7.0.13) (2018-01-07)
+
 ## [7.0.12](https://github.com/heroku/heroku-cli-command/compare/v7.0.11...v7.0.12) (2018-01-05)
+
 ## [7.0.11](https://github.com/heroku/heroku-cli-command/compare/v7.0.10...v7.0.11) (2017-12-31)
+
 ## [7.0.10](https://github.com/heroku/heroku-cli-command/compare/v7.0.0-beta.3...v7.0.10) (2017-12-27)
+
 ## [7.0.0-beta.3](https://github.com/heroku/heroku-cli-command/compare/v7.0.0-beta.2...v7.0.0-beta.3) (2017-12-26)
+
 ## [7.0.0-beta.2](https://github.com/heroku/heroku-cli-command/compare/v7.0.0-beta.1...v7.0.0-beta.2) (2017-12-26)
+
 ## [7.0.0-beta.1](https://github.com/heroku/heroku-cli-command/compare/v7.0.9...v7.0.0-beta.1) (2017-12-26)
+
 ## [7.0.9](https://github.com/heroku/heroku-cli-command/compare/v7.0.8...v7.0.9) (2017-12-26)
+
 ## [7.0.8](https://github.com/heroku/heroku-cli-command/compare/v7.0.7...v7.0.8) (2017-12-26)
+
 ## [7.0.7](https://github.com/heroku/heroku-cli-command/compare/v7.0.6...v7.0.7) (2017-12-26)
+
 ## [7.0.6](https://github.com/heroku/heroku-cli-command/compare/v7.0.5...v7.0.6) (2017-12-25)
+
 ## [7.0.5](https://github.com/heroku/heroku-cli-command/compare/v7.0.4...v7.0.5) (2017-12-22)
+
 ## [7.0.4](https://github.com/heroku/heroku-cli-command/compare/v7.0.3...v7.0.4) (2017-12-20)
+
 ## [7.0.3](https://github.com/heroku/heroku-cli-command/compare/v7.0.2...v7.0.3) (2017-12-20)
+
 ## [7.0.2](https://github.com/heroku/heroku-cli-command/compare/v7.0.1...v7.0.2) (2017-12-20)
+
 ## [7.0.1](https://github.com/heroku/heroku-cli-command/compare/v7.0.0...v7.0.1) (2017-12-20)
+
 ## [7.0.0](https://github.com/heroku/heroku-cli-command/compare/v6.1.0-ts.1...v7.0.0) (2017-12-20)
+
 ## [6.1.0-ts.1](https://github.com/heroku/heroku-cli-command/compare/v6.1.0-ts.0...v6.1.0-ts.1) (2017-12-18)
+
 ## [6.1.0-ts.0](https://github.com/heroku/heroku-cli-command/compare/v6.0.1...v6.1.0-ts.0) (2017-12-15)
+
 ## [6.0.1](https://github.com/heroku/heroku-cli-command/compare/v6.0.0...v6.0.1) (2017-12-13)
+
 ## [6.0.0](https://github.com/heroku/heroku-cli-command/compare/v6.0.0-ts.1...v6.0.0) (2017-12-13)
+
 ## [6.0.0-ts.1](https://github.com/heroku/heroku-cli-command/compare/v6.0.0-ts.0...v6.0.0-ts.1) (2017-12-13)
+
 ## [6.0.0-ts.0](https://github.com/heroku/heroku-cli-command/compare/v5.0.3...v6.0.0-ts.0) (2017-12-13)
+
 ## [5.0.3](https://github.com/heroku/heroku-cli-command/compare/v5.0.2...v5.0.3) (2017-11-27)
+
 ## [5.0.2](https://github.com/heroku/heroku-cli-command/compare/v5.0.1...v5.0.2) (2017-11-27)
+
 ## [5.0.1](https://github.com/heroku/heroku-cli-command/compare/v5.0.0...v5.0.1) (2017-11-27)
+
 ## [5.0.0](https://github.com/heroku/heroku-cli-command/compare/v4.1.1...v5.0.0) (2017-09-28)
+
 ## [4.1.1](https://github.com/heroku/heroku-cli-command/compare/v4.1.0...v4.1.1) (2017-09-27)
+
 ## [4.1.0](https://github.com/heroku/heroku-cli-command/compare/v4.0.1...v4.1.0) (2017-09-12)
+
 ## [4.0.1](https://github.com/heroku/heroku-cli-command/compare/v4.0.0...v4.0.1) (2017-09-09)
+
 ## [4.0.0](https://github.com/heroku/heroku-cli-command/compare/v3.1.1...v4.0.0) (2017-09-09)
+
 ## [3.1.1](https://github.com/heroku/heroku-cli-command/compare/v3.1.0...v3.1.1) (2017-09-08)
+
 ## [3.1.0](https://github.com/heroku/heroku-cli-command/compare/v3.0.5...v3.1.0) (2017-09-08)
+
 ## [3.0.5](https://github.com/heroku/heroku-cli-command/compare/v3.0.4...v3.0.5) (2017-09-08)
+
 ## [3.0.4](https://github.com/heroku/heroku-cli-command/compare/v3.0.3...v3.0.4) (2017-09-08)
 
 ### Reverts
 
-* Revert "updated deps" ([a68d73d](https://github.com/heroku/heroku-cli-command/commit/a68d73d214cf1f5c43c7727495e16a753ffa6113))
+- Revert "updated deps" ([a68d73d](https://github.com/heroku/heroku-cli-command/commit/a68d73d214cf1f5c43c7727495e16a753ffa6113))
+
 ## [3.0.3](https://github.com/heroku/heroku-cli-command/compare/v3.0.2...v3.0.3) (2017-09-07)
+
 ## [3.0.2](https://github.com/heroku/heroku-cli-command/compare/v3.0.1...v3.0.2) (2017-09-06)
+
 ## [3.0.1](https://github.com/heroku/heroku-cli-command/compare/v3.0.0...v3.0.1) (2017-09-06)
+
 ## [3.0.0](https://github.com/heroku/heroku-cli-command/compare/v2.0.0...v3.0.0) (2017-09-05)
+
 ## [2.0.0](https://github.com/heroku/heroku-cli-command/compare/v1.1.12...v2.0.0) (2017-09-02)
+
 ## [1.1.12](https://github.com/heroku/heroku-cli-command/compare/v1.1.11...v1.1.12) (2017-09-01)
+
 ## [1.1.11](https://github.com/heroku/heroku-cli-command/compare/v1.1.10...v1.1.11) (2017-08-31)
+
 ## [1.1.10](https://github.com/heroku/heroku-cli-command/compare/v1.1.9...v1.1.10) (2017-08-29)
+
 ## [1.1.9](https://github.com/heroku/heroku-cli-command/compare/v1.1.8...v1.1.9) (2017-08-29)
+
 ## [1.1.8](https://github.com/heroku/heroku-cli-command/compare/v1.1.7...v1.1.8) (2017-08-29)
+
 ## [1.1.7](https://github.com/heroku/heroku-cli-command/compare/v1.1.6...v1.1.7) (2017-08-11)
+
 ## [1.1.6](https://github.com/heroku/heroku-cli-command/compare/v1.1.5...v1.1.6) (2017-08-07)
+
 ## [1.1.5](https://github.com/heroku/heroku-cli-command/compare/v1.1.4...v1.1.5) (2017-07-21)
+
 ## [1.1.4](https://github.com/heroku/heroku-cli-command/compare/v1.1.3...v1.1.4) (2017-07-10)
+
 ## [1.1.3](https://github.com/heroku/heroku-cli-command/compare/v1.1.2...v1.1.3) (2017-07-07)
+
 ## [1.1.2](https://github.com/heroku/heroku-cli-command/compare/v1.1.1...v1.1.2) (2017-06-28)
+
 ## [1.1.1](https://github.com/heroku/heroku-cli-command/compare/v1.1.0...v1.1.1) (2017-06-20)
+
 ## [1.1.0](https://github.com/heroku/heroku-cli-command/compare/v1.0.1...v1.1.0) (2017-06-08)
+
 ## [1.0.1](https://github.com/heroku/heroku-cli-command/compare/v1.0.0...v1.0.1) (2017-06-07)
+
 ## [1.0.0](https://github.com/heroku/heroku-cli-command/compare/v0.3.7...v1.0.0) (2017-06-07)
+
 ## [0.3.7](https://github.com/heroku/heroku-cli-command/compare/v0.3.6...v0.3.7) (2017-06-02)
+
 ## [0.3.6](https://github.com/heroku/heroku-cli-command/compare/v0.3.5...v0.3.6) (2017-06-02)
+
 ## [0.3.5](https://github.com/heroku/heroku-cli-command/compare/v0.3.4...v0.3.5) (2017-06-02)
+
 ## [0.3.4](https://github.com/heroku/heroku-cli-command/compare/v0.3.3...v0.3.4) (2017-06-01)
+
 ## [0.3.3](https://github.com/heroku/heroku-cli-command/compare/v0.3.2...v0.3.3) (2017-06-01)
+
 ## [0.3.2](https://github.com/heroku/heroku-cli-command/compare/v0.3.1...v0.3.2) (2017-05-31)
+
 ## [0.3.1](https://github.com/heroku/heroku-cli-command/compare/v0.3.0...v0.3.1) (2017-05-24)
+
 ## [0.3.0](https://github.com/heroku/heroku-cli-command/compare/v0.2.0...v0.3.0) (2017-05-19)
+
 ## [0.2.0](https://github.com/heroku/heroku-cli-command/compare/v0.1.0...v0.2.0) (2017-05-19)
+
 ## 0.1.0 (2017-05-18)
+
