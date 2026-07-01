@@ -1,19 +1,8 @@
-## [12.2.2](https://github.com/heroku/heroku-cli-command/compare/command-v12.2.1...command-v12.2.2) (2026-03-25)
-
-
-### Bug Fixes
-
-* Ctrl-C cancels login process ([#305](https://github.com/heroku/heroku-cli-command/issues/305)) ([bea43c5](https://github.com/heroku/heroku-cli-command/commit/bea43c5df7e1bf218baa35a99fc7c40430986855))
-
-
-### Miscellaneous Chores
-
-* adopt @heroku-cli/test-utils and modernize test setup ([#308](https://github.com/heroku/heroku-cli-command/issues/308)) ([db7be8e](https://github.com/heroku/heroku-cli-command/commit/db7be8eb0e84422e40240c5df5d063513dbe528f))
-
 ## [13.0.0](https://github.com/heroku/heroku-cli-command/compare/command-v12.4.2...command-v13.0.0) (2026-07-01)
 
 
 ### ⚠ BREAKING CHANGES
+With this major version release we will be improving the security by storing authentication credentials in your system keychain by default. We will no longer save authentication credentials to `.netrc` files by default, though we will continue to support `.netrc` files as a fall-back if a supported keychain is not available or if the user's keychain returns an error. Users will also be able to force the use of the `.netrc` file by setting the environment variable `HEROKU_NETRC_WRITE=true`. The user's token can also be provided directly by setting `HEROKU_API_TOKEN=<token>`.
 
 * remove dual write for credential storage ([#389](https://github.com/heroku/heroku-cli-command/issues/389))
 
@@ -91,6 +80,18 @@
 * release 12.2.4 ([#323](https://github.com/heroku/heroku-cli-command/issues/323)) ([339c6da](https://github.com/heroku/heroku-cli-command/commit/339c6da70b2094aebabde16cf47d24255f8be2c2))
 * release 12.3.0 ([#326](https://github.com/heroku/heroku-cli-command/issues/326)) ([11e46ea](https://github.com/heroku/heroku-cli-command/commit/11e46eab79c1b3d909621df457a5fd5c71dd866e))
 * release 12.3.1 ([#327](https://github.com/heroku/heroku-cli-command/issues/327)) ([72dff13](https://github.com/heroku/heroku-cli-command/commit/72dff13855ee6fc10610f2ac27eeb1a4b4684272))
+
+## [12.2.2](https://github.com/heroku/heroku-cli-command/compare/command-v12.2.1...command-v12.2.2) (2026-03-25)
+
+
+### Bug Fixes
+
+* Ctrl-C cancels login process ([#305](https://github.com/heroku/heroku-cli-command/issues/305)) ([bea43c5](https://github.com/heroku/heroku-cli-command/commit/bea43c5df7e1bf218baa35a99fc7c40430986855))
+
+
+### Miscellaneous Chores
+
+* adopt @heroku-cli/test-utils and modernize test setup ([#308](https://github.com/heroku/heroku-cli-command/issues/308)) ([db7be8e](https://github.com/heroku/heroku-cli-command/commit/db7be8eb0e84422e40240c5df5d063513dbe528f))
 
 ## [12.2.1](https://github.com/heroku/heroku-cli-command/compare/command-v12.2.0...command-v12.2.1) (2026-03-11)
 
