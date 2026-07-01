@@ -10,6 +10,17 @@
 
 * adopt @heroku-cli/test-utils and modernize test setup ([#308](https://github.com/heroku/heroku-cli-command/issues/308)) ([db7be8e](https://github.com/heroku/heroku-cli-command/commit/db7be8eb0e84422e40240c5df5d063513dbe528f))
 
+## [13.0.0](https://github.com/heroku/heroku-cli-command/compare/command-v12.4.2...command-v13.0.0) (2026-07-01)
+
+
+### ⚠ BREAKING CHANGES
+
+* remove dual write for credential storage ([#389](https://github.com/heroku/heroku-cli-command/issues/389))
+
+### Features
+
+* remove dual write for credential storage ([#389](https://github.com/heroku/heroku-cli-command/issues/389)) ([e50b5be](https://github.com/heroku/heroku-cli-command/commit/e50b5be106f7997d85f7a5a53ff06ff1eadecb9c))
+
 ## [12.4.2](https://github.com/heroku/heroku-cli-command/compare/command-v12.4.1...command-v12.4.2) (2026-06-15)
 
 
