@@ -10,6 +10,18 @@ With this major version release we will be improving the security by storing aut
 
 * remove dual write for credential storage ([#389](https://github.com/heroku/heroku-cli-command/issues/389)) ([e50b5be](https://github.com/heroku/heroku-cli-command/commit/e50b5be106f7997d85f7a5a53ff06ff1eadecb9c))
 
+## [13.0.1](https://github.com/heroku/heroku-cli-command/compare/command-v13.0.0...command-v13.0.1) (2026-07-17)
+
+
+### Bug Fixes
+
+* **ci:** pass PR title via env var in pr-title-check workflow ([#392](https://github.com/heroku/heroku-cli-command/issues/392)) ([138af53](https://github.com/heroku/heroku-cli-command/commit/138af53bfef620c0d43226b505913076e2691eac))
+
+
+### Dependencies
+
+* bump @opentelemetry/core and @sentry/node ([#387](https://github.com/heroku/heroku-cli-command/issues/387)) ([0b08cc0](https://github.com/heroku/heroku-cli-command/commit/0b08cc06d1219989d989f444c27553121c840106))
+
 ## [12.4.2](https://github.com/heroku/heroku-cli-command/compare/command-v12.4.1...command-v12.4.2) (2026-06-15)
 
 
