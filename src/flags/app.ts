@@ -47,6 +47,7 @@ export const app = Flags.custom({
   },
 
   description: 'app to run command against',
+  env: 'HEROKU_APP',
 })
 
 export const remote = Flags.custom({
