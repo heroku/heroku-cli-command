@@ -10,6 +10,13 @@ With this major version release we will be improving the security by storing aut
 
 * remove dual write for credential storage ([#389](https://github.com/heroku/heroku-cli-command/issues/389)) ([e50b5be](https://github.com/heroku/heroku-cli-command/commit/e50b5be106f7997d85f7a5a53ff06ff1eadecb9c))
 
+## [13.1.0](https://github.com/heroku/heroku-cli-command/compare/command-v13.0.1...command-v13.1.0) (2026-08-03)
+
+
+### Features
+
+* document HEROKU_APP env var in app flag --help (W-23597905) ([#395](https://github.com/heroku/heroku-cli-command/issues/395)) ([460eaaa](https://github.com/heroku/heroku-cli-command/commit/460eaaac7e1cc95f740bedb171a7ea09e55d59d8))
+
 ## [13.0.1](https://github.com/heroku/heroku-cli-command/compare/command-v13.0.0...command-v13.0.1) (2026-07-17)
 
 
