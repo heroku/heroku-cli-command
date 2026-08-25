@@ -10,6 +10,13 @@ With this major version release we will be improving the security by storing aut
 
 * remove dual write for credential storage ([#389](https://github.com/heroku/heroku-cli-command/issues/389)) ([e50b5be](https://github.com/heroku/heroku-cli-command/commit/e50b5be106f7997d85f7a5a53ff06ff1eadecb9c))
 
+## [13.2.0](https://github.com/heroku/heroku-cli-command/compare/command-v13.1.0...command-v13.2.0) (2026-08-25)
+
+
+### Features
+
+* handle 2FA prompts safely during CLI actions ([#400](https://github.com/heroku/heroku-cli-command/issues/400)) ([7c08ea9](https://github.com/heroku/heroku-cli-command/commit/7c08ea9a16f1c148369b26d45d98af005a54f5f4))
+
 ## [13.1.0](https://github.com/heroku/heroku-cli-command/compare/command-v13.0.1...command-v13.1.0) (2026-08-03)
 
 
