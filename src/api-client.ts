@@ -2,6 +2,7 @@ import type {Config} from '@oclif/core/interfaces'
 
 import {HTTP, HTTPError, HTTPRequestOptions} from '@heroku/http-call'
 import {CLIError, warn} from '@oclif/core/errors'
+import {ux} from '@oclif/core/ux'
 import debug from 'debug'
 import * as url from 'node:url'
 
@@ -425,20 +426,30 @@ export class APIClient {
   }
 
   twoFactorPrompt() {
+    if (!process.stdin.isTTY) {
+      return Promise.reject(new Error('Two-factor authentication requires an interactive terminal.'))
+    }
+
     yubikey.enable()
     return this.twoFactorMutex.synchronize(async () => {
       try {
-        const {factor} = await prompter.prompt<{factor: string}>([{
-          mask: '*',
-          message: 'Two-factor code',
-          name: 'factor',
-          type: 'password',
-        }])
+        const result = await ux.action.pauseAsync(async () => {
+          try {
+            const {factor} = await prompter.prompt<{factor: string}>([{
+              mask: '*',
+              message: 'Two-factor code',
+              name: 'factor',
+              type: 'password',
+            }])
+            return {factor}
+          } catch (error) {
+            return {error}
+          }
+        })
+        if ('error' in result) throw result.error
+        return result.factor
+      } finally {
         yubikey.disable()
-        return factor
-      } catch (error) {
-        yubikey.disable()
-        throw error
       }
     })
   }

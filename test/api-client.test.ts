@@ -1,4 +1,5 @@
 import {Config} from '@oclif/core/config'
+import {ux} from '@oclif/core/ux'
 import debug from 'debug'
 import {expect, fancy} from 'fancy-test'
 import nock from 'nock'
@@ -14,6 +15,7 @@ const SYSTEM_TMPDIR = os.tmpdir()
 import {Command as CommandBase} from '../src/command.js'
 import {writeLoginState} from '../src/credential-manager-core/lib/login-state.js'
 import {setCredentialManagerProvider} from '../src/credential-manager.js'
+import {prompter} from '../src/prompter.js'
 import {RequestId, requestIdHeader} from '../src/request-id.js'
 import {restoreCredentialManagerStub, stubCredentialManager} from './helpers/credential-manager-stub.js'
 
@@ -802,7 +804,9 @@ describe('api_client', () => {
     .it('2fa preauth', async ctx => {
       const scope = nock('https://api.heroku.com')
       scope.get('/apps/myapp').reply(403, {app: {name: 'myapp'}, id: 'two_factor'})
-      scope.put('/apps/myapp/pre-authorizations').reply(200, {})
+      scope.get('/apps/myapp/config').reply(403, {app: {name: 'myapp'}, id: 'two_factor'})
+      scope.get('/apps/myapp/dynos').reply(403, {app: {name: 'myapp'}, id: 'two_factor'})
+      scope.put('/apps/myapp/pre-authorizations').matchHeader('Heroku-Two-Factor-Code', '123456').reply(200, {})
       scope.get('/apps/myapp').reply(200, {name: 'myapp'})
       scope.get('/apps/anotherapp').reply(200, {name: 'anotherapp'})
       scope.get('/apps/myapp/config').reply(200, {foo: 'bar'})
@@ -810,7 +814,7 @@ describe('api_client', () => {
 
       const cmd = new Command([], ctx.config)
       // Mock the twoFactorPrompt method
-      sinon.stub(cmd.heroku, 'twoFactorPrompt').resolves('123456')
+      const promptStub = sinon.stub(cmd.heroku, 'twoFactorPrompt').resolves('123456')
       const info = cmd.heroku.get('/apps/myapp')
       const anotherapp = cmd.heroku.get('/apps/anotherapp')
       const _config = cmd.heroku.get('/apps/myapp/config')
@@ -819,7 +823,72 @@ describe('api_client', () => {
       expect((await anotherapp).body).to.deep.equal({name: 'anotherapp'})
       expect((await _config).body).to.deep.equal({foo: 'bar'})
       expect((await dynos).body).to.deep.equal({web: 1})
+      expect(promptStub.calledOnce).to.be.true
       scope.done()
+    })
+
+  test
+    .it('pauses an active action while prompting for 2fa', async ctx => {
+      const cmd = new Command([], ctx.config)
+      const originalIsTTY = process.stdin.isTTY
+      Object.defineProperty(process.stdin, 'isTTY', {configurable: true, value: true})
+      const promptStub = sinon.stub(prompter, 'prompt').resolves({factor: '123456'})
+      const pauseStub = sinon.stub(ux.action, 'pauseAsync').callsFake(async fn => {
+        expect(promptStub.called).to.be.false
+        const result = await fn()
+        expect(promptStub.calledOnce).to.be.true
+        return result
+      })
+
+      try {
+        expect(await cmd.heroku.twoFactorPrompt()).to.equal('123456')
+        expect(pauseStub.calledOnce).to.be.true
+        expect(promptStub.calledOnce).to.be.true
+      } finally {
+        pauseStub.restore()
+        promptStub.restore()
+        Object.defineProperty(process.stdin, 'isTTY', {configurable: true, value: originalIsTTY})
+      }
+    })
+
+  test
+    .it('rejects a 2fa prompt without an interactive terminal', async ctx => {
+      const cmd = new Command([], ctx.config)
+      const originalIsTTY = process.stdin.isTTY
+      Object.defineProperty(process.stdin, 'isTTY', {configurable: true, value: false})
+      const promptStub = sinon.stub(prompter, 'prompt')
+
+      try {
+        await expect(cmd.heroku.twoFactorPrompt()).to.be.rejectedWith('Two-factor authentication requires an interactive terminal.')
+        expect(promptStub.called).to.be.false
+      } finally {
+        promptStub.restore()
+        Object.defineProperty(process.stdin, 'isTTY', {configurable: true, value: originalIsTTY})
+      }
+    })
+
+  test
+    .it('resumes the action before propagating a 2fa prompt error', async ctx => {
+      const cmd = new Command([], ctx.config)
+      const originalIsTTY = process.stdin.isTTY
+      Object.defineProperty(process.stdin, 'isTTY', {configurable: true, value: true})
+      const promptStub = sinon.stub(prompter, 'prompt').rejects(new Error('Two-factor prompt canceled'))
+      let pauseCallbackCompleted = false
+      const pauseStub = sinon.stub(ux.action, 'pauseAsync').callsFake(async fn => {
+        const result = await fn()
+        pauseCallbackCompleted = true
+        return result
+      })
+
+      try {
+        await expect(cmd.heroku.twoFactorPrompt()).to.be.rejectedWith('Two-factor prompt canceled')
+        expect(pauseCallbackCompleted).to.be.true
+        expect(pauseStub.calledOnce).to.be.true
+      } finally {
+        pauseStub.restore()
+        promptStub.restore()
+        Object.defineProperty(process.stdin, 'isTTY', {configurable: true, value: originalIsTTY})
+      }
     })
 
   context('with HEROKU_DEBUG = "1"', function () {
