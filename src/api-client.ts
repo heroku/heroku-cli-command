@@ -5,6 +5,7 @@ import {CLIError, warn} from '@oclif/core/errors'
 import {ux} from '@oclif/core/ux'
 import debug from 'debug'
 import * as url from 'node:url'
+import {inspect} from 'node:util'
 
 import {getStorageConfig} from './credential-manager-core/lib/credential-storage-selector.js'
 import {deleteLoginState, loginStateDataDir, readLoginState} from './credential-manager-core/lib/login-state.js'
@@ -178,6 +179,46 @@ function apiDiagnosticUrl(input: string): string {
   }
 }
 
+function responseDocumentationUrl(input: unknown): string | undefined {
+  if (typeof input !== 'string') return
+  try {
+    const target = new URL(input)
+    const safeArticlePath = /^\/articles\/[a-z0-9]+(?:-[a-z0-9]+)*\/?$/.test(target.pathname)
+    const safeFragment = !target.hash || /^#[a-z0-9]+(?:-[a-z0-9]+)*$/.test(target.hash)
+    if (target.protocol !== 'https:'
+      || target.hostname !== 'devcenter.heroku.com'
+      || target.port
+      || target.username
+      || target.password
+      || target.search
+      || !safeArticlePath
+      || !safeFragment) return
+    return target.href
+  } catch {}
+}
+
+function isStructuredErrorBody(body: unknown): body is IHerokuAPIErrorOptions & Record<string, unknown> {
+  return typeof body === 'object' && body !== null && !Array.isArray(body)
+}
+
+function sanitizeResponseBodyUrl(body: IHerokuAPIErrorOptions & Record<string, unknown>): IHerokuAPIErrorOptions & Record<string, unknown> {
+  const sanitized = {...body}
+  const documentationUrl = responseDocumentationUrl(sanitized.url)
+  if (documentationUrl) sanitized.url = documentationUrl
+  else delete sanitized.url
+  return sanitized
+}
+
+function setHTTPErrorBody(httpError: HTTPError, body: unknown): void {
+  httpError.body = body
+  httpError.http.body = body
+}
+
+function setHTTPErrorFallbackMessage(httpError: HTTPError, body: IHerokuAPIErrorOptions & Record<string, unknown>): void {
+  const requestUrl = typeof httpError.http.url === 'string' ? apiDiagnosticUrl(httpError.http.url) : '[redacted URL]'
+  httpError.message = `HTTP Error ${httpError.http.statusCode} for ${httpError.http.method} ${requestUrl}\n${inspect(body)}`
+}
+
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace APIClient {
   export interface Options extends HTTPRequestOptions {
@@ -209,11 +250,17 @@ export class HerokuAPIError extends CLIError {
 
   constructor(httpError: HTTPError) {
     if (!httpError) throw new Error('invalid error')
-    const rawOptions: IHerokuAPIErrorOptions = httpError.body
-    const options = rawOptions && typeof rawOptions === 'object'
-      ? {...rawOptions, ...(rawOptions.url ? {url: apiDiagnosticUrl(rawOptions.url)} : {})}
-      : rawOptions
-    if (!options || !options.message) throw httpError
+    const rawOptions: unknown = httpError.body
+    if (!isStructuredErrorBody(rawOptions)) throw httpError
+    const options = sanitizeResponseBodyUrl(rawOptions)
+    setHTTPErrorBody(httpError, options)
+
+    if (typeof options.message !== 'string' || !options.message.trim()) {
+      setHTTPErrorFallbackMessage(httpError, options)
+      Error.captureStackTrace(httpError, HerokuAPIError)
+      throw httpError
+    }
+
     const info = []
     if (options.id) info.push(`Error ID: ${options.id}`)
     if (options.app && options.app.name) info.push(`App: ${options.app.name}`)
@@ -222,8 +269,6 @@ export class HerokuAPIError extends CLIError {
     else super(options.message)
     this.http = httpError
     this.body = options
-    this.http.body = options
-    if (this.http.http) this.http.http.body = options
   }
 }
 

@@ -12,6 +12,7 @@ import chaiAsPromised from 'chai-as-promised'
 import debug from 'debug'
 import {expect, fancy} from 'fancy-test'
 import nock from 'nock'
+import childProcess from 'node:child_process'
 import {EventEmitter, once} from 'node:events'
 import {
   mkdtemp,
@@ -127,6 +128,46 @@ async function listen(server: Server): Promise<number> {
 async function closeServer(server: Server): Promise<void> {
   server.closeAllConnections?.()
   if (server.listening) server.close()
+}
+
+function useDeterministicLoginEnvironment(): () => void {
+  const names = [
+    'HEROKU_API_KEY',
+    'HEROKU_API_TOKEN',
+    'HEROKU_API_URL',
+    'HEROKU_GIT_HOST',
+    'HEROKU_HOST',
+    'HEROKU_LOGIN_HOST',
+    'HEROKU_ORGANIZATION',
+    'HEROKU_TESTING_HEADLESS_LOGIN',
+    'SSO_URL',
+  ]
+  const previous = Object.fromEntries(names.map(name => [name, process.env[name]]))
+  for (const name of names) delete process.env[name]
+  const previousNetrcWrite = process.env.HEROKU_NETRC_WRITE
+  process.env.HEROKU_NETRC_WRITE = 'true'
+
+  return () => {
+    for (const [name, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[name]
+      else process.env[name] = value
+    }
+
+    if (previousNetrcWrite === undefined) delete process.env.HEROKU_NETRC_WRITE
+    else process.env.HEROKU_NETRC_WRITE = previousNetrcWrite
+  }
+}
+
+function stubBrowserSpawn(): sinon.SinonStub {
+  return sinon.stub(childProcess, 'spawn').callsFake((() => {
+    // eslint-disable-next-line unicorn/prefer-event-target -- ChildProcess uses EventEmitter semantics
+    const child = Object.assign(new EventEmitter(), {
+      pid: 12_345,
+      unref: sinon.stub(),
+    })
+    setImmediate(() => child.emit('spawn'))
+    return child
+  }) as typeof childProcess.spawn)
 }
 
 const test = fancy
@@ -550,29 +591,27 @@ describe('login with interactive', () => {
   test
     .it('throws a custom error message body for device_trust_required error', async ctx => {
       const cmd = new Command([], ctx.config)
-      api
+      const request = nock('https://api.heroku.com')
         .post('/oauth/authorizations')
         .reply(401, {id: 'device_trust_required', message: 'original error message'})
 
-      await cmd.heroku.login({method: 'interactive'})
-        .catch(error => {
-          expect(error.message).to.contain('The interactive flag requires Two-Factor Authentication')
-          expect(error.message).to.contain('Error ID: device_trust_required')
-        })
+      await chaiExpect(cmd.heroku.login({method: 'interactive'}))
+        .to.be.rejectedWith('The interactive flag requires Two-Factor Authentication')
+        .and.eventually.have.property('message').that.contains('Error ID: device_trust_required')
+      request.done()
     })
 
   test
     .it('sends any other error message body through', async ctx => {
       const cmd = new Command([], ctx.config)
-      api
+      const request = nock('https://api.heroku.com')
         .post('/oauth/authorizations')
         .reply(401, {id: 'unauthorized', message: 'original error message'})
 
-      await cmd.heroku.login({method: 'interactive'})
-        .catch(error => {
-          expect(error.message).to.contain('original error message')
-          expect(error.message).to.contain('Error ID: unauthorized')
-        })
+      await chaiExpect(cmd.heroku.login({method: 'interactive'}))
+        .to.be.rejectedWith('original error message')
+        .and.eventually.have.property('message').that.contains('Error ID: unauthorized')
+      request.done()
     })
 
   test
@@ -635,43 +674,43 @@ describe('login with interactive', () => {
   test
     .it('defaults to 30 days login', async ctx => {
       const cmd = new Command([], ctx.config)
-      api
+      const request = nock('https://api.heroku.com')
         .post(
           '/oauth/authorizations',
           {description: /^Heroku CLI login from .*/, expires_in: 60 * 60 * 24 * 30, scope: ['global']},
         )
         .reply(401, {id: 'unauthorized', message: 'not authorized'})
 
-      await cmd.heroku.login({method: 'interactive'})
-        .catch(error => {
-          expect(error.message).to.contain('Error ID: unauthorized')
-        })
+      await chaiExpect(cmd.heroku.login({method: 'interactive'}))
+        .to.be.rejectedWith('not authorized\n\nError ID: unauthorized')
+      request.done()
     })
 
   test
     .it('allows shorter logins', async ctx => {
       const cmd = new Command([], ctx.config)
-      api
+      const request = nock('https://api.heroku.com')
         .post(
           '/oauth/authorizations',
           {description: /^Heroku CLI login from .*/, expires_in: 12_345, scope: ['global']},
         )
         .reply(401, {id: 'unauthorized', message: 'not authorized'})
 
-      await cmd.heroku.login({expiresIn: 12_345, method: 'interactive'})
-        .catch(error => {
-          expect(error.message).to.contain('Error ID: unauthorized')
-        })
+      await chaiExpect(cmd.heroku.login({expiresIn: 12_345, method: 'interactive'}))
+        .to.be.rejectedWith('not authorized\n\nError ID: unauthorized')
+      request.done()
     })
 
   test
     .it('does not allow logins longer than 30 days', async ctx => {
       const cmd = new Command([], ctx.config)
+      const unexpectedRequest = nock('https://api.heroku.com')
+        .post('/oauth/authorizations')
+        .reply(500, {message: 'request should not be made'})
 
-      await cmd.heroku.login({expiresIn: 60 * 60 * 24 * 31, method: 'interactive'})
-        .catch(error => {
-          expect(error.message).to.contain('Cannot set an expiration longer than thirty days')
-        })
+      await chaiExpect(cmd.heroku.login({expiresIn: 60 * 60 * 24 * 31, method: 'interactive'}))
+        .to.be.rejectedWith('Cannot set an expiration longer than thirty days')
+      expect(unexpectedRequest.isDone()).to.equal(false)
     })
 
   test
@@ -717,7 +756,145 @@ describe('login with interactive', () => {
 })
 
 describe('login with browser', () => {
-  afterEach(() => sinon.restore())
+  afterEach(() => {
+    sinon.restore()
+    restoreCredentialManagerStub()
+    nock.cleanAll()
+  })
+
+  test
+    .it('completes browser login through the real delegate and command adapters', async ctx => {
+      const restoreEnvironment = useDeterministicLoginEnvironment()
+      const saveCalls: Array<{account: string; hosts: string[]; service?: string; token: string}> = []
+      const browserUrl = 'https://cli-auth.heroku.com/auth/cli/browser/browser-request?requestor=integration-test'
+      const loginApi = nock('https://cli-auth.heroku.com')
+        .post('/auth', body => /^Heroku CLI login from .+/.test(body.description))
+        .reply(200, {
+          browser_url: '/auth/cli/browser/browser-request?requestor=integration-test',
+          cli_url: '/auth/cli/browser/browser-request',
+          token: 'temporary-browser-token',
+        })
+        .get('/auth/cli/browser/browser-request')
+        .matchHeader('authorization', 'Bearer temporary-browser-token')
+        .reply(200, {access_token: 'browser-access-token'})
+      const accountApi = nock('https://api.heroku.com')
+        .get('/account')
+        .matchHeader('authorization', 'Bearer browser-access-token')
+        .reply(200, {email: 'browser@example.com'})
+
+      try {
+        setCredentialManagerProvider({
+          async getAuth() {
+            throw new Error('No auth found')
+          },
+          async removeAuth() {},
+          async saveAuth(account, token, hosts, service) {
+            saveCalls.push({
+              account,
+              hosts,
+              service,
+              token,
+            })
+          },
+        })
+        const spawnStub = stubBrowserSpawn()
+        const stderrStub = sinon.stub(ux, 'stderr')
+        const warnStub = sinon.stub(ux, 'warn')
+        const progressStartStub = sinon.stub(ux.action, 'start')
+        const progressStopStub = sinon.stub(ux.action, 'stop')
+        const cmd = new Command([], ctx.config)
+
+        await cmd.heroku.login({method: 'browser'})
+
+        loginApi.done()
+        accountApi.done()
+        expect(spawnStub.calledOnce).to.equal(true)
+        expect(stderrStub.calledWithExactly(`Opening browser to ${browserUrl}`)).to.equal(true)
+        expect(stderrStub.calledWithExactly(ansis.greenBright(browserUrl))).to.equal(true)
+        expect(warnStub.calledWithExactly('If browser does not open, visit:')).to.equal(true)
+        expect(progressStartStub.args.map(call => call[0])).to.deep.equal(['heroku: Waiting for login', 'Logging in'])
+        expect(progressStopStub.called).to.equal(true)
+        expect(saveCalls).to.deep.equal([{
+          account: 'browser@example.com',
+          hosts: ['api.heroku.com', 'git.heroku.com'],
+          service: 'heroku-cli',
+          token: 'browser-access-token',
+        }])
+        expect(await cmd.heroku.getAuthEntry()).to.deep.equal({
+          account: 'browser@example.com',
+          token: 'browser-access-token',
+        })
+      } finally {
+        restoreEnvironment()
+      }
+    })
+
+  test
+    .it('completes SSO login through the real delegate and command adapters', async ctx => {
+      const restoreEnvironment = useDeterministicLoginEnvironment()
+      const saveCalls: Array<{account: string; hosts: string[]; service?: string; token: string}> = []
+      const ssoUrl = 'https://sso.heroku.com/saml/integration-org/init?cli=true'
+      const accountApi = nock('https://api.heroku.com')
+        .get('/account')
+        .matchHeader('authorization', 'Bearer sso-access-token')
+        .reply(200, {email: 'sso@example.com'})
+
+      try {
+        setCredentialManagerProvider({
+          async getAuth() {
+            throw new Error('No auth found')
+          },
+          async removeAuth() {},
+          async saveAuth(account, token, hosts, service) {
+            saveCalls.push({
+              account,
+              hosts,
+              service,
+              token,
+            })
+          },
+        })
+        const promptStub = sinon.stub(prompter, 'prompt').callsFake(async (questions: any[]) => {
+          const [question] = questions
+          return question.name === 'orgName'
+            ? {orgName: 'integration-org'}
+            : {password: 'sso-access-token'}
+        })
+        const spawnStub = stubBrowserSpawn()
+        const stderrStub = sinon.stub(ux, 'stderr')
+        sinon.stub(ux, 'warn')
+        const progressStartStub = sinon.stub(ux.action, 'start')
+        const progressStopStub = sinon.stub(ux.action, 'stop')
+        const cmd = new Command([], ctx.config)
+
+        await cmd.heroku.login({method: 'sso'})
+
+        accountApi.done()
+        expect(spawnStub.calledOnce).to.equal(true)
+        expect(promptStub.callCount).to.equal(2)
+        expect(promptStub.firstCall.args[0][0]).to.include({message: 'Organization name', name: 'orgName', type: 'input'})
+        expect(promptStub.secondCall.args[0][0]).to.include({message: 'Access token', name: 'password', type: 'password'})
+        expect(stderrStub.args.map(call => call[0])).to.include.members([
+          'Opening browser to:',
+          ansis.greenBright(ssoUrl),
+          'If the browser fails to open or you are authenticating remotely, manually open the URL above.',
+        ])
+        expect(progressStartStub.calledOnceWithExactly('Validating token')).to.equal(true)
+        expect(progressStopStub.called).to.equal(true)
+        expect(saveCalls).to.deep.equal([{
+          account: 'sso@example.com',
+          hosts: ['api.heroku.com', 'git.heroku.com'],
+          service: 'heroku-cli',
+          token: 'sso-access-token',
+        }])
+        expect(await cmd.heroku.getAuthEntry()).to.deep.equal({
+          account: 'sso@example.com',
+          token: 'sso-access-token',
+        })
+      } finally {
+        restoreEnvironment()
+      }
+    })
 
   test
     .it('keeps loginHost public and mutable and passes its current value to login', async ctx => {
@@ -778,16 +955,16 @@ describe('login with browser', () => {
     })
 
   test
-    .it('treats q keypress as cancel without an interrupt exit code', async ctx => {
+    .it('treats q keypress as a historical command cancellation exit', async ctx => {
       const cmd = new Command([], ctx.config)
       const login = new Login(ctx.config, cmd.heroku)
       const errorStub = sinon.stub(ux, 'error').throws(new Error('cancelled'))
 
       expect(() => (login as any).getLoginMethodFromPromptKey('q')).to.throw('cancelled')
-      expect(errorStub.calledWithExactly('Login cancelled by user', {exit: 0})).to.equal(true)
+      expect(errorStub.calledWithExactly('Login cancelled by user', {exit: 2})).to.equal(true)
     })
 
-  for (const [reason, exit] of [['quit', 0], ['interrupt', 130]] as const) {
+  for (const [reason, exit] of [['quit', 2], ['interrupt', 130]] as const) {
     test
       .it(`preserves package ${reason} cancellation exit ${exit} through the command adapter`, async ctx => {
         const cmd = new Command([], ctx.config)
@@ -804,7 +981,7 @@ describe('login with browser', () => {
 
   for (const [name, key, expectedArgs] of [
     ['ctrl-c', '\u0003', ['Login cancelled by user', {exit: 130}]],
-    ['q', 'q', ['Login cancelled by user', {exit: 0}]],
+    ['q', 'q', ['Login cancelled by user', {exit: 2}]],
   ] as const) {
     test
       .it(`routes ${name} from the real prompt adapter through the key parser and restores raw mode`, async ctx => {

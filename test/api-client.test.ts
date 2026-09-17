@@ -2,6 +2,7 @@ import type {AddressInfo} from 'node:net'
 
 // eslint-disable-next-line n/no-extraneous-import -- installed integration dependency is intentionally local until package metadata lands
 import {NativeCredentialNotFoundError} from '@heroku/heroku-credential-manager'
+import {HTTPError} from '@heroku/http-call'
 import {Config} from '@oclif/core/config'
 import {CLIError} from '@oclif/core/errors'
 import {ux} from '@oclif/core/ux'
@@ -40,7 +41,7 @@ async function rejectionWithin(promise: Promise<unknown>, timeoutMs = 1000): Pro
   throw new Error('Expected request to reject')
 }
 
-import {APIClient, LOCALHOST_DOMAINS} from '../src/api-client.js'
+import {APIClient, HerokuAPIError, LOCALHOST_DOMAINS} from '../src/api-client.js'
 import {Command as CommandBase} from '../src/command.js'
 import {credentialSentrySdk} from '../src/credential-manager-core/lib/cli-command-telemetry.js'
 import {writeLoginState} from '../src/credential-manager-core/lib/login-state.js'
@@ -2007,6 +2008,191 @@ describe('api_client', () => {
       await client.get('/apps')
       localApi.done()
     })
+
+  describe('Platform API error documentation URLs', () => {
+    for (const documentationUrl of [
+      'https://devcenter.heroku.com/articles/platform-api-reference',
+      'https://devcenter.heroku.com/articles/platform-api-reference#rate-limits',
+      'https://devcenter.heroku.com/articles/platform-api-reference/',
+    ]) {
+      test
+        .it(`preserves ${documentationUrl}`, async ctx => {
+          api.get('/documentation-error').reply(422, {
+            detail: 'retained detail',
+            message: 'request failed',
+            metadata: {retryable: false},
+            url: documentationUrl,
+          })
+          const client = new APIClient(ctx.config)
+          const failure = await rejectionWithin(client.get('/documentation-error'))
+
+          expect(failure).to.be.instanceOf(HerokuAPIError)
+          const mapped = failure as HerokuAPIError
+          expect(mapped.message).to.equal(`request failed\n\nSee ${documentationUrl} for more information.`)
+          for (const body of [mapped.body, mapped.http.body, mapped.http.http.body]) {
+            expect(body).to.deep.equal({
+              detail: 'retained detail',
+              message: 'request failed',
+              metadata: {retryable: false},
+              url: documentationUrl,
+            })
+          }
+        })
+    }
+
+    test
+      .it('accepts normalized hostname spelling in a documentation URL', async ctx => {
+        const documentationUrl = 'https://DEVCENTER.HEROKU.COM:443/articles/platform-api-reference#rate-limits'
+        const normalizedUrl = 'https://devcenter.heroku.com/articles/platform-api-reference#rate-limits'
+        api.get('/documentation-error').reply(422, {message: 'request failed', url: documentationUrl})
+        const client = new APIClient(ctx.config)
+        const failure = await rejectionWithin(client.get('/documentation-error'))
+
+        expect(failure).to.be.instanceOf(HerokuAPIError)
+        const mapped = failure as HerokuAPIError
+        expect(mapped.message).to.equal(`request failed\n\nSee ${normalizedUrl} for more information.`)
+        for (const body of [mapped.body, mapped.http.body, mapped.http.http.body]) {
+          expect(body.url).to.equal(normalizedUrl)
+        }
+      })
+
+    for (const [kind, unsafeUrl, secret] of [
+      ['authorization', 'https://api.heroku.com/oauth/authorizations/authorization-secret', 'authorization-secret'],
+      ['query', 'https://devcenter.heroku.com/articles/platform-api-reference?token=query-secret', 'query-secret'],
+      ['userinfo', 'https://userinfo-secret@devcenter.heroku.com/articles/platform-api-reference', 'userinfo-secret'],
+      ['scheme', 'http://devcenter.heroku.com/articles/scheme-secret', 'scheme-secret'],
+      ['lookalike', 'https://devcenter.heroku.com.lookalike-secret.example/articles/platform-api-reference', 'lookalike-secret'],
+      ['nondefault port', 'https://devcenter.heroku.com:8443/articles/port-secret', 'port-secret'],
+    ]) {
+      test
+        .it(`omits an unsafe ${kind} URL from every projected error body`, async ctx => {
+          api.get('/documentation-error').reply(422, {
+            detail: 'retained detail',
+            message: 'request failed',
+            metadata: {retryable: true},
+            url: unsafeUrl,
+          })
+          const client = new APIClient(ctx.config)
+          const failure = await rejectionWithin(client.get('/documentation-error'))
+
+          expect(failure).to.be.instanceOf(HerokuAPIError)
+          const mapped = failure as HerokuAPIError
+          expect(mapped.message).to.equal('request failed')
+          for (const body of [mapped.body, mapped.http.body, mapped.http.http.body]) {
+            expect(body).to.deep.equal({
+              detail: 'retained detail',
+              message: 'request failed',
+              metadata: {retryable: true},
+            })
+          }
+
+          expect(mapped.http.message).to.equal('HTTP Error 422 for GET https://api.heroku.com/[redacted]\nrequest failed')
+          expect(mapped.http.message).not.to.contain('retained detail')
+          expect(mapped.http.message).not.to.contain('retryable')
+
+          for (const exposed of [mapped.message, mapped.body, mapped.http.message, mapped.http.body, mapped.http.http.body]) {
+            const diagnostic = typeof exposed === 'string' ? exposed : JSON.stringify(exposed)
+            expect(diagnostic).not.to.contain(unsafeUrl)
+            expect(diagnostic).not.to.contain(secret)
+          }
+        })
+    }
+
+    for (const [kind, message] of [
+      ['missing', undefined],
+      ['blank', '   '],
+      ['non-string', 42],
+    ] as const) {
+      test
+        .it(`sanitizes an unsafe URL when the response message is ${kind}`, async ctx => {
+          const unsafeUrl = `https://attacker.example.com/remediation/${kind}-secret`
+          const body: {detail: string; id: string; message?: number | string; url: string} = {
+            detail: `${kind}-body-secret`,
+            id: 'invalid_response',
+            url: unsafeUrl,
+          }
+          if (message !== undefined) body.message = message
+          api.get('/documentation-error').reply(422, body)
+          const client = new APIClient(ctx.config)
+          const failure = await rejectionWithin(client.get('/documentation-error'))
+
+          expect(failure).to.be.instanceOf(HTTPError)
+          expect(failure).not.to.be.instanceOf(HerokuAPIError)
+          const mapped = failure as HTTPError
+          expect(mapped.message).to.contain('HTTP Error 422 for GET https://api.heroku.com/[redacted]\n')
+          expect(mapped.message).to.contain(`detail: '${kind}-body-secret'`)
+          expect(mapped.message).to.contain("id: 'invalid_response'")
+          for (const exposedBody of [mapped.body, mapped.http.body]) {
+            expect(exposedBody).to.deep.equal({
+              detail: `${kind}-body-secret`,
+              id: 'invalid_response',
+              ...(message === undefined ? {} : {message}),
+            })
+          }
+
+          for (const exposed of [mapped.message, mapped.body, mapped.http.body]) {
+            const diagnostic = typeof exposed === 'string' ? exposed : JSON.stringify(exposed)
+            expect(diagnostic).not.to.contain(unsafeUrl)
+            expect(diagnostic).not.to.contain(`${kind}-secret`)
+          }
+        })
+    }
+
+    for (const [kind, body, expectedDetail] of [
+      ['string', 'historical string response', 'historical string response'],
+      ['array', ['historical array response', {detail: 'retained'}], "[ 'historical array response', { detail: 'retained' } ]"],
+      ['number', 42, '42'],
+    ] as const) {
+      test
+        .it(`preserves historical HTTPError behavior for a malformed ${kind} response body`, async ctx => {
+          api.get('/malformed-error').reply(502, body)
+          const client = new APIClient(ctx.config)
+          const failure = await rejectionWithin(client.get('/malformed-error'))
+
+          expect(failure).to.be.instanceOf(HTTPError)
+          expect(failure).not.to.be.instanceOf(HerokuAPIError)
+          const mapped = failure as HTTPError
+          expect(mapped.message).to.equal(`HTTP Error 502 for GET https://api.heroku.com/[redacted]\n${expectedDetail}`)
+          expect(mapped.statusCode).to.equal(502)
+          expect(mapped.http.statusCode).to.equal(502)
+          expect(mapped.body).to.deep.equal(body)
+          expect(mapped.http.body).to.deep.equal(body)
+        })
+    }
+
+    test
+      .it('refreshes a pre-materialized fallback stack after sanitizing response and request URLs', () => {
+        const unsafeResponseUrl = 'https://attacker.example.com/remediation/response-url-secret'
+        const rawRequestUrl = 'https://api.heroku.com/apps/raw-request-secret?token=request-query-secret'
+        const body = {detail: 'retained detail', id: 'invalid_response', url: unsafeResponseUrl}
+        const httpError = new HTTPError({
+          body,
+          method: 'GET',
+          statusCode: 422,
+          url: rawRequestUrl,
+        } as unknown as ConstructorParameters<typeof HTTPError>[0])
+        const originalStack = httpError.stack
+        expect(originalStack).to.contain('response-url-secret')
+        expect(originalStack).to.contain('raw-request-secret')
+
+        let failure: unknown
+        try {
+          failure = new HerokuAPIError(httpError)
+        } catch (error) {
+          failure = error
+        }
+
+        expect(failure).to.equal(httpError)
+        expect(httpError.body).to.deep.equal({detail: 'retained detail', id: 'invalid_response'})
+        expect(httpError.http.body).to.equal(httpError.body)
+        expect(httpError.message).to.contain('HTTP Error 422 for GET https://api.heroku.com/[redacted]')
+        expect(httpError.message).to.contain("detail: 'retained detail'")
+        expect(httpError.stack).to.contain(httpError.message)
+        for (const secret of [unsafeResponseUrl, 'response-url-secret', rawRequestUrl, 'raw-request-secret', 'request-query-secret']) {
+          expect(httpError.stack).not.to.contain(secret)
+        }
+      })
+  })
 
   describe('request for Account Info endpoint', () => {
     test

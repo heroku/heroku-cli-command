@@ -457,7 +457,7 @@ export class Login {
 
   private getLoginMethodFromPromptKey(key: string): 'browser' {
     if (key === '\u0003') ux.error('Login cancelled by user', {exit: 130})
-    if (key.toLowerCase() === 'q') ux.error('Login cancelled by user', {exit: 0})
+    if (key.toLowerCase() === 'q') ux.error('Login cancelled by user', {exit: 2})
     return 'browser'
   }
 
@@ -518,12 +518,13 @@ export class Login {
       http.message = `HTTP Error ${error.status}${method ? ` for ${method}` : ''}\n${this.herokuErrorMessage(error)}`
     }
 
-    const mapped = new HerokuAPIError(Object.assign(new Error(error.message), {
-      body: {message: this.herokuErrorMessage(error)},
-      statusCode: error.status,
-    }) as unknown as HTTPError)
+    const mappedBody = {message: this.herokuErrorMessage(error)}
+    response.body = mappedBody
+    http.body = mappedBody
+    const mapped = new HerokuAPIError(http)
+    response.body = body
+    http.body = body
     mapped.body = body as HerokuAPIError['body']
-    mapped.http = http
     return mapped
   }
 
@@ -583,7 +584,7 @@ export class Login {
       this.heroku.setAuthEntry(entry)
     } catch (error) {
       if (error instanceof LoginCancelledError) {
-        ux.error(error.message, {exit: error.exitCode})
+        ux.error(error.message, {exit: error.reason === 'quit' ? 2 : error.exitCode})
       }
 
       throw this.mapLoginFailure(error)
