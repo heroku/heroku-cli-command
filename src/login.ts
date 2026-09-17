@@ -1,370 +1,686 @@
+/* eslint-disable n/no-extraneous-import -- installed integration dependency is intentionally local until package metadata lands */
+import type {
+  LoginHttp,
+  LoginHttpRequest,
+  LoginHttpResponse,
+  LoginPromptSelection,
+  LoginResult,
+  LoginStorage,
+} from '@heroku/heroku-credential-manager/login'
 import type {Config} from '@oclif/core/interfaces'
+import type {ChildProcess} from 'node:child_process'
 
-import * as Heroku from '@heroku-cli/schema'
-import {HTTP} from '@heroku/http-call'
+import {
+  Login as CredentialManagerLogin,
+  LoginCancelledError,
+  LoginHttpError,
+} from '@heroku/heroku-credential-manager/login'
+import {HTTP, HTTPError} from '@heroku/http-call'
 import {ux} from '@oclif/core/ux'
 import ansis from 'ansis'
-import debug from 'debug'
-import os from 'node:os'
 import * as readline from 'node:readline'
 
 import {APIClient, HerokuAPIError} from './api-client.js'
 import {getStorageConfig} from './credential-manager-core/lib/credential-storage-selector.js'
-import {writeLoginState} from './credential-manager-core/lib/login-state.js'
-import {saveAuth} from './credential-manager.js'
+import {
+  deleteLoginState,
+  loginStateDataDir,
+  readLoginState,
+  synchronizeLoginLifecycle,
+  writeLoginState,
+} from './credential-manager-core/lib/login-state.js'
+import {
+  credentialServiceForApiHost,
+  getAuth,
+  removeAuth,
+  saveAuth,
+} from './credential-manager.js'
+import {protectDebugOutput} from './http-debug.js'
 import {prompter} from './prompter.js'
-import {vars} from './vars.js'
+import {type ResolvedVars, vars} from './vars.js'
 
-const cliDebug = debug('heroku-cli-command')
-const hostname = os.hostname()
-const thirtyDays = 60 * 60 * 24 * 30
-const REDACTED_TOKEN_ASTERISKS = '*'.repeat(10)
+const REQUEST_TIMEOUT = 60 * 1000
+
+const SAFE_ERROR_RESPONSE_HEADERS = new Set([
+  'content-type',
+  'date',
+  'request-id',
+  'retry-after',
+  'x-request-id',
+])
+const SENSITIVE_LOGIN_HEADERS = new Set([
+  'authorization',
+  'cookie',
+  'heroku-two-factor-code',
+  'proxy-authorization',
+  'set-cookie',
+])
+const NON_REPLAYABLE_BODY_ERROR = 'Cannot redispatch a request with a non-replayable body'
+
+function isSensitiveLoginHeader(header: string): boolean {
+  const normalized = header.toLowerCase()
+  return SENSITIVE_LOGIN_HEADERS.has(normalized) || normalized.startsWith('x-heroku-')
+}
+
+function isReadableStream(body: unknown): body is NodeJS.ReadableStream {
+  return typeof body === 'object' && body !== null && typeof (body as NodeJS.ReadableStream).pipe === 'function'
+}
+
+function isLoopbackHttp(target: URL): boolean {
+  if (target.protocol !== 'http:') return false
+  const hostname = target.hostname.toLowerCase()
+  if (hostname === 'localhost' || hostname === '[::1]' || hostname === '::1') return true
+  const octets = hostname.split('.')
+  return octets.length === 4
+    && octets[0] === '127'
+    && octets.every(octet => /^\d{1,3}$/.test(octet) && Number(octet) <= 255)
+}
+
+function safeErrorHeaders(headers: Record<string, string> | undefined): Record<string, string> {
+  return Object.fromEntries(Object.entries(headers ?? {}).filter(([name]) => SAFE_ERROR_RESPONSE_HEADERS.has(name.toLowerCase())))
+}
+
+function safeLoginDiagnosticUrl(url: string): string {
+  const target = new URL(url)
+  const exactRoutes = new Set([
+    '/account',
+    '/auth',
+    '/oauth/authorizations',
+    '/oauth/authorizations/~',
+    '/oauth/sessions/~',
+  ])
+  let route = exactRoutes.has(target.pathname) ? target.pathname : undefined
+  if (/^\/oauth\/authorizations\/[^/]+$/.test(target.pathname)) route = '/oauth/authorizations/:id'
+  if (/^\/auth\/cli\/browser\/[^/]+$/.test(target.pathname)) route = '/auth/cli/browser/:id'
+  return `${redirectOriginForDiagnostic(target)}${route ?? '/[redacted]'}`
+}
+
+function safeLoginErrorUrl(url: string | undefined): string | undefined {
+  if (!url) return
+  try {
+    const target = new URL(url)
+    if (target.username || target.password) return
+    const safe = safeLoginDiagnosticUrl(url)
+    return safe.endsWith('/[redacted]') ? undefined : safe
+  } catch {
+    // Malformed URLs are omitted from public errors.
+  }
+}
+
+function consistentValue(values: Array<string | undefined>): string | undefined {
+  const provided = [...new Set(values.filter((value): value is string => value !== undefined))]
+  return provided.length === 1 ? provided[0] : undefined
+}
+
+function errorCause(error: unknown): unknown {
+  try {
+    return (error as {cause?: unknown}).cause
+  } catch {
+    return undefined
+  }
+}
+
+function aggregateErrors(error: AggregateError): undefined | unknown[] {
+  try {
+    return [...error.errors]
+  } catch {
+    return undefined
+  }
+}
+
+function safeContainedLoginError(error: unknown, projected = new Map<unknown, Error>()): Error {
+  const existing = projected.get(error)
+  if (existing) return existing
+
+  if (error instanceof AggregateError) {
+    const aggregate = new AggregateError([], 'Login operation failed')
+    projected.set(error, aggregate)
+    aggregate.errors = (aggregateErrors(error) ?? []).map(child => safeContainedLoginError(child, projected))
+    const cause = errorCause(error)
+    if (cause !== undefined) {
+      Object.defineProperty(aggregate, 'cause', {
+        configurable: true,
+        value: safeContainedLoginError(cause, projected),
+        writable: true,
+      })
+    }
+
+    return aggregate
+  }
+
+  const sanitized = new Error('Login operation failed')
+  if ((typeof error === 'object' || typeof error === 'function') && error !== null) projected.set(error, sanitized)
+  const cause = errorCause(error)
+  if (cause !== undefined) {
+    Object.defineProperty(sanitized, 'cause', {
+      configurable: true,
+      value: safeContainedLoginError(cause, projected),
+      writable: true,
+    })
+  }
+
+  return sanitized
+}
+
+function redirectOriginForDiagnostic(target: URL): string {
+  return target.origin === 'null' ? `${target.protocol}//[opaque]` : target.origin
+}
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace Login {
+  export type Method = 'b' | 'browser' | 'i' | 'interactive' | 's' | 'sso'
+
   export interface Options {
     browser?: string
     expiresIn?: number
-    method?: 'browser' | 'interactive' | 'sso'
+    method?: Method
   }
 }
 
-interface NetrcEntry {
-  login: string
-  password: string
-}
+export class LoginHttpAdapter implements LoginHttp {
+  async request<T>(url: string, options: LoginHttpRequest): Promise<LoginHttpResponse<T>> {
+    if (options.signal?.aborted) throw options.signal.reason
 
-const headers = (token: string) => ({headers: {accept: 'application/vnd.heroku+json; version=3', authorization: `Bearer ${token}`}})
+    const target = new URL(url)
+    if (target.username || target.password) {
+      throw new Error(`Refusing credentialed login request at ${redirectOriginForDiagnostic(target)}`)
+    }
+
+    const response = new HTTP<T>(url, {
+      agent: isLoopbackHttp(target) ? false : undefined,
+      body: options.body,
+      headers: options.headers,
+      method: options.method,
+      partial: true,
+      timeout: options.timeoutMs ?? REQUEST_TIMEOUT,
+    })
+    if (isLoopbackHttp(target)) response.options.agent = false
+    protectDebugOutput(response, isSensitiveLoginHeader, safeLoginDiagnosticUrl)
+    const request = response as unknown as {
+      _redirect(): Promise<void>
+      _request(): Promise<void>
+      _wait(ms: number): Promise<void>
+    }
+    let currentUrl = new URL(url)
+    const trustedOrigin = currentUrl.origin
+    const directTransport = isLoopbackHttp(currentUrl)
+    let redirectCount = 0
+    let streamBodyDispatched = false
+    const dispatch = request._request.bind(response)
+
+    request._request = async () => {
+      if (directTransport) response.options.agent = false
+      if (isReadableStream(response.options.body)) {
+        if (streamBodyDispatched) throw new Error(NON_REPLAYABLE_BODY_ERROR)
+        streamBodyDispatched = true
+      }
+
+      await dispatch()
+    }
+
+    request._redirect = async () => {
+      redirectCount++
+      if (redirectCount > 10) throw new Error(`Redirect loop at ${redirectOriginForDiagnostic(currentUrl)}`)
+      currentUrl = this.redirectTarget(response, currentUrl, trustedOrigin)
+      response.url = currentUrl.href
+      if (directTransport) response.options.agent = false
+      await request._request()
+    }
+
+    let rejectAbort: (reason?: unknown) => void
+    const aborted = new Promise<never>((_resolve, reject) => {
+      rejectAbort = reject
+    })
+    const abort = () => {
+      response.request?.destroy(options.signal?.reason)
+      rejectAbort(options.signal?.reason)
+    }
+
+    options.signal?.addEventListener('abort', abort, {once: true})
+    try {
+      if (options.signal) {
+        const wait = request._wait.bind(response)
+        request._wait = ms => this.abortableWait(ms, options.signal!, wait)
+      }
+
+      const pending = request._request()
+      await Promise.race([pending, aborted])
+      return this.response(response, true, safeLoginDiagnosticUrl(currentUrl.href), response.method)
+    } catch (error) {
+      if (options.signal?.aborted) throw options.signal.reason
+      if (error instanceof HTTPError) return this.response(error.http, false, safeLoginDiagnosticUrl(currentUrl.href), error.http.method)
+      throw error
+    } finally {
+      options.signal?.removeEventListener('abort', abort)
+    }
+  }
+
+  private async abortableWait(ms: number, signal: AbortSignal, wait: (ms: number) => Promise<void>): Promise<void> {
+    if (signal.aborted) throw signal.reason
+    let rejectAbort: (reason?: unknown) => void
+    const aborted = new Promise<never>((_resolve, reject) => {
+      rejectAbort = reject
+    })
+    const abort = () => rejectAbort(signal.reason)
+    signal.addEventListener('abort', abort, {once: true})
+    try {
+      await Promise.race([wait(ms), aborted])
+    } finally {
+      signal.removeEventListener('abort', abort)
+    }
+  }
+
+  private redirectTarget<T>(response: HTTP<T>, currentUrl: URL, trustedOrigin: string): URL {
+    const {location} = response.headers
+    const [firstLocation] = Array.isArray(location) ? location : [location]
+    if (!firstLocation) throw new Error(`Redirect from ${redirectOriginForDiagnostic(currentUrl)} has no location header`)
+
+    const targetUrl = new URL(firstLocation, currentUrl)
+    if (targetUrl.origin !== trustedOrigin) {
+      throw new Error(`Refusing cross-origin redirect from ${redirectOriginForDiagnostic(currentUrl)} to ${redirectOriginForDiagnostic(targetUrl)}`)
+    }
+
+    if (targetUrl.username || targetUrl.password) {
+      throw new Error(`Refusing credentialed login redirect at ${redirectOriginForDiagnostic(targetUrl)}`)
+    }
+
+    return targetUrl
+  }
+
+  private response<T>(response: HTTP<T>, ok: boolean, url: string, method: string): LoginHttpResponse<T> {
+    const headers = Object.fromEntries(Object.entries(response.headers).flatMap(([name, value]) => {
+      if (value === undefined) return []
+      return [[name.toLowerCase(), Array.isArray(value) ? value.join(', ') : String(value)]]
+    }))
+    const {body} = response
+
+    const loginResponse: LoginHttpResponse<T> & {method: string; url: string} = {
+      body,
+      headers,
+      method,
+      ok,
+      status: response.statusCode,
+      url,
+    }
+    return loginResponse
+  }
+}
 
 export class Login {
   loginHost = process.env.HEROKU_LOGIN_HOST || 'https://cli-auth.heroku.com'
+  private activeLoginPrompt?: (reason: unknown) => void
+  private activeLoginPromptCompletion?: Promise<void>
+  private delegate: CredentialManagerLogin
+  private delegateLoginHost: string
+  private readonly http = new LoginHttpAdapter()
+  private readonly lifecycleCredentialService: string
+  private readonly loginVars: ResolvedVars
 
-  constructor(private readonly config: Config, private readonly heroku: APIClient) {}
+  constructor(private readonly config: Config, private readonly heroku: APIClient, resolvedVars?: ResolvedVars) {
+    this.loginVars = resolvedVars ?? vars.resolve()
+    this.lifecycleCredentialService = credentialServiceForApiHost(this.loginVars.apiHost)
+    this.delegateLoginHost = this.loginHost
+    this.delegate = this.createDelegate(this.delegateLoginHost)
+  }
 
   async login(opts: Login.Options = {}): Promise<void> {
-    let loggedIn = false
-    try {
-      // timeout after 10 minutes
-      setTimeout(() => {
-        if (!loggedIn) ux.error('timed out')
-      }, 1000 * 60 * 10).unref()
-
-      if (process.env.HEROKU_API_KEY) ux.error('Cannot log in with HEROKU_API_KEY set')
-      if (opts.expiresIn && opts.expiresIn > thirtyDays) ux.error('Cannot set an expiration longer than thirty days')
-
-      const previousToken = await this.heroku.getAuth()
-      const previousAccount = previousToken
-        ? (await this.heroku.getAuthEntry())?.account?.trim() || undefined
-        : undefined
-      let input: string | undefined = opts.method
-      if (!input) {
-        if (opts.expiresIn) {
-          // can't use browser with --expires-in
-          input = 'interactive'
-        } else if (process.env.HEROKU_LEGACY_SSO === '1') {
-          input = 'sso'
-        } else {
-          ux.stderr(`heroku: Press any key to open up the browser to login or ${ansis.yellow('q')} to exit`)
-          const rl = readline.createInterface({
-            input: process.stdin,
-            output: process.stdout,
-          })
-          // Set raw mode to get immediate keypresses
-          process.stdin.setRawMode(true)
-          process.stdin.resume()
-          const key = await new Promise<string>(resolve => {
-            process.stdin.once('data', data => {
-              const key = data.toString()
-              resolve(key)
-            })
-          })
-          // Restore normal terminal settings
-          process.stdin.setRawMode(false)
-          rl.close()
-          ux.stdout('')
-          input = this.getLoginMethodFromPromptKey(key)
-        }
-      }
-
-      let auth
-      switch (input) {
-        case 'b':
-        case 'browser': {
-          auth = await this.browser(opts.browser)
-          break
-        }
-
-        case 'i':
-        case 'interactive': {
-          auth = await this.interactive(previousAccount, opts.expiresIn)
-          break
-        }
-
-        case 's':
-        case 'sso': {
-          auth = await this.sso()
-          break
-        }
-
-        default: {
-          return this.login(opts)
-        }
-      }
-
-      await this.saveToken(auth)
-    } catch (error: any) {
-      throw new HerokuAPIError(error)
-    } finally {
-      loggedIn = true
-    }
+    return synchronizeLoginLifecycle(this.config.dataDir, this.lifecycleCredentialService, () => this.loginUnlocked(opts))
   }
 
-  async logout(token?: string) {
-    const resolvedToken = token ?? await this.heroku.getAuth()
-    if (!resolvedToken) return cliDebug('no credentials to logout')
-    const requests: Promise<any>[] = []
-    // for SSO logins we delete the session since those do not show up in
-    // authorizations because they are created a trusted client
-    requests.push(HTTP.delete(`${vars.apiUrl}/oauth/sessions/~`, headers(resolvedToken))
-      .catch(error => {
-        if (!error.http) throw error
-        if (error.http.statusCode === 404 && error.http.body && error.http.body.id === 'not_found' && error.http.body.resource === 'session') {
-          return
-        }
-
-        if (error.http.statusCode === 401) {
-          return
-        }
-
-        throw error
-      }))
-
-    // grab all the authorizations so that we can delete the token they are
-    // using in the CLI.  we have to do this rather than delete ~ because
-    // the ~ is the API Key, not the authorization that is currently requesting
-    requests.push(HTTP.get<Heroku.OAuthAuthorization[]>(`${vars.apiUrl}/oauth/authorizations`, headers(resolvedToken))
-      .then(async ({body: authorizations}) => {
-      // grab the default authorization because that is the token shown in the
-      // dashboard as API Key and they may be using it for something else and we
-      // would unwittingly break an integration that they are depending on
-        const defaultApiToken = await this.defaultToken()
-        if (defaultApiToken && this.isCurrentOAuthToken(resolvedToken, defaultApiToken)) return
-        return Promise.all(authorizations
-          .filter(a => a.access_token?.token && this.isCurrentOAuthToken(resolvedToken, a.access_token.token))
-          .map(a => HTTP.delete(`${vars.apiUrl}/oauth/authorizations/${a.id}`, headers(resolvedToken))))
-      })
-      .catch(error => {
-        if (!error.http) throw error
-        if (error.http.statusCode === 401) {
-          return []
-        }
-
-        throw error
-      }))
-
-    await Promise.all(requests)
+  async logout(entryOrToken?: LoginResult | string): Promise<void> {
+    return synchronizeLoginLifecycle(this.config.dataDir, this.lifecycleCredentialService, () => this.logoutUnlocked(entryOrToken))
   }
 
-  private async browser(browser?: string): Promise<NetrcEntry> {
-    const {body: urls} = await HTTP.post<{browser_url: string, cli_url: string, token: string}>(`${this.loginHost}/auth`, {
-      body: {description: `Heroku CLI login from ${hostname}`},
-    })
-    const url = `${this.loginHost}${urls.browser_url}`
-    ux.stderr(`Opening browser to ${url}\n`)
-    let urlDisplayed = false
-    const showUrl = () => {
-      if (!urlDisplayed) ux.warn('Cannot open browser.')
-      urlDisplayed = true
-    }
-
-    this.showManualBrowserLoginUrl(url)
-    const open = (await import('open')).default
-    const cp = await open(url, {wait: false, ...(browser ? {app: {name: browser}} : {})})
-    cp.on('error', err => {
-      ux.warn(err)
-      showUrl()
-    })
-    if (process.env.HEROKU_TESTING_HEADLESS_LOGIN === '1') showUrl()
-    cp.on('close', code => {
-      if (code !== 0) showUrl()
-    })
-    ux.action.start('heroku: Waiting for login')
-    const fetchAuth = async (retries = 3): Promise<{access_token: string, error?: string}> => {
-      try {
-        const {body: auth} = await HTTP.get<{access_token: string, error?: string}>(`${this.loginHost}${urls.cli_url}`, {
-          headers: {authorization: `Bearer ${urls.token}`},
-        })
-        return auth
-      } catch (error: any) {
-        if (retries > 0 && error.http && error.http.statusCode > 500) return fetchAuth(retries - 1)
-        throw error
-      }
-    }
-
-    const auth = await fetchAuth()
-    if (auth.error) ux.error(auth.error)
-    ux.action.start('Logging in')
-    const {body: account} = await HTTP.get<Heroku.Account>(`${vars.apiUrl}/account`, headers(auth.access_token))
-    ux.action.stop()
-    this.heroku.setAuthEntry({account: account.email, token: auth.access_token})
-    return {
-      login: account.email!,
-      password: auth.access_token,
-    }
+  private async cancelLoginPrompt(reason: unknown): Promise<void> {
+    this.activeLoginPrompt?.(reason)
+    await this.activeLoginPromptCompletion
   }
 
-  private async createOAuthToken(username: string, password: string, opts: {expiresIn?: number, secondFactor?: string} = {}): Promise<NetrcEntry> {
-    function basicAuth(username: string, password: string) {
-      let auth = [username, password].join(':')
-      auth = Buffer.from(auth).toString('base64')
-      return `Basic ${auth}`
-    }
-
-    const headers: {[k: string]: string} = {
-      accept: 'application/vnd.heroku+json; version=3',
-      authorization: basicAuth(username, password),
-    }
-
-    if (opts.secondFactor) headers['Heroku-Two-Factor-Code'] = opts.secondFactor
-
-    const {body: auth} = await HTTP.post<Heroku.OAuthAuthorization>(`${vars.apiUrl}/oauth/authorizations`, {
-      body: {
-        description: `Heroku CLI login from ${hostname}`,
-        expires_in: opts.expiresIn || thirtyDays,
-        scope: ['global'],
+  private createDelegate(loginHost: string, remoteOnly = false): CredentialManagerLogin {
+    const credentialService = credentialServiceForApiHost(this.loginVars.apiHost)
+    const {credentialStore, useNetrc} = getStorageConfig()
+    const scopedLoginStateDir = !remoteOnly
+      && credentialService !== 'heroku-cli'
+      && credentialStore
+      && !useNetrc
+      && this.config?.dataDir
+      ? loginStateDataDir(this.config.dataDir, this.loginVars.apiHost, credentialService)
+      : undefined
+    const storage: LoginStorage = {
+      deleteLoginState: remoteOnly ? async () => {} : deleteLoginState,
+      async getAuth(account, host, service) {
+        const selectedAccount = account ?? (scopedLoginStateDir ? (await readLoginState(scopedLoginStateDir))?.account : undefined)
+        const entry = await getAuth(selectedAccount, host, service)
+        if (!entry.account) throw new Error('Stored credential did not include an account')
+        if (!entry.token) throw new Error('Stored credential did not include a token')
+        return {account: entry.account, token: entry.token}
       },
-      headers,
-    })
-    return {login: auth.user!.email!, password: auth.access_token!.token!}
-  }
+      hasNativeStorage() {
+        return Boolean(getStorageConfig().credentialStore)
+      },
+      readLoginState,
+      removeAuth: remoteOnly
+        ? async () => {}
+        : async (account, hosts, service, expectedToken) => {
+          let removeFailure: unknown
+          try {
+            await removeAuth(account, hosts, service, expectedToken)
+          } catch (error) {
+            removeFailure = error
+          }
 
-  private async defaultToken(): Promise<string | undefined> {
-    const token = await this.heroku.getAuth()
-    if (!token) return
-    try {
-      const {body: authorization} = await HTTP.get<Heroku.OAuthAuthorization>(`${vars.apiUrl}/oauth/authorizations/~`, headers(token))
-      return authorization.access_token && authorization.access_token.token
-    } catch (error: any) {
-      if (!error.http) throw error
-      if (error.http.statusCode === 404 && error.http.body && error.http.body.id === 'not_found' && error.http.body.resource === 'authorization') return
-      if (error.http.statusCode === 401) return
-      throw error
+          let stateFailure: unknown
+          if (scopedLoginStateDir) {
+            try {
+              await deleteLoginState(scopedLoginStateDir)
+            } catch (error) {
+              stateFailure = error
+            }
+          }
+
+          if (removeFailure !== undefined && stateFailure !== undefined) {
+            throw new AggregateError([removeFailure, stateFailure], 'Credential cleanup failed')
+          }
+
+          if (removeFailure !== undefined) throw removeFailure
+          if (stateFailure !== undefined) throw stateFailure
+        },
+      saveAuth: remoteOnly
+        ? async () => {}
+        : async (account, token, hosts, service) => {
+          await saveAuth(account, token, hosts, service)
+
+          if (scopedLoginStateDir) {
+            await writeLoginState(scopedLoginStateDir, account)
+          }
+        },
+      writeLoginState: remoteOnly
+        ? async () => {}
+        : writeLoginState,
     }
+
+    return new CredentialManagerLogin({
+      browser: {
+        open: async (url, options) => {
+          const open = (await import('open')).default
+          const child = await open(url, {
+            wait: false,
+            ...(options?.browser ? {app: {name: options.browser}} : {}),
+          })
+          this.observeBrowserChild(child)
+        },
+      },
+      config: {
+        apiHost: this.loginVars.apiHost,
+        apiUrl: this.loginVars.apiUrl,
+        dataDir: remoteOnly ? undefined : this.config?.dataDir,
+        gitHost: this.loginVars.httpGitHost,
+        loginHost,
+        requestTimeoutMs: REQUEST_TIMEOUT,
+      },
+      environment: {get: name => process.env[name]},
+      http: this.http,
+      output: {
+        warn: message => ux.warn(message),
+        write: message => ux.stderr(message.startsWith('http') ? ansis.greenBright(message) : message),
+      },
+      progress: {
+        start: message => ux.action.start(message),
+        stop() {
+          ux.action.stop()
+        },
+      },
+      prompt: {
+        accessToken: async () => this.promptValue('password', 'Access token', 'password'),
+        email: async previousAccount => {
+          ux.stderr('heroku: Enter your login credentials\n')
+          return this.promptValue('email', 'Email', 'input', previousAccount)
+        },
+        loginMethod: () => this.loginMethod(),
+        organization: previousOrganization => this.promptValue('orgName', 'Organization name', 'input', previousOrganization),
+        password: () => this.promptValue('password', 'Password', 'password'),
+        secondFactor: () => this.promptValue('secondFactor', 'Two-factor code', 'password'),
+      },
+      storage,
+      timers: {
+        clearTimeout: timer => clearTimeout(timer as ReturnType<typeof setTimeout>),
+        setTimeout: (handler, timeoutMs) => {
+          const timer = setTimeout(() => {
+            this.cancelLoginPrompt(new Error('Login timed out')).then(handler).catch(handler)
+          }, timeoutMs)
+          timer.unref()
+          return timer
+        },
+      },
+    })
   }
 
   private getLoginMethodFromPromptKey(key: string): 'browser' {
-    if (key === '\u0003') {
-      ux.error('Login cancelled by user', {exit: 130})
-    }
-
-    if (key.toLowerCase() === 'q') {
-      ux.error('Login cancelled by user')
-    }
-
+    if (key === '\u0003') ux.error('Login cancelled by user', {exit: 130})
+    if (key.toLowerCase() === 'q') ux.error('Login cancelled by user', {exit: 2})
     return 'browser'
   }
 
-  private async interactive(login?: string, expiresIn?: number): Promise<NetrcEntry> {
-    ux.stderr('heroku: Enter your login credentials\n')
-    const {email} = await prompter.prompt<{email: string}>([{
-      default: login,
-      message: 'Email',
-      name: 'email',
-      type: 'input',
-    }])
-    login = email
-
-    const {password} = await prompter.prompt<{password: string}>([{
-      message: 'Password',
-      name: 'password',
-      type: 'password',
-    }])
-
-    let auth
-    try {
-      auth = await this.createOAuthToken(login!, password, {expiresIn})
-    } catch (error: any) {
-      if (error.body && error.body.id === 'device_trust_required') {
-        error.body.message = 'The interactive flag requires Two-Factor Authentication to be enabled on your account. Please use heroku login.'
-        throw error
+  private herokuApiError(error: LoginHttpError): HerokuAPIError {
+    const context = error as LoginHttpError & {
+      headers?: Record<string, string>
+      http?: {
+        headers?: Record<string, string>
+        method?: string
+        url?: string
       }
-
-      if (!error.body || error.body.id !== 'two_factor') {
-        throw error
-      }
-
-      const {secondFactor} = await prompter.prompt<{secondFactor: string}>([{
-        message: 'Two-factor code',
-        name: 'secondFactor',
-        type: 'password',
-      }])
-      auth = await this.createOAuthToken(login!, password, {expiresIn, secondFactor})
+      method?: string
+      stack?: string
+      url?: string
+    }
+    const {body} = error
+    const headers = safeErrorHeaders(context.headers ?? context.http?.headers)
+    const stack = context.stack ?? ''
+    const stackMethod = /authorizationCleanup/.test(stack)
+      ? 'DELETE'
+      : (/createOAuthToken/.test(stack) ? 'POST' : undefined)
+    const stackUrl = /createOAuthToken/.test(stack)
+      ? `${new URL(this.loginVars.apiUrl).origin}/oauth/authorizations`
+      : undefined
+    const method = consistentValue([stackMethod, context.method, context.http?.method])
+    const safeOrigin = new URL(this.loginVars.apiUrl).origin
+    const url = stackMethod === 'DELETE'
+      ? `${safeOrigin}/oauth/authorizations/:id`
+      : (stackUrl ?? consistentValue([
+        safeLoginErrorUrl(context.url),
+        safeLoginErrorUrl(context.http?.url),
+      ]))
+    const response = new HTTP(url ?? 'https://login-error.invalid/', {
+      method,
+    })
+    const responseOptions = response.options as typeof response.options & {port?: number | string}
+    if (url) {
+      const responseUrl = new URL(url)
+      responseOptions.host = responseUrl.host
+      responseOptions.port = responseUrl.port || responseOptions.port
     }
 
-    this.heroku.setAuthEntry({account: auth.login, token: auth.password})
-    return auth
+    Object.defineProperties(response, {
+      body: {
+        configurable: true, enumerable: true, value: body ?? {}, writable: true,
+      },
+      headers: {configurable: true, enumerable: true, value: headers},
+      method: {configurable: true, enumerable: true, value: method},
+      statusCode: {configurable: true, enumerable: true, value: error.status},
+    })
+    const http = new HTTPError(response)
+    response.body = body
+    http.body = body
+    Object.assign(http, {headers, method})
+    Object.defineProperty(http, 'url', {configurable: true, enumerable: true, value: url})
+    if (!url) {
+      Object.defineProperty(response, 'url', {configurable: true, enumerable: true, value: undefined})
+      http.message = `HTTP Error ${error.status}${method ? ` for ${method}` : ''}\n${this.herokuErrorMessage(error)}`
+    }
+
+    const mappedBody = {message: this.herokuErrorMessage(error)}
+    response.body = mappedBody
+    http.body = mappedBody
+    const mapped = new HerokuAPIError(http)
+    response.body = body
+    http.body = body
+    mapped.body = body as HerokuAPIError['body']
+    return mapped
+  }
+
+  private herokuErrorMessage(error: LoginHttpError): string {
+    const rawBody: unknown = error.body
+    const body = rawBody as undefined | {id?: string; message?: string}
+    if (body?.message?.trim() && body.id?.trim()) return `${body.message}\n\nError ID: ${body.id}`
+    if (body?.message?.trim()) return body.message
+    if (body?.id?.trim()) return `Error ID: ${body.id}`
+    if (typeof rawBody === 'string' && rawBody.trim()) return rawBody
+    return error.message
   }
 
   private isCurrentOAuthToken(localToken: string, apiToken: string): boolean {
-    const asteriskIndex = apiToken.indexOf(REDACTED_TOKEN_ASTERISKS)
-
-    if (asteriskIndex === -1) {
-      // raw value stored, direct match works
-      return localToken === apiToken
-    }
-
-    const prefix = apiToken.slice(0, asteriskIndex)
-    const suffix = apiToken.slice(asteriskIndex + REDACTED_TOKEN_ASTERISKS.length)
-    return localToken.startsWith(prefix) && (suffix === '' || localToken.endsWith(suffix))
+    const match = /^(.*?)\*{10}(.*)$/.exec(apiToken)
+    return match ? localToken.startsWith(match[1]) && (!match[2] || localToken.endsWith(match[2])) : localToken === apiToken
   }
 
-  private async saveToken(entry: NetrcEntry) {
-    await saveAuth(entry.login, entry.password, [vars.apiHost, vars.httpGitHost])
-    const config = getStorageConfig()
-    if (config.credentialStore && this.config.dataDir) {
-      await writeLoginState(this.config.dataDir, entry.login)
+  private async loginMethod(): Promise<LoginPromptSelection> {
+    ux.stderr(`heroku: Press any key to open up the browser to login or ${ansis.yellow('q')} to exit`)
+    if (!process.stdin.isTTY) return {method: 'browser'}
+
+    const rl = readline.createInterface({input: process.stdin, output: process.stdout})
+    const rawMode = typeof process.stdin.setRawMode === 'function'
+    const previousRawMode = Boolean(process.stdin.isRaw)
+    if (rawMode) process.stdin.setRawMode(true)
+    process.stdin.resume()
+    let cancelPrompt: ((reason: unknown) => void) | undefined
+    let onData: ((data: Buffer) => void) | undefined
+    try {
+      const key = await new Promise<string>((resolve, reject) => {
+        cancelPrompt = reject
+        onData = data => resolve(data.toString())
+        this.activeLoginPrompt = cancelPrompt
+        process.stdin.once('data', onData)
+      })
+      ux.stdout('')
+      return {method: this.getLoginMethodFromPromptKey(key)}
+    } finally {
+      if (onData) process.stdin.removeListener('data', onData)
+      if (this.activeLoginPrompt === cancelPrompt) this.activeLoginPrompt = undefined
+      if (rawMode) process.stdin.setRawMode(previousRawMode)
+      rl.close()
     }
   }
 
-  private showManualBrowserLoginUrl(url: string) {
+  private async loginUnlocked(opts: Login.Options): Promise<void> {
+    try {
+      const options = this.normalizeOptions(opts)
+      if (this.loginHost !== this.delegateLoginHost) {
+        const delegate = this.createDelegate(this.loginHost)
+        this.delegate = delegate
+        this.delegateLoginHost = this.loginHost
+      }
+
+      const entry = await this.delegate.login(options)
+      this.heroku.setAuthEntry(entry)
+    } catch (error) {
+      if (error instanceof LoginCancelledError) {
+        ux.error(error.message, {exit: error.reason === 'quit' ? 2 : error.exitCode})
+      }
+
+      throw this.mapLoginFailure(error)
+    }
+  }
+
+  private async logoutUnlocked(entryOrToken?: LoginResult | string): Promise<void> {
+    const cached = typeof entryOrToken === 'object'
+      ? entryOrToken
+      : (typeof entryOrToken === 'string' ? undefined : await this.heroku.getAuthEntry())
+    const token = typeof entryOrToken === 'string' ? entryOrToken : cached?.token
+    const entry = cached?.account && token ? {account: cached.account, token} : undefined
+    if (!token) return
+
+    try {
+      await (entry
+        ? this.delegate.logout(entry)
+        : this.createDelegate(this.loginHost, true).logout({account: 'remote-only', token}))
+    } catch (error) {
+      throw this.mapLoginFailure(error)
+    }
+  }
+
+  private mapLoginFailure(error: unknown): unknown {
+    if (error instanceof LoginHttpError) return this.herokuApiError(error)
+    if (!(error instanceof AggregateError)) return error
+
+    const contained = aggregateErrors(error)
+    if (!contained) return error
+    if (!contained.some(failure => failure instanceof LoginHttpError)) return error
+
+    const safeProjection = new Map<unknown, Error>()
+    const projected = contained.map(failure => failure instanceof LoginHttpError
+      ? this.herokuApiError(failure)
+      : safeContainedLoginError(failure, safeProjection))
+    const primary = projected[0] ?? safeContainedLoginError(error, safeProjection)
+    if (!(contained[0] instanceof LoginHttpError)) {
+      return new AggregateError(projected, primary.message, {cause: primary})
+    }
+
+    const mapped = this.herokuApiError(contained[0])
+    Object.defineProperties(mapped, {
+      cause: {configurable: true, value: primary, writable: true},
+      errors: {configurable: true, value: projected, writable: true},
+    })
+    return mapped
+  }
+
+  private normalizeOptions(opts: Login.Options): {browser?: string; expiresIn?: number; method?: 'browser' | 'interactive' | 'sso'} {
+    const methods = {b: 'browser', i: 'interactive', s: 'sso'} as const
+    const method = opts.method && opts.method in methods
+      ? methods[opts.method as keyof typeof methods]
+      : opts.method as 'browser' | 'interactive' | 'sso' | undefined
+    return {...opts, method}
+  }
+
+  private observeBrowserChild(child: ChildProcess): void {
+    child.once('error', cause => ux.warn(cause))
+    child.once('close', code => {
+      if (code !== 0) ux.warn('Cannot open browser. Continue with the manual URL above.')
+    })
+  }
+
+  private async promptValue(
+    name: 'email' | 'orgName' | 'password' | 'secondFactor',
+    message: string,
+    type: 'input' | 'password',
+    defaultValue?: string,
+  ): Promise<string> {
+    const controller = new AbortController()
+    const cancelPrompt = (reason: unknown) => controller.abort(reason)
+    const pending = prompter.prompt<Record<typeof name, string>>([{
+      ...(defaultValue ? {default: defaultValue} : {}),
+      message,
+      name,
+      type,
+    }], {signal: controller.signal})
+    const completion = pending.then(() => {}, () => {})
+    this.activeLoginPrompt = cancelPrompt
+    this.activeLoginPromptCompletion = completion
+    try {
+      const answer = await pending
+      return answer[name]
+    } catch (error) {
+      if (controller.signal.aborted) throw controller.signal.reason
+      throw error
+    } finally {
+      if (this.activeLoginPrompt === cancelPrompt) {
+        this.activeLoginPrompt = undefined
+        this.activeLoginPromptCompletion = undefined
+      }
+    }
+  }
+
+  private showManualBrowserLoginUrl(url: string): void {
     ux.warn('If browser does not open, visit:')
     ux.stderr(ansis.greenBright(url))
-  }
-
-  private async sso(): Promise<NetrcEntry> {
-    const open = (await import('open')).default
-    let url = process.env.SSO_URL
-    let org = process.env.HEROKU_ORGANIZATION
-    if (!url) {
-      const {orgName} = await prompter.prompt<{orgName: string}>([{
-        default: org,
-        message: 'Organization name',
-        name: 'orgName',
-        type: 'input',
-      }])
-      org = orgName
-      url = `https://sso.heroku.com/saml/${encodeURIComponent(org!)}/init?cli=true`
-    }
-
-    // TODO: handle browser
-    cliDebug(`opening browser to ${url}`)
-    ux.stderr(`Opening browser to:\n${url}\n`)
-    ux.stderr(ansis.gray(`If the browser fails to open or you're authenticating on a remote
-machine, please manually open the URL above in your browser.\n`))
-    await open(url, {wait: false})
-
-    const {password} = await prompter.prompt<{password: string}>([{
-      message: 'Access token',
-      name: 'password',
-      type: 'password',
-    }])
-    ux.action.start('Validating token')
-    const {body: account} = await HTTP.get<Heroku.Account>(`${vars.apiUrl}/account`, headers(password))
-    ux.action.stop()
-    this.heroku.setAuthEntry({account: account.email, token: password})
-    return {
-      login: account.email!,
-      password,
-    }
   }
 }

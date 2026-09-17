@@ -10,7 +10,8 @@ import {Command} from '../src/command.js'
 import * as flags from '../src/flags/index.js'
 import {restoreCredentialManagerStub, stubCredentialManager, stubCredentialManagerWithNoCredentials} from './helpers/credential-manager-stub.js'
 
-const {env: processEnv} = process
+const commandEnvKeys = ['HEROKU_API_KEY', 'HEROKU_API_TOKEN', 'HEROKU_DEBUG', 'HEROKU_DEBUG_HEADERS', 'HEROKU_HEADERS', 'HEROKU_HOST'] as const
+let commandEnv: Partial<Record<(typeof commandEnvKeys)[number], string>>
 
 const test = fancy
   .add('config', () => {
@@ -42,12 +43,18 @@ class CommandWithoutPromptInBaseFlags extends TestableCommand {
 describe('command', () => {
   describe('credential preload in init', () => {
     beforeEach(() => {
-      process.env = {}
+      commandEnv = Object.fromEntries(commandEnvKeys.map(key => [key, process.env[key]]))
+      for (const key of commandEnvKeys) delete process.env[key]
       stubCredentialManager('mypass')
     })
 
     afterEach(() => {
-      process.env = processEnv
+      for (const key of commandEnvKeys) {
+        const value = commandEnv[key]
+        if (value === undefined) delete process.env[key]
+        else process.env[key] = value
+      }
+
       restoreCredentialManagerStub()
     })
 

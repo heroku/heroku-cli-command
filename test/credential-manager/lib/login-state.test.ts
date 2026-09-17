@@ -1,10 +1,15 @@
 import {expect} from 'chai'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
-import {join} from 'node:path'
+import {join, relative} from 'node:path'
 import sinon from 'sinon'
 
-import {deleteLoginState, readLoginState, writeLoginState} from '../../../src/credential-manager-core/lib/login-state.js'
+import {
+  deleteLoginState,
+  loginStateDataDir,
+  readLoginState,
+  writeLoginState,
+} from '../../../src/credential-manager-core/lib/login-state.js'
 
 const skipOnWindows = process.platform === 'win32' ? it.skip : it
 
@@ -18,6 +23,39 @@ describe('login-state', function () {
   afterEach(function () {
     fs.rmSync(tmpDir, {force: true, recursive: true})
     sinon.restore()
+  })
+
+  describe('loginStateDataDir', function () {
+    it('keeps canonical production state at the historical global path', function () {
+      expect(loginStateDataDir(tmpDir, 'api.heroku.com', 'heroku-cli')).to.equal(tmpDir)
+    })
+
+    it('derives a stable traversal-safe directory from the exact custom scope', function () {
+      const service = 'heroku-cli@../../api.staging.heroku.com:8443'
+      const scoped = loginStateDataDir(tmpDir, 'api.staging.heroku.com:8443', service)
+      const relativePath = relative(tmpDir, scoped)
+
+      expect(scoped).to.equal(loginStateDataDir(tmpDir, 'api.staging.heroku.com:8443', service))
+      expect(relativePath).to.match(/^login-state[/\\][\da-f]{64}$/)
+      expect(relativePath).to.not.include('..')
+      expect(scoped).to.not.equal(loginStateDataDir(tmpDir, 'api.staging.heroku.com:8444', service))
+      expect(scoped).to.not.equal(loginStateDataDir(tmpDir, 'api.staging.heroku.com:8443', `${service}-other`))
+    })
+
+    it('uses the login-state format and permissions for scoped custom state', async function () {
+      const scoped = loginStateDataDir(tmpDir, '[::1]:8443', 'heroku-cli@[::1]:8443')
+
+      await writeLoginState(scoped, 'custom@example.com')
+
+      expect(await readLoginState(scoped)).to.deep.equal({account: 'custom@example.com'})
+      expect(JSON.parse(fs.readFileSync(join(scoped, 'login.json'), 'utf8'))).to.deep.equal({account: 'custom@example.com'})
+      if (process.platform !== 'win32') {
+        // eslint-disable-next-line no-bitwise
+        expect(fs.statSync(scoped).mode & 0o777).to.equal(0o700)
+        // eslint-disable-next-line no-bitwise
+        expect(fs.statSync(join(scoped, 'login.json')).mode & 0o777).to.equal(0o600)
+      }
+    })
   })
 
   describe('readLoginState', function () {

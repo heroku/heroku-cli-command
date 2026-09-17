@@ -3,12 +3,12 @@ import chaiAsPromised from 'chai-as-promised'
 import sinon from 'sinon'
 import {stderr} from 'stdout-stderr'
 
-import {LinuxHandler} from '../../src/credential-manager-core/credential-handlers/linux-handler.js'
-import {MacOSHandler} from '../../src/credential-manager-core/credential-handlers/macos-handler.js'
-import {NetrcHandler} from '../../src/credential-manager-core/credential-handlers/netrc-handler.js'
-import {WindowsHandler} from '../../src/credential-manager-core/credential-handlers/windows-handler.js'
-import * as credentialManager from '../../src/credential-manager-core/index.js'
-import {CredentialStore} from '../../src/credential-manager-core/lib/credential-storage-selector.js'
+import {LinuxHandler} from '../../src/deprecated/credential-manager-core/credential-handlers/linux-handler.js'
+import {MacOSHandler} from '../../src/deprecated/credential-manager-core/credential-handlers/macos-handler.js'
+import {NetrcHandler} from '../../src/deprecated/credential-manager-core/credential-handlers/netrc-handler.js'
+import {WindowsHandler} from '../../src/deprecated/credential-manager-core/credential-handlers/windows-handler.js'
+import * as credentialManager from '../../src/deprecated/credential-manager-core/index.js'
+import {CredentialStore} from '../../src/deprecated/credential-manager-core/lib/credential-storage-selector.js'
 import {unwrap} from '../helpers/unwrap.js'
 
 use(chaiAsPromised)

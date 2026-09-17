@@ -1,49 +1,56 @@
-import debug from 'debug'
-import * as fs from 'node:fs'
-import {join} from 'node:path'
+/** @deprecated Import login-state APIs from `@heroku/heroku-credential-manager`. */
+/* eslint-disable n/no-extraneous-import */
+import {createHash} from 'node:crypto'
+import {join, resolve} from 'node:path'
 
-const credDebug = debug('heroku-credential-manager')
+export {
+  deleteLoginState,
+  readLoginState,
+  writeLoginState,
+} from '@heroku/heroku-credential-manager'
+/* eslint-enable n/no-extraneous-import */
 
-const LOGIN_STATE_FILE = 'login.json'
+const DEFAULT_API_HOST = 'api.heroku.com'
+const DEFAULT_CREDENTIAL_SERVICE = 'heroku-cli'
+const lifecycleQueues = new Map<string, {pending: number; tail: Promise<void>}>()
 
-type LoginState = {
-  account: string
-}
+/** Serializes credential and login-state mutations for one persistent storage scope. */
+export async function synchronizeLoginLifecycle<T>(
+  dataDir: string | undefined,
+  credentialService: string,
+  task: () => Promise<T>,
+): Promise<T> {
+  const key = `${dataDir ? resolve(dataDir) : ''}\0${credentialService}`
+  const queue = lifecycleQueues.get(key) ?? {pending: 0, tail: Promise.resolve()}
+  queue.pending++
+  const previous = queue.tail
+  let release!: () => void
+  queue.tail = new Promise<void>(resolveTail => {
+    release = resolveTail
+  })
+  lifecycleQueues.set(key, queue)
 
-export async function readLoginState(dataDir: string): Promise<LoginState | undefined> {
-  const filePath = join(dataDir, LOGIN_STATE_FILE)
-
+  await previous
   try {
-    const content = await fs.promises.readFile(filePath, 'utf8')
-    const parsed = JSON.parse(content)
-
-    if (typeof parsed?.account === 'string' && parsed.account.length > 0) {
-      return {account: parsed.account}
-    }
-
-    credDebug('login state file missing valid account field: %s', filePath)
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-      credDebug('failed to read login state file: %s', (error as Error).message)
-    }
+    return await task()
+  } finally {
+    release()
+    queue.pending--
+    if (queue.pending === 0 && lifecycleQueues.get(key) === queue) lifecycleQueues.delete(key)
   }
 }
 
-export async function writeLoginState(dataDir: string, account: string): Promise<void> {
-  const filePath = join(dataDir, LOGIN_STATE_FILE)
+/**
+ * Keeps production on its historical login.json while isolating custom native
+ * account selection by the exact API host and credential service.
+ */
+export function loginStateDataDir(dataDir: string, apiHost: string, credentialService: string): string {
+  if (apiHost === DEFAULT_API_HOST && credentialService === DEFAULT_CREDENTIAL_SERVICE) return dataDir
 
-  await fs.promises.mkdir(dataDir, {mode: 0o700, recursive: true})
-  await fs.promises.writeFile(filePath, JSON.stringify({account}) + '\n', {encoding: 'utf8', mode: 0o600})
-}
-
-export async function deleteLoginState(dataDir: string): Promise<void> {
-  const filePath = join(dataDir, LOGIN_STATE_FILE)
-
-  try {
-    await fs.promises.unlink(filePath)
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-      credDebug('failed to delete login state file: %s', (error as Error).message)
-    }
-  }
+  const scope = createHash('sha256')
+    .update(credentialService)
+    .update('\0')
+    .update(apiHost)
+    .digest('hex')
+  return join(dataDir, 'login-state', scope)
 }
