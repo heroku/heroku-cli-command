@@ -1270,6 +1270,50 @@ describe('api_client', () => {
       })
 
     test
+      .it('supports the Data API defaults.host routing pattern with generated authorization', async ctx => {
+        const dataApi = nock('https://api.data.heroku.com', {
+          reqheaders: {authorization: 'Bearer mypass'},
+        })
+          .get('/apps')
+          .reply(200, [{name: 'myapp'}])
+        const client = new APIClient(ctx.config)
+        client.defaults.host = 'api.data.heroku.com'
+
+        const {body} = await client.get('/apps')
+
+        expect(body).to.deep.equal([{name: 'myapp'}])
+        dataApi.done()
+      })
+
+    test
+      .it('does not authorize an untrusted defaults.host destination', async ctx => {
+        const external = nock('https://example.com', {badheaders: ['authorization']})
+          .get('/apps')
+          .reply(200, [])
+        const client = new APIClient(ctx.config)
+        client.defaults.host = 'example.com'
+
+        await client.get('/apps')
+
+        external.done()
+      })
+
+    test
+      .it('does not login or retry with authorization after an untrusted defaults.host 401', async ctx => {
+        const external = nock('https://example.com', {badheaders: ['authorization']})
+          .get('/account')
+          .reply(401, {id: 'unauthorized', message: 'nope'})
+        const client = new APIClient(ctx.config)
+        client.defaults.host = 'example.com'
+        const login = sinon.stub(client, 'login').rejects(new Error('login invoked'))
+
+        await chaiExpect(client.get('/account')).to.be.rejectedWith(HerokuAPIError, 'nope')
+
+        expect(login.called).to.be.false
+        external.done()
+      })
+
+    test
       .it('rejects unsafe defaults added by an HTTP subclass at dispatch', async ctx => {
         const client = new APIClient(ctx.config)
         class UnsafeSubclass<T> extends client.http<T> {}

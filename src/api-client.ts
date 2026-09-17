@@ -56,7 +56,7 @@ function normalizeHostname(hostname: string): string {
   return hostname.startsWith('[') && hostname.endsWith(']') ? hostname.slice(1, -1) : hostname
 }
 
-function requestTarget(requestUrl: string, opts: APIClient.Options, apiUrl: URL): URL {
+function requestTarget(requestUrl: string, opts: APIClient.Options, apiUrl: URL, defaultHost: null | string | undefined = apiUrl.hostname): URL {
   let parsed: undefined | URL
   try {
     parsed = new URL(requestUrl)
@@ -64,7 +64,7 @@ function requestTarget(requestUrl: string, opts: APIClient.Options, apiUrl: URL)
 
   const relative = parsed ?? new URL(requestUrl, apiUrl)
   const protocol = parsed?.protocol || opts.protocol || apiUrl.protocol
-  const hostname = normalizeHostname(String(opts.hostname || parsed?.hostname || apiUrl.hostname))
+  const hostname = normalizeHostname(String(opts.hostname || parsed?.hostname || defaultHost || apiUrl.hostname))
   const port = parsed?.port || opts.port || apiUrl.port || (protocol === 'https:' ? 443 : 80)
   const formattedHostname = hostname.includes(':') ? `[${hostname}]` : hostname
   const userinfo = relative.username || relative.password ? `${relative.username}:${relative.password}@` : ''
@@ -333,12 +333,12 @@ export class APIClient {
 
       if (defaults.auth !== undefined) throw new Error('APIClient does not support mutable default auth')
       if (defaults.hostname !== undefined) throw new Error('APIClient does not support mutable default hostname')
-      for (const option of ['host', 'port', 'protocol'] as const) {
+      for (const option of ['port', 'protocol'] as const) {
         if (defaults[option] !== routingDefaults[option]) throw new Error(`APIClient does not support mutable default ${option}`)
       }
 
       const prepared = cloneRequestOptions(requestOptions)
-      const target = requestTarget(requestUrl, prepared, apiUrl)
+      const target = requestTarget(requestUrl, prepared, apiUrl, defaults.host)
       if (target.username || target.password) {
         throw new Error(`APIClient does not support credentialed request URLs at ${redirectOriginForDiagnostic(target)}`)
       }
@@ -403,7 +403,7 @@ export class APIClient {
           }).filter(([, value]) => value !== undefined)) as typeof this.options.headers
         }
 
-        this.redirectUrl = requestTarget(requestUrl, this.options, apiUrl)
+        this.redirectUrl = requestTarget(requestUrl, this.options, apiUrl, this.options.host)
         this.originalOrigin = this.redirectUrl.origin
         this.callerSuppliedAuthorization = hasHeader(prepared.headers!, 'authorization')
         this.routingSnapshot = routingOptions(this.options)
@@ -461,7 +461,7 @@ export class APIClient {
       // eslint-disable-next-line complexity
       static async request<T>(url: string, requestOpts: APIClient.Options = {}, retries = 3, generatedAuthorization = false): Promise<APIHTTPClient<T>> {
         const opts = prepareRequestOptions(url, requestOpts, this.defaults)
-        const targetUrl = requestTarget(url, opts, apiUrl)
+        const targetUrl = requestTarget(url, opts, apiUrl, this.defaults.host)
         const targetAllowsAuthorization = authorizationAllowed(targetUrl)
         const callerSuppliedAuthorization = !generatedAuthorization && hasHeader(opts.headers!, 'authorization')
         const requestUsesGeneratedAuthorization = generatedAuthorization || (targetAllowsAuthorization && !callerSuppliedAuthorization)
@@ -598,7 +598,7 @@ export class APIClient {
 
       async _request(): Promise<void> {
         validateRequestTransport(this.ctor.defaults, 'mutable default')
-        for (const option of ['host', 'port', 'protocol'] as const) {
+        for (const option of ['port', 'protocol'] as const) {
           if (this.ctor.defaults[option] !== routingDefaults[option]) throw new Error(`APIClient does not support mutable default ${option}`)
         }
 
