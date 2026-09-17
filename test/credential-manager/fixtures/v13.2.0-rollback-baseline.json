@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "packageVersion": "13.2.0",
+  "provenance": {
+    "commit": "d114e3d2a1afb269f63bf9c3985a7017e096dbc4",
+    "sourceRoot": "src/credential-manager-core",
+    "derivation": "SHA-256 and UTF-8 byte length from each file at the recorded base HEAD"
+  },
+  "allowedRelocations": [
+    {
+      "path": "lib/cli-command-telemetry.ts",
+      "baseline": "join(dir, '../../../package.json')",
+      "archived": "join(dir, '../../../../package.json')"
+    }
+  ],
+  "files": [
+    {
+      "path": "credential-handlers/linux-handler.ts",
+      "sha256": "3b8b981aa2da8717e1a38d8c65675240b196b173753ab84976c47b14d8385fbc",
+      "bytes": 5777
+    },
+    {
+      "path": "credential-handlers/macos-handler.ts",
+      "sha256": "989b1e5f2c015248ace6ae8b9fc781f26e47992205c017424c416b1f4f560b38",
+      "bytes": 5053
+    },
+    {
+      "path": "credential-handlers/netrc-handler.ts",
+      "sha256": "404c654322a00b60068dafdf98dc49f09e288b90c968dd5e412959ba51f8723e",
+      "bytes": 2859
+    },
+    {
+      "path": "credential-handlers/windows-handler.ts",
+      "sha256": "beaadb2a7bf8aff8c2c949021f72b78e4b359f30cc19b360b852236330fec1e0",
+      "bytes": 6614
+    },
+    {
+      "path": "index.ts",
+      "sha256": "bb22fdabeba416cb33b9f7fc470b167e5bcb5bf0875c0278c6565036a67d9caa",
+      "bytes": 6696
+    },
+    {
+      "path": "lib/cli-command-telemetry.ts",
+      "sha256": "30324bd6a75f889fd925feaad7a47cbd9b0e0415681810a03e671fa7020196f9",
+      "bytes": 3259
+    },
+    {
+      "path": "lib/credential-storage-selector.ts",
+      "sha256": "050296880b1f96c3aecd95670e30419bfaca78b573d62028a5a1c86259e5ed0a",
+      "bytes": 2282
+    },
+    {
+      "path": "lib/login-state.ts",
+      "sha256": "3422d46d4c9cdf408d30484ef645c73ff6e7fde6d771eeed058f9c9d6599f16e",
+      "bytes": 1517
+    },
+    {
+      "path": "lib/netrc-parser.ts",
+      "sha256": "11b2b38ce250780c7bf6de62bacb537266f679f6038d7b7ee503471e032a1aa2",
+      "bytes": 12543
+    },
+    {
+      "path": "lib/types.ts",
+      "sha256": "c46d4f7bd0947b8721ee2c162056c9cf53893dc8e4d9ba5cddb0743d6ff5c095",
+      "bytes": 244
+    }
+  ]
+}

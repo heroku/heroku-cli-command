@@ -1,12 +1,20 @@
 import {expect} from 'chai'
 import {execa, ExecaError} from 'execa'
 import fs from 'fs-extra'
+import os from 'node:os'
+import path from 'node:path'
+import {type SinonStub, stub} from 'sinon'
 
 import {Netrc} from '../../../src/credential-manager-core/lib/netrc-parser.js'
 
 process.env.NETRC_PARSER_DEBUG = '1'
 
 const skipOnWindows = process.platform === 'win32' ? it.skip : it
+const defaultNetrcName = process.platform === 'win32' ? '_netrc' : '.netrc'
+
+let testHome: string
+let originalHome: string | undefined
+let homedirStub: SinonStub
 
 const configureGpgMock = async () => {
   // Create and set temp gpg home directory
@@ -24,23 +32,37 @@ const configureGpgMock = async () => {
 }
 
 describe('netrc', function () {
-  beforeEach(async function () {
+  beforeEach(function () {
     fs.mkdirpSync('tmp')
+    testHome = fs.mkdtempSync(path.join(os.tmpdir(), 'heroku-cli-command-netrc-'))
+    originalHome = process.env.HOME
+    process.env.HOME = testHome
+    homedirStub = stub(os, 'homedir').returns(testHome)
   })
 
   afterEach(function () {
     fs.removeSync('tmp')
+    fs.removeSync(testHome)
+    homedirStub.restore()
+    if (originalHome === undefined) {
+      delete process.env.HOME
+    } else {
+      process.env.HOME = originalHome
+    }
+
     delete process.env.GNUPGHOME
   })
 
-  it('can read system netrc', function () {
+  it('can read an empty default netrc path', function () {
     const netrc = new Netrc()
+    expect(netrc.file).to.equal(path.join(testHome, defaultNetrcName))
     netrc.loadSync()
     expect(Boolean(netrc.machines)).to.be.true
   })
 
-  it('can read system netrc async', async function () {
+  it('can read an empty default netrc path async', async function () {
     const netrc = new Netrc()
+    expect(netrc.file).to.equal(path.join(testHome, defaultNetrcName))
     await netrc.load()
     expect(Boolean(netrc.machines)).to.be.true
   })
@@ -584,6 +606,7 @@ machine foo password uu
 
   it('extra code coverage checks', function () {
     const netrc = new Netrc()
+    expect(netrc.file).to.equal(path.join(testHome, defaultNetrcName))
     netrc.loadSync()
     expect(Symbol('test') in netrc.machines).to.equal(false)
     netrc.machines.a = {login: 'foo'}

@@ -1,9 +1,12 @@
-/**
- * @deprecated Command-owned compatibility telemetry for the historical credential-manager path.
- * The standalone credential manager intentionally has no telemetry dependency.
- */
 import type {ErrorEvent} from '@sentry/node'
 
+import {
+  GDPR_FIELDS,
+  HEROKU_FIELDS,
+  PCI_FIELDS,
+  PII_PATTERNS,
+  Scrubber,
+} from '@heroku/js-blanket'
 import * as Sentry from '@sentry/node'
 import {readFileSync} from 'node:fs'
 import {dirname, join} from 'node:path'
@@ -13,6 +16,11 @@ import type {CredentialStore} from './credential-storage-selector.js'
 
 const DSN
   = 'https://4eb3812769d649a09ae76ef3fcd03dbb@o4508609692368896.ingest.us.sentry.io/4511095245832192'
+
+const scrubber = new Scrubber({
+  fields: [...HEROKU_FIELDS, ...GDPR_FIELDS, ...PCI_FIELDS],
+  patterns: [...PII_PATTERNS],
+})
 
 /** Indirection so tests can `sinon.stub` without stubbing the ESM `@sentry/node` namespace. */
 export const credentialSentrySdk = {
@@ -25,25 +33,13 @@ export const credentialSentrySdk = {
 let releaseCache: string | undefined
 let sentryClient: ReturnType<typeof Sentry.init> | undefined
 
-const credentialOperations = new Set<CredentialSentryOperation>([
-  'getAuth',
-  'listKeychainAccounts',
-  'removeAuth',
-  'saveAuth',
-])
-const credentialStores = new Set([
-  'linux-secret-service',
-  'macos-keychain',
-  'unknown',
-  'windows-credential-manager',
-])
 function readPackageVersion(): string {
   if (releaseCache !== undefined) {
     return releaseCache
   }
 
   const dir = dirname(fileURLToPath(import.meta.url))
-  const pkgPath = join(dir, '../../../package.json')
+  const pkgPath = join(dir, '../../../../package.json')
   const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as {version?: string}
   releaseCache = pkg.version ?? 'unknown'
   return releaseCache
@@ -69,41 +65,6 @@ export function shouldReportCredentialErrorsToSentry(): boolean {
   return true
 }
 
-/**
- * Credential-provider errors are opaque and can contain account, service, or token values.
- * Build a minimal event instead of trying to identify every possible secret pattern.
- */
-export function sanitizeCredentialErrorEvent(event: ErrorEvent): ErrorEvent {
-  const operation = event.tags?.credential_operation
-  const store = event.tags?.credential_store
-  const tags: Record<string, string> = {component: 'heroku-cli-command'}
-
-  if (typeof operation === 'string' && credentialOperations.has(operation as CredentialSentryOperation)) {
-    tags.credential_operation = operation
-  }
-
-  if (typeof store === 'string' && credentialStores.has(store)) {
-    tags.credential_store = store
-  }
-
-  return {
-    environment: event.environment,
-    event_id: event.event_id,
-    exception: {
-      values: [{
-        type: 'CredentialManagerError',
-        value: 'Credential manager operation failed',
-      }],
-    },
-    level: event.level,
-    platform: event.platform,
-    release: event.release,
-    tags,
-    timestamp: event.timestamp,
-    type: undefined,
-  }
-}
-
 function ensureCredentialSentryInitialized(): void {
   if (!shouldReportCredentialErrorsToSentry()) {
     return
@@ -117,7 +78,9 @@ function ensureCredentialSentryInitialized(): void {
 
   sentryClient = credentialSentrySdk.init({
     beforeSend(event) {
-      return sanitizeCredentialErrorEvent(event)
+      const scrubbed
+        = scrubber.scrub(event as unknown as Record<string, unknown>).data
+      return scrubbed as unknown as ErrorEvent
     },
     dsn: DSN,
     environment: isDev ? 'development' : 'production',
@@ -129,11 +92,8 @@ function ensureCredentialSentryInitialized(): void {
 export type CredentialSentryOperation = 'getAuth' | 'listKeychainAccounts' | 'removeAuth' | 'saveAuth'
 
 export async function reportCredentialStoreError(
-  _error: unknown,
-  context: {
-    credentialStore: 'unknown' | CredentialStore
-    operation: CredentialSentryOperation
-  },
+  error: unknown,
+  context: {credentialStore: CredentialStore; operation: CredentialSentryOperation},
 ): Promise<void> {
   if (!shouldReportCredentialErrorsToSentry()) {
     return
@@ -141,7 +101,7 @@ export async function reportCredentialStoreError(
 
   try {
     ensureCredentialSentryInitialized()
-    credentialSentrySdk.captureException(new Error('Credential manager operation failed'), {
+    credentialSentrySdk.captureException(error, {
       tags: {
         component: 'heroku-cli-command',
         credential_operation: context.operation,

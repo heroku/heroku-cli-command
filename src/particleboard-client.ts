@@ -3,8 +3,18 @@ import type {Config} from '@oclif/core/interfaces'
 import {HTTP, HTTPRequestOptions} from '@heroku/http-call'
 import {URL} from 'node:url'
 
+import {protectDebugOutput} from './http-debug.js'
 import {RequestId, requestIdHeader} from './request-id.js'
 import {vars} from './vars.js'
+
+function isSensitiveParticleboardHeader(header: string): boolean {
+  const normalized = header.toLowerCase()
+  return normalized === 'authorization'
+    || normalized === 'cookie'
+    || normalized === 'proxy-authorization'
+    || normalized === requestIdHeader.toLowerCase()
+    || normalized.startsWith('x-heroku-')
+}
 
 export interface IDelinquencyInfo {
   scheduled_deletion_time?: null | string
@@ -22,9 +32,9 @@ export class ParticleboardClient {
   http: typeof HTTP
   private _auth?: string
 
-  constructor(protected config: Config) {
+  constructor(protected config: Config, particleboardEndpoint: string | URL = vars.particleboardUrl) {
     this.config = config
-    const particleboardUrl = new URL(vars.particleboardUrl)
+    const particleboardUrl = new URL(particleboardEndpoint)
     const self = this as any
     const envParticleboardHeaders = JSON.parse(process.env.HEROKU_PARTICLEBOARD_HEADERS || '{}')
     const particleboardOpts = {
@@ -38,6 +48,11 @@ export class ParticleboardClient {
       protocol: particleboardUrl.protocol,
     }
     this.http = class ParticleboardHTTPClient<T> extends HTTP.create(particleboardOpts)<T> {
+      constructor(url: string, opts: HTTPRequestOptions = {}) {
+        super(url, opts)
+        protectDebugOutput(this, isSensitiveParticleboardHeader)
+      }
+
       static async request<T>(url: string, opts: HTTPRequestOptions = {}): Promise<ParticleboardHTTPClient<T>> {
         opts.headers = opts.headers || {}
         opts.headers[requestIdHeader] = RequestId.create() && RequestId.headerValue

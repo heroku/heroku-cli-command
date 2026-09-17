@@ -5,6 +5,7 @@ import {restore, stub} from 'sinon'
 import {
   credentialSentrySdk,
   reportCredentialStoreError,
+  sanitizeCredentialErrorEvent,
   shouldReportCredentialErrorsToSentry,
 } from '../../../src/credential-manager-core/lib/cli-command-telemetry.js'
 import {CredentialStore} from '../../../src/credential-manager-core/lib/credential-storage-selector.js'
@@ -95,7 +96,14 @@ describe('cli-command-telemetry', function () {
       })
 
       expect(captureStub.calledOnce).to.equal(true)
-      expect(captureStub.firstCall.args[0]).to.equal(err)
+      const reportedError: unknown = captureStub.firstCall.args[0]
+      expect(reportedError).to.be.instanceOf(Error)
+      if (!(reportedError instanceof Error)) {
+        throw new TypeError('expected credential telemetry to capture an Error')
+      }
+
+      expect(reportedError.message).to.equal('Credential manager operation failed')
+      expect(reportedError.cause).to.equal(undefined)
       expect(captureStub.firstCall.args[1]).to.deep.include({
         tags: {
           component: 'heroku-cli-command',
@@ -103,6 +111,34 @@ describe('cli-command-telemetry', function () {
           credential_store: CredentialStore.MacOSKeychain,
         },
       })
+    })
+
+    it('captures a generic error without retaining the provider error', async function () {
+      delete process.env.CI
+      process.env.NODE_ENV = 'development'
+      delete process.env.IS_HEROKU_TEST_ENV
+      delete process.env.DISABLE_TELEMETRY
+
+      const closeStub = stub().resolves()
+      stub(credentialSentrySdk, 'getClient').returns({close: closeStub} as unknown as NonNullable<ReturnType<typeof credentialSentrySdk.getClient>>)
+      const captureStub = stub(credentialSentrySdk, 'captureException')
+      stub(credentialSentrySdk, 'flush').resolves(true)
+
+      const providerError = new Error('opaque-account opaque-service opaque-token')
+      await reportCredentialStoreError(providerError, {
+        credentialStore: CredentialStore.MacOSKeychain,
+        operation: 'getAuth',
+      })
+
+      const reportedError: unknown = captureStub.firstCall.args[0]
+      expect(reportedError).to.be.instanceOf(Error)
+      if (!(reportedError instanceof Error)) {
+        throw new TypeError('expected credential telemetry to capture an Error')
+      }
+
+      expect(reportedError.message).to.equal('Credential manager operation failed')
+      expect(reportedError.cause).to.equal(undefined)
+      expect(reportedError.stack).to.not.include(providerError.message)
     })
 
     it('calls close on Sentry client after flush', async function () {
@@ -152,11 +188,54 @@ describe('cli-command-telemetry', function () {
 
       // Both errors should be captured
       expect(captureStub.calledTwice).to.equal(true)
-      expect(captureStub.firstCall.args[0]).to.equal(err1)
-      expect(captureStub.secondCall.args[0]).to.equal(err2)
+      expect(captureStub.firstCall.args[0]).to.be.instanceOf(Error)
+      expect(captureStub.secondCall.args[0]).to.be.instanceOf(Error)
+      expect(captureStub.firstCall.args[0]).to.not.equal(err1)
+      expect(captureStub.secondCall.args[0]).to.not.equal(err2)
 
       // Close should be called for each error
       expect(closeStub.calledTwice).to.equal(true)
+    })
+  })
+
+  describe('sanitizeCredentialErrorEvent', function () {
+    it('removes opaque provider values from linked errors and event metadata', function () {
+      const event = {
+        breadcrumbs: [{message: 'opaque-token'}],
+        contexts: {provider: {account: 'opaque-account'}},
+        exception: {
+          values: [{
+            mechanism: {data: {service: 'opaque-service'}, type: 'provider'},
+            stacktrace: {frames: [{filename: 'opaque-account'}]},
+            type: 'ProviderError',
+            value: 'opaque-account opaque-service opaque-token',
+          }],
+        },
+        extra: {providerError: 'opaque-token'},
+        tags: {
+          component: 'heroku-cli-command',
+          credential_operation: 'getAuth',
+          credential_store: CredentialStore.MacOSKeychain,
+          provider_account: 'opaque-account',
+        },
+        type: undefined,
+      }
+
+      const sanitized = sanitizeCredentialErrorEvent(event)
+      const serialized = JSON.stringify(sanitized)
+
+      expect(serialized).to.not.include('opaque-account')
+      expect(serialized).to.not.include('opaque-service')
+      expect(serialized).to.not.include('opaque-token')
+      expect(sanitized.exception?.values).to.deep.equal([{
+        type: 'CredentialManagerError',
+        value: 'Credential manager operation failed',
+      }])
+      expect(sanitized.tags).to.deep.equal({
+        component: 'heroku-cli-command',
+        credential_operation: 'getAuth',
+        credential_store: CredentialStore.MacOSKeychain,
+      })
     })
   })
 })

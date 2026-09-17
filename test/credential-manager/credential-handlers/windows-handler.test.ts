@@ -2,7 +2,7 @@ import {expect} from 'chai'
 import childProcess from 'node:child_process'
 import sinon from 'sinon'
 
-import {WindowsHandler} from '../../../src/credential-manager-core/credential-handlers/windows-handler.js'
+import {WindowsHandler} from '../../../src/deprecated/credential-manager-core/credential-handlers/windows-handler.js'
 
 describe('WindowsHandler', function () {
   let execSyncStub: sinon.SinonStub
