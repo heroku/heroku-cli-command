@@ -10,6 +10,14 @@ With this major version release we will be improving the security by storing aut
 
 * remove dual write for credential storage ([#389](https://github.com/heroku/heroku-cli-command/issues/389)) ([e50b5be](https://github.com/heroku/heroku-cli-command/commit/e50b5be106f7997d85f7a5a53ff06ff1eadecb9c))
 
+## [13.2.1](https://github.com/heroku/heroku-cli-command/compare/command-v13.2.0...command-v13.2.1) (2026-09-22)
+
+
+### Dependencies
+
+* bump esbuild and tsx ([#385](https://github.com/heroku/heroku-cli-command/issues/385)) ([880edf0](https://github.com/heroku/heroku-cli-command/commit/880edf0b9d0a1850e01ea1a4030e020b05083b76))
+* bump yargs-parser from 20.2.9 to 22.0.0 ([#198](https://github.com/heroku/heroku-cli-command/issues/198)) ([f0260a2](https://github.com/heroku/heroku-cli-command/commit/f0260a2370fc3e7933498371fbedfa11202d867c))
+
 ## [13.2.0](https://github.com/heroku/heroku-cli-command/compare/command-v13.1.0...command-v13.2.0) (2026-08-25)
 
 
