@@ -67,8 +67,9 @@
     "lint:fix": "eslint --fix",
     "prepublishOnly": "npm run build",
     "prepare": "npm run build",
-    "test": "c8 --all --check-coverage --reporter=lcov --reporter=text-summary mocha --forbid-only \"test/**/*.test.ts\" --ignore \"test/**/acceptance/**/*.test.ts\"",
+    "test": "c8 --all --check-coverage --reporter=lcovonly --reporter=text-summary mocha --forbid-only \"test/**/*.test.ts\" --ignore \"test/**/acceptance/**/*.test.ts\"",
     "test:file": "c8 mocha",
+    "coverage:html": "c8 --all --reporter=html mocha --forbid-only \"test/**/*.test.ts\" --ignore \"test/**/acceptance/**/*.test.ts\"",
     "test:ci:acceptance": "c8 mocha --forbid-only \"test/credential-manager/acceptance/index.acceptance.test.ts\"",
     "example": "sh examples/run.sh"
   },
