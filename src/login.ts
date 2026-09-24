@@ -20,6 +20,13 @@ const hostname = os.hostname()
 const thirtyDays = 60 * 60 * 24 * 30
 const REDACTED_TOKEN_ASTERISKS = '*'.repeat(10)
 
+// Stamped on the error thrown when an interactive login is required but stdin
+// is not a TTY (piped input, CI, or an automatic 401 re-auth). Exported as the
+// single source of truth so consumers (e.g. the heroku/cli telemetry pipeline)
+// can recognize this expected condition and route it appropriately rather than
+// matching a duplicated string literal (W-22403348).
+export const NONINTERACTIVE_LOGIN_ERROR_CODE = 'HEROKU_NONINTERACTIVE_LOGIN'
+
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace Login {
   export interface Options {
@@ -70,8 +77,9 @@ export class Login {
           // it throws `setRawMode is not a function` (W-22403348). Fail with a
           // clear, actionable message instead. The `code` marks this as an
           // expected user/environment condition (not a bug) so the CLI's
-          // telemetry hook filters it out of Sentry rather than reporting it.
-          ux.error('Cannot prompt for login in a non-interactive terminal. Run `heroku login` in an interactive shell, or set HEROKU_API_KEY.', {code: 'HEROKU_NONINTERACTIVE_LOGIN', exit: 1})
+          // telemetry pipeline can keep it out of Sentry error reporting while
+          // still recording it in Honeycomb for analytics.
+          ux.error('Cannot prompt for login in a non-interactive terminal. Run `heroku login` in an interactive shell, or set HEROKU_API_KEY.', {code: NONINTERACTIVE_LOGIN_ERROR_CODE, exit: 1})
         } else {
           ux.stderr(`heroku: Press any key to open up the browser to login or ${ansis.yellow('q')} to exit`)
           const rl = readline.createInterface({

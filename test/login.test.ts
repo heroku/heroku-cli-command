@@ -9,7 +9,7 @@ import * as sinon from 'sinon'
 
 import {Command as CommandBase} from '../src/command.js'
 import {setCredentialManagerProvider} from '../src/credential-manager.js'
-import {Login} from '../src/login.js'
+import {Login, NONINTERACTIVE_LOGIN_ERROR_CODE} from '../src/login.js'
 import {prompter} from '../src/prompter.js'
 import {restoreCredentialManagerStub, stubCredentialManager} from './helpers/credential-manager-stub.js'
 
@@ -272,8 +272,28 @@ describe('login in a non-interactive terminal', () => {
       expect(caught?.message).to.equal('non-interactive')
       expect(errorStub.calledWithExactly(
         'Cannot prompt for login in a non-interactive terminal. Run `heroku login` in an interactive shell, or set HEROKU_API_KEY.',
-        {code: 'HEROKU_NONINTERACTIVE_LOGIN', exit: 1},
+        {code: NONINTERACTIVE_LOGIN_ERROR_CODE, exit: 1},
       )).to.equal(true)
+    })
+
+  test
+    .it('preserves the error code through login()\'s catch so telemetry can filter it (W-22403348)', async ctx => {
+      const cmd = new Command([], ctx.config)
+      const login = new Login(ctx.config, cmd.heroku)
+      // Intentionally do NOT stub ux.error here: this exercises the real
+      // ux.error -> CLIError -> `catch { throw new HerokuAPIError(error) }`
+      // re-throw path. The whole cross-repo Sentry filter hinges on `.code`
+      // surviving that wrap, so pin it with a real end-to-end assertion.
+      let caught: any
+      try {
+        await login.login()
+      } catch (error) {
+        caught = error
+      }
+
+      expect(caught, 'login() should have thrown').to.exist
+      expect(caught.code).to.equal(NONINTERACTIVE_LOGIN_ERROR_CODE)
+      expect(caught.message).to.contain('non-interactive terminal')
     })
 })
 
