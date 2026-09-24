@@ -70,17 +70,7 @@ export class Login {
           input = 'interactive'
         } else if (process.env.HEROKU_LEGACY_SSO === '1') {
           input = 'sso'
-        } else if (!process.stdin.isTTY) {
-          // Non-interactive terminal (piped stdin, CI, or an automatic re-auth
-          // after a 401): we can't show the "press any key" prompt, and
-          // process.stdin.setRawMode is undefined on a non-TTY stream — calling
-          // it throws `setRawMode is not a function` (W-22403348). Fail with a
-          // clear, actionable message instead. The `code` marks this as an
-          // expected user/environment condition (not a bug) so the CLI's
-          // telemetry pipeline can keep it out of Sentry error reporting while
-          // still recording it in Honeycomb for analytics.
-          ux.error('Cannot prompt for login in a non-interactive terminal. Run `heroku login` in an interactive shell, or set HEROKU_API_KEY.', {code: NONINTERACTIVE_LOGIN_ERROR_CODE, exit: 1})
-        } else {
+        } else if (process.stdin.isTTY) {
           ux.stderr(`heroku: Press any key to open up the browser to login or ${ansis.yellow('q')} to exit`)
           const rl = readline.createInterface({
             input: process.stdin,
@@ -100,6 +90,16 @@ export class Login {
           rl.close()
           ux.stdout('')
           input = this.getLoginMethodFromPromptKey(key)
+        } else {
+          // Non-interactive terminal (piped stdin, CI, or an automatic re-auth
+          // after a 401): we can't show the "press any key" prompt, and
+          // process.stdin.setRawMode is undefined on a non-TTY stream — calling
+          // it throws `setRawMode is not a function` (W-22403348). Fail with a
+          // clear, actionable message instead. The `code` marks this as an
+          // expected user/environment condition (not a bug) so the CLI's
+          // telemetry pipeline can keep it out of Sentry error reporting while
+          // still recording it in Honeycomb for analytics.
+          ux.error('Cannot prompt for login in a non-interactive terminal. Run `heroku login` in an interactive shell, or set HEROKU_API_KEY.', {code: NONINTERACTIVE_LOGIN_ERROR_CODE, exit: 1})
         }
       }
 
