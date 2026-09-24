@@ -91,9 +91,9 @@ export class Login {
         } else {
           // Non-interactive terminal (piped stdin, CI, or a 401 re-auth): we
           // can't show the "press any key" prompt, and process.stdin.setRawMode
-          // is undefined on a non-TTY stream (`setRawMode is not a function`,
-          // W-22403348). Fail with a clear message instead. The `code` lets the
-          // CLI keep this out of Sentry while still recording it in Honeycomb.
+          // is undefined on a non-TTY stream (`setRawMode is not a function`).
+          // Fail with a clear message instead. The `code` lets the CLI keep
+          // this out of Sentry while still recording it in Honeycomb.
           ux.error('Cannot prompt for login in a non-interactive terminal. Run `heroku login` in an interactive shell, or set HEROKU_API_KEY.', {code: NONINTERACTIVE_LOGIN_ERROR_CODE, exit: 1})
         }
       }
