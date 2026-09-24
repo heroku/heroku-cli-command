@@ -21,10 +21,8 @@ const thirtyDays = 60 * 60 * 24 * 30
 const REDACTED_TOKEN_ASTERISKS = '*'.repeat(10)
 
 // Stamped on the error thrown when an interactive login is required but stdin
-// is not a TTY (piped input, CI, or an automatic 401 re-auth). Exported as the
-// single source of truth so consumers (e.g. the heroku/cli telemetry pipeline)
-// can recognize this expected condition and route it appropriately rather than
-// matching a duplicated string literal (W-22403348).
+// is not a TTY. Exported so consumers can recognize this condition by code
+// rather than matching a string literal.
 export const NONINTERACTIVE_LOGIN_ERROR_CODE = 'HEROKU_NONINTERACTIVE_LOGIN'
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
