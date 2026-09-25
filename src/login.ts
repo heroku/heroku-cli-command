@@ -20,6 +20,11 @@ const hostname = os.hostname()
 const thirtyDays = 60 * 60 * 24 * 30
 const REDACTED_TOKEN_ASTERISKS = '*'.repeat(10)
 
+// Stamped on the error thrown when an interactive login is required but stdin
+// is not a TTY. Exported so consumers can recognize this condition by code
+// rather than matching a string literal.
+export const NONINTERACTIVE_LOGIN_ERROR_CODE = 'HEROKU_NONINTERACTIVE_LOGIN'
+
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace Login {
   export interface Options {
@@ -63,7 +68,7 @@ export class Login {
           input = 'interactive'
         } else if (process.env.HEROKU_LEGACY_SSO === '1') {
           input = 'sso'
-        } else {
+        } else if (process.stdin.isTTY) {
           ux.stderr(`heroku: Press any key to open up the browser to login or ${ansis.yellow('q')} to exit`)
           const rl = readline.createInterface({
             input: process.stdin,
@@ -83,6 +88,13 @@ export class Login {
           rl.close()
           ux.stdout('')
           input = this.getLoginMethodFromPromptKey(key)
+        } else {
+          // Non-interactive terminal (piped stdin, CI, or a 401 re-auth): we
+          // can't show the "press any key" prompt, and process.stdin.setRawMode
+          // is undefined on a non-TTY stream (`setRawMode is not a function`).
+          // Fail with a clear message instead. The `code` lets the CLI keep
+          // this out of Sentry while still recording it in Honeycomb.
+          ux.error('Cannot prompt for login in a non-interactive terminal. Run `heroku login` in an interactive shell, or set HEROKU_API_KEY.', {code: NONINTERACTIVE_LOGIN_ERROR_CODE, exit: 1})
         }
       }
 

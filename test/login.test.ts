@@ -9,7 +9,7 @@ import * as sinon from 'sinon'
 
 import {Command as CommandBase} from '../src/command.js'
 import {setCredentialManagerProvider} from '../src/credential-manager.js'
-import {Login} from '../src/login.js'
+import {Login, NONINTERACTIVE_LOGIN_ERROR_CODE} from '../src/login.js'
 import {prompter} from '../src/prompter.js'
 import {restoreCredentialManagerStub, stubCredentialManager} from './helpers/credential-manager-stub.js'
 
@@ -196,6 +196,10 @@ describe('login with interactive', () => {
 })
 
 describe('login with browser', () => {
+  afterEach(() => {
+    sinon.restore()
+  })
+
   test
     .it('prints fallback URL on its own line', async ctx => {
       const cmd = new Command([], ctx.config)
@@ -221,6 +225,75 @@ describe('login with browser', () => {
 
       expect(() => (login as any).getLoginMethodFromPromptKey('\u0003')).to.throw('cancelled')
       expect(errorStub.calledWithExactly('Login cancelled by user', {exit: 130})).to.equal(true)
+    })
+})
+
+describe('login in a non-interactive terminal', () => {
+  let originalIsTTY: boolean | undefined
+  let originalApiKey: string | undefined
+  let originalLegacySSO: string | undefined
+
+  beforeEach(() => {
+    stubCredentialManager()
+    originalIsTTY = process.stdin.isTTY
+    originalApiKey = process.env.HEROKU_API_KEY
+    originalLegacySSO = process.env.HEROKU_LEGACY_SSO
+    delete process.env.HEROKU_API_KEY
+    delete process.env.HEROKU_LEGACY_SSO
+    // Simulate a non-TTY stdin (piped input / CI / automatic re-auth).
+    Object.defineProperty(process.stdin, 'isTTY', {configurable: true, value: false})
+  })
+
+  afterEach(() => {
+    sinon.restore()
+    restoreCredentialManagerStub()
+    nock.cleanAll()
+    Object.defineProperty(process.stdin, 'isTTY', {configurable: true, value: originalIsTTY})
+    if (originalApiKey === undefined) delete process.env.HEROKU_API_KEY
+    else process.env.HEROKU_API_KEY = originalApiKey
+    if (originalLegacySSO === undefined) delete process.env.HEROKU_LEGACY_SSO
+    else process.env.HEROKU_LEGACY_SSO = originalLegacySSO
+  })
+
+  test
+    .it('errors clearly instead of calling setRawMode on a non-TTY stdin (W-22403348)', async ctx => {
+      const cmd = new Command([], ctx.config)
+      const login = new Login(ctx.config, cmd.heroku)
+      const errorStub = sinon.stub(ux, 'error').throws(new Error('non-interactive'))
+
+      let caught: Error | undefined
+      try {
+        await login.login()
+      } catch (error) {
+        caught = error as Error
+      }
+
+      // Without the guard this would be `process.stdin.setRawMode is not a function`.
+      expect(caught?.message).to.equal('non-interactive')
+      expect(errorStub.calledWithExactly(
+        'Cannot prompt for login in a non-interactive terminal. Run `heroku login` in an interactive shell, or set HEROKU_API_KEY.',
+        {code: NONINTERACTIVE_LOGIN_ERROR_CODE, exit: 1},
+      )).to.equal(true)
+    })
+
+  test
+    .it('preserves the error code through login()\'s catch so telemetry can filter it (W-22403348)', async ctx => {
+      const cmd = new Command([], ctx.config)
+      const login = new Login(ctx.config, cmd.heroku)
+      // Intentionally do NOT stub ux.error here: this exercises the real
+      // ux.error -> CLIError -> `catch { throw new HerokuAPIError(error) }`
+      // re-throw path. The whole cross-repo Sentry filter hinges on `.code`
+      // surviving that wrap, so pin it with a real end-to-end assertion.
+      let caught: any
+      try {
+        await login.login()
+      } catch (error) {
+        caught = error
+      }
+
+      expect(caught, 'login() should have thrown').to.exist
+      expect(caught.code).to.equal(NONINTERACTIVE_LOGIN_ERROR_CODE)
+      expect(caught.message).to.contain('non-interactive terminal')
     })
 })
 
