@@ -10,6 +10,13 @@ With this major version release we will be improving the security by storing aut
 
 * remove dual write for credential storage ([#389](https://github.com/heroku/heroku-cli-command/issues/389)) ([e50b5be](https://github.com/heroku/heroku-cli-command/commit/e50b5be106f7997d85f7a5a53ff06ff1eadecb9c))
 
+## [13.2.2](https://github.com/heroku/heroku-cli-command/compare/command-v13.2.1...command-v13.2.2) (2026-09-25)
+
+
+### Bug Fixes
+
+* guard interactive login prompt against non-TTY stdin (W-22403348) ([#408](https://github.com/heroku/heroku-cli-command/issues/408)) ([7a6fcaa](https://github.com/heroku/heroku-cli-command/commit/7a6fcaa343a98280026d269d499e4c6e63aa40ac))
+
 ## [13.2.1](https://github.com/heroku/heroku-cli-command/compare/command-v13.2.0...command-v13.2.1) (2026-09-22)
 
 
