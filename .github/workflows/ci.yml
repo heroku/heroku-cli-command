@@ -31,4 +31,4 @@ jobs:
           cache: npm
       - run: npm ci
       - name: unit tests
-        run: npm test
+        run: npm run test:coverage
