@@ -1,6 +1,11 @@
 name: Node CI Suite
 
-on: push
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
 
 jobs:
   lint:
@@ -31,4 +36,4 @@ jobs:
           cache: npm
       - run: npm ci
       - name: unit tests
-        run: npm test
+        run: npm run test:coverage
