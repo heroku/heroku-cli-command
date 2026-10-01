@@ -1,0 +1,249 @@
+name: Private npm install
+description: Installs private dependencies without retaining the read token for later commands.
+
+inputs:
+  node-version:
+    description: Node.js version passed to actions/setup-node.
+    required: true
+  read-token:
+    description: Read-only npm token used only by npm ci.
+    required: true
+  expected-action-sha:
+    description: Protected commit SHA that supplied this action definition.
+    required: true
+  working-directory:
+    description: Repository-relative package directory.
+    required: false
+    default: .
+
+outputs:
+  clean-root:
+    description: Temporary token-free npm directory to remove after downstream commands finish.
+    value: ${{ steps.npm-paths.outputs.clean_root }}
+
+runs:
+  using: composite
+  steps:
+    - name: Verify trusted action checkout
+      shell: bash
+      env:
+        EXPECTED_ACTION_SHA: ${{ inputs.expected-action-sha }}
+      run: |
+        set -euo pipefail
+        test "$(git -C "$GITHUB_ACTION_PATH" rev-parse HEAD)" = "$EXPECTED_ACTION_SHA"
+        test -z "$(git -C "$GITHUB_ACTION_PATH" status --porcelain --untracked-files=no)"
+
+    - name: Mask private npm read token
+      shell: bash
+      env:
+        READ_TOKEN: ${{ inputs.read-token }}
+      run: |
+        set -euo pipefail
+        test -n "$READ_TOKEN"
+        echo "::add-mask::$READ_TOKEN"
+
+    - name: Create isolated npm paths
+      id: npm-paths
+      shell: bash
+      env:
+        RUN_ID: ${{ github.run_id }}
+        RUN_ATTEMPT: ${{ github.run_attempt }}
+        JOB_NAME: ${{ github.job }}
+        PRIVATE_NPM_BASE: ${{ runner.temp }}
+      run: node "${{ github.action_path }}/prepare.mjs"
+
+    - name: Protect Windows npm paths with native ACLs
+      if: runner.os == 'Windows'
+      shell: pwsh
+      env:
+        PRIVATE_NPM_ROOT: ${{ steps.npm-paths.outputs.root }}
+        PRIVATE_NPM_CACHE: ${{ steps.npm-paths.outputs.cache }}
+        PRIVATE_NPM_LOGS: ${{ steps.npm-paths.outputs.logs }}
+        PRIVATE_NPM_USERCONFIG: ${{ steps.npm-paths.outputs.userconfig }}
+        PRIVATE_NPM_CLEAN_ROOT: ${{ steps.npm-paths.outputs.clean_root }}
+        PRIVATE_NPM_CLEAN_CACHE: ${{ steps.npm-paths.outputs.clean_cache }}
+        PRIVATE_NPM_CLEAN_LOGS: ${{ steps.npm-paths.outputs.clean_logs }}
+        PRIVATE_NPM_CLEAN_USERCONFIG: ${{ steps.npm-paths.outputs.clean_userconfig }}
+      run: |
+        $ErrorActionPreference = 'Stop'
+        $identity = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
+        $paths = @(
+          $env:PRIVATE_NPM_ROOT,
+          $env:PRIVATE_NPM_CACHE,
+          $env:PRIVATE_NPM_LOGS,
+          $env:PRIVATE_NPM_USERCONFIG,
+          $env:PRIVATE_NPM_CLEAN_ROOT,
+          $env:PRIVATE_NPM_CLEAN_CACHE,
+          $env:PRIVATE_NPM_CLEAN_LOGS,
+          $env:PRIVATE_NPM_CLEAN_USERCONFIG
+        )
+        foreach ($path in $paths) {
+          $acl = Get-Acl -LiteralPath $path
+          $acl.SetAccessRuleProtection($true, $false)
+          foreach ($rule in @($acl.Access)) {
+            [void] $acl.RemoveAccessRuleSpecific($rule)
+          }
+          $inheritance = if ((Get-Item -LiteralPath $path).PSIsContainer) {
+            [System.Security.AccessControl.InheritanceFlags]'ContainerInherit, ObjectInherit'
+          } else {
+            [System.Security.AccessControl.InheritanceFlags]::None
+          }
+          $rule = [System.Security.AccessControl.FileSystemAccessRule]::new(
+            $identity,
+            [System.Security.AccessControl.FileSystemRights]::FullControl,
+            $inheritance,
+            [System.Security.AccessControl.PropagationFlags]::None,
+            [System.Security.AccessControl.AccessControlType]::Allow
+          )
+          $acl.SetOwner($identity)
+          [void] $acl.AddAccessRule($rule)
+          Set-Acl -LiteralPath $path -AclObject $acl
+        }
+
+    - name: Set up Node.js
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      env:
+        RUNNER_TEMP: ${{ steps.npm-paths.outputs.root }}
+      with:
+        node-version: ${{ inputs.node-version }}
+        registry-url: https://registry.npmjs.org
+        package-manager-cache: false
+
+    - name: Inspect Windows npm config ACL
+      if: runner.os == 'Windows'
+      shell: pwsh
+      env:
+        PRIVATE_NPM_ROOT: ${{ steps.npm-paths.outputs.root }}
+        PRIVATE_NPM_CACHE: ${{ steps.npm-paths.outputs.cache }}
+        PRIVATE_NPM_LOGS: ${{ steps.npm-paths.outputs.logs }}
+        PRIVATE_NPM_USERCONFIG: ${{ steps.npm-paths.outputs.userconfig }}
+        PRIVATE_NPM_CLEAN_ROOT: ${{ steps.npm-paths.outputs.clean_root }}
+        PRIVATE_NPM_CLEAN_CACHE: ${{ steps.npm-paths.outputs.clean_cache }}
+        PRIVATE_NPM_CLEAN_LOGS: ${{ steps.npm-paths.outputs.clean_logs }}
+        PRIVATE_NPM_CLEAN_USERCONFIG: ${{ steps.npm-paths.outputs.clean_userconfig }}
+      run: |
+        $ErrorActionPreference = 'Stop'
+        $paths = @(
+          $env:PRIVATE_NPM_ROOT,
+          $env:PRIVATE_NPM_CACHE,
+          $env:PRIVATE_NPM_LOGS,
+          $env:PRIVATE_NPM_USERCONFIG,
+          $env:PRIVATE_NPM_CLEAN_ROOT,
+          $env:PRIVATE_NPM_CLEAN_CACHE,
+          $env:PRIVATE_NPM_CLEAN_LOGS,
+          $env:PRIVATE_NPM_CLEAN_USERCONFIG
+        )
+        foreach ($path in $paths) {
+          $acl = Get-Acl -LiteralPath $path
+          if ([string]::IsNullOrWhiteSpace($acl.Owner)) {
+            throw "The temporary npm path has no ACL owner: $path"
+          }
+          if ($acl.AreAccessRulesProtected -ne $true -or $acl.Access.Count -ne 1) {
+            throw "The temporary npm path ACL is not owner-only: $path"
+          }
+          $rule = $acl.Access[0]
+          $currentSid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+          $ruleSid = $rule.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value
+          if ($ruleSid -ne $currentSid -or $rule.AccessControlType -ne 'Allow' -or -not $rule.FileSystemRights.HasFlag([System.Security.AccessControl.FileSystemRights]::FullControl)) {
+            throw "The temporary npm path ACL does not grant only the owner full control: $path"
+          }
+        }
+        $config = Get-Content -LiteralPath $env:PRIVATE_NPM_USERCONFIG -Raw
+        if ($config -notmatch [regex]::Escape('${NODE_AUTH_TOKEN}')) {
+          throw 'The npm userconfig does not contain the literal token placeholder.'
+        }
+
+    - name: Verify POSIX npm path modes
+      if: runner.os != 'Windows'
+      shell: bash
+      env:
+        PRIVATE_NPM_ROOT: ${{ steps.npm-paths.outputs.root }}
+        PRIVATE_NPM_CACHE: ${{ steps.npm-paths.outputs.cache }}
+        PRIVATE_NPM_LOGS: ${{ steps.npm-paths.outputs.logs }}
+        PRIVATE_NPM_USERCONFIG: ${{ steps.npm-paths.outputs.userconfig }}
+        PRIVATE_NPM_CLEAN_ROOT: ${{ steps.npm-paths.outputs.clean_root }}
+        PRIVATE_NPM_CLEAN_CACHE: ${{ steps.npm-paths.outputs.clean_cache }}
+        PRIVATE_NPM_CLEAN_LOGS: ${{ steps.npm-paths.outputs.clean_logs }}
+        PRIVATE_NPM_CLEAN_USERCONFIG: ${{ steps.npm-paths.outputs.clean_userconfig }}
+      run: |
+        set -euo pipefail
+        case "$(uname -s)" in
+          Darwin)
+            for path in "$PRIVATE_NPM_ROOT" "$PRIVATE_NPM_CACHE" "$PRIVATE_NPM_LOGS" "$PRIVATE_NPM_CLEAN_ROOT" "$PRIVATE_NPM_CLEAN_CACHE" "$PRIVATE_NPM_CLEAN_LOGS"; do test "$(stat -f '%Lp' "$path")" = '700'; done
+            for path in "$PRIVATE_NPM_USERCONFIG" "$PRIVATE_NPM_CLEAN_USERCONFIG"; do test "$(stat -f '%Lp' "$path")" = '600'; done
+            ;;
+          Linux)
+            for path in "$PRIVATE_NPM_ROOT" "$PRIVATE_NPM_CACHE" "$PRIVATE_NPM_LOGS" "$PRIVATE_NPM_CLEAN_ROOT" "$PRIVATE_NPM_CLEAN_CACHE" "$PRIVATE_NPM_CLEAN_LOGS"; do test "$(stat -c '%a' "$path")" = '700'; done
+            for path in "$PRIVATE_NPM_USERCONFIG" "$PRIVATE_NPM_CLEAN_USERCONFIG"; do test "$(stat -c '%a' "$path")" = '600'; done
+            ;;
+          *) exit 1 ;;
+        esac
+
+    - name: Install private dependencies
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        NODE_AUTH_TOKEN: ${{ inputs.read-token }}
+        NPM_CONFIG_CACHE: ${{ steps.npm-paths.outputs.cache }}
+        NPM_CONFIG_LOGS_DIR: ${{ steps.npm-paths.outputs.logs }}
+      run: npm ci --ignore-scripts
+
+    - name: Remove npm credentials
+      if: always()
+      shell: bash
+      env:
+        PRIVATE_NPM_BASE: ${{ runner.temp }}
+        PRIVATE_NPM_ROOT: ${{ steps.npm-paths.outputs.root }}
+        PRIVATE_NPM_USERCONFIG: ${{ steps.npm-paths.outputs.userconfig }}
+        PRIVATE_NPM_CLEAN_ROOT: ${{ steps.npm-paths.outputs.clean_root }}
+        PRIVATE_NPM_CLEAN_CACHE: ${{ steps.npm-paths.outputs.clean_cache }}
+        PRIVATE_NPM_CLEAN_LOGS: ${{ steps.npm-paths.outputs.clean_logs }}
+        PRIVATE_NPM_CLEAN_USERCONFIG: ${{ steps.npm-paths.outputs.clean_userconfig }}
+      run: node "${{ github.action_path }}/cleanup.mjs"
+
+    - name: Verify POSIX credential cleanup
+      if: always() && runner.os != 'Windows'
+      shell: bash
+      env:
+        PRIVATE_NPM_BASE: ${{ runner.temp }}
+        PRIVATE_NPM_ROOT: ${{ steps.npm-paths.outputs.root }}
+        PRIVATE_NPM_USERCONFIG: ${{ steps.npm-paths.outputs.userconfig }}
+      run: |
+        set -euo pipefail
+        test ! -e "$PRIVATE_NPM_USERCONFIG"
+        test ! -e "$PRIVATE_NPM_ROOT"
+        test -f "$PRIVATE_NPM_CLEAN_USERCONFIG"
+        ! grep -q '_authToken\|NODE_AUTH_TOKEN' "$PRIVATE_NPM_CLEAN_USERCONFIG"
+
+    - name: Verify Windows credential cleanup and ACLs
+      if: always() && runner.os == 'Windows'
+      shell: pwsh
+      env:
+        PRIVATE_NPM_ROOT: ${{ steps.npm-paths.outputs.root }}
+        PRIVATE_NPM_USERCONFIG: ${{ steps.npm-paths.outputs.userconfig }}
+        PRIVATE_NPM_CLEAN_USERCONFIG: ${{ steps.npm-paths.outputs.clean_userconfig }}
+      run: |
+        $ErrorActionPreference = 'Stop'
+        if (Test-Path -LiteralPath $env:PRIVATE_NPM_USERCONFIG) {
+          throw 'The temporary npm userconfig still exists.'
+        }
+        if (Test-Path -LiteralPath $env:PRIVATE_NPM_ROOT) {
+          throw 'The temporary npm directory still exists.'
+        }
+        if (-not (Test-Path -LiteralPath $env:PRIVATE_NPM_CLEAN_USERCONFIG)) {
+          throw 'The clean npm userconfig does not exist.'
+        }
+        if ((Get-Content -LiteralPath $env:PRIVATE_NPM_CLEAN_USERCONFIG -Raw) -match '_authToken|NODE_AUTH_TOKEN') {
+          throw 'The clean npm userconfig contains an authentication setting.'
+        }
+
+    - name: Rebuild dependencies without credentials
+      if: success()
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        NODE_AUTH_TOKEN: ''
+        NPM_CONFIG_USERCONFIG: ${{ steps.npm-paths.outputs.clean_userconfig }}
+        NPM_CONFIG_CACHE: ${{ steps.npm-paths.outputs.clean_cache }}
+        NPM_CONFIG_LOGS_DIR: ${{ steps.npm-paths.outputs.clean_logs }}
+      run: npm rebuild

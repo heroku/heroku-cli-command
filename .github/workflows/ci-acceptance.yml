@@ -1,34 +1,79 @@
 name: Node CI Suite - Acceptance
 
-on: [pull_request, release]
+on:
+  push:
+    # Keep integration and publishing branches covered because all retain the
+    # package-scoped private credential-manager dependency.
+    branches: [v14.0.0, main, beta]
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
+  trust-configuration-notice:
+    if: >-
+      github.repository == 'heroku/heroku-cli-command' &&
+      vars.CREDENTIAL_MANAGER_INSTALL_ENABLED != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain fail-closed acceptance matrix
+        run: echo 'Acceptance is disabled until an owner protects CredentialManagerInstall and v14.0.0/main/beta, then sets CREDENTIAL_MANAGER_INSTALL_ENABLED=true.'
+
   acceptance:
+    if: >-
+      github.repository == 'heroku/heroku-cli-command' &&
+      vars.CREDENTIAL_MANAGER_INSTALL_ENABLED == 'true' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+      (github.ref == 'refs/heads/v14.0.0' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/beta')
+    environment: CredentialManagerInstall
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [windows-latest, ubuntu-latest, macos-latest]
         node-version: [20.x, 22.x]
     env:
       ACCEPTANCE_TESTS: 'true'
     steps:
-      - uses: actions/checkout@v7
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v7
+      - name: Check out trusted action definition
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          path: trusted-action
+          persist-credentials: false
+      - name: Check out exact candidate source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          path: candidate
+          persist-credentials: false
+      - name: Install private dependencies
+        id: private-install
+        uses: ./trusted-action/.github/actions/private-npm-install
         with:
           node-version: ${{ matrix.node-version }}
-          cache: npm
-      - run: npm ci
-      - name: install libsecret-tools for Linux
+          read-token: ${{ secrets.NPM_READ_TOKEN_HEROKU_CREDENTIAL_MANAGER }}
+          expected-action-sha: ${{ github.sha }}
+          working-directory: candidate
+      - name: Install libsecret tools for Linux
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libsecret-tools gnome-keyring
-      - name: run acceptance tests (macOS/Windows)
+      - name: Run acceptance tests on macOS and Windows
         if: runner.os != 'Linux'
+        working-directory: candidate
         run: npm run test:ci:acceptance
-      - name: run acceptance tests (Linux)
+      - name: Run acceptance tests on Linux
         if: runner.os == 'Linux'
+        working-directory: candidate
         run: |
           dbus-run-session -- bash -c '
             eval "$(echo -n "heroku-credential-manager-ci" | gnome-keyring-daemon --unlock --components=secrets)"
             npm run test:ci:acceptance
           '
+      - name: Remove token-free npm paths
+        if: always()
+        env:
+          PRIVATE_NPM_BASE: ${{ runner.temp }}
+          PRIVATE_NPM_CLEAN_ROOT: ${{ steps.private-install.outputs.clean-root }}
+        run: node trusted-action/.github/actions/private-npm-install/finalize.mjs

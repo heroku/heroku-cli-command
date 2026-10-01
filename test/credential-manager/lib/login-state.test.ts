@@ -4,7 +4,7 @@ import * as os from 'node:os'
 import {join} from 'node:path'
 import sinon from 'sinon'
 
-import {deleteLoginState, readLoginState, writeLoginState} from '../../../src/credential-manager-core/lib/login-state.js'
+import {deleteLoginState, readLoginState, writeLoginState} from '../../../src/deprecated/credential-manager-core/lib/login-state.js'
 
 const skipOnWindows = process.platform === 'win32' ? it.skip : it
 

@@ -1,128 +1,375 @@
 name: Release
 
-# Public repo workflow using GitHub App token to access private npm-release-workflows
-# Uses vars.DEV_TOOLS_RELEASE_WORKFLOW_APP_ID and secrets.DEV_TOOLS_RELEASE_WORKFLOW_APP_PRIVATE_KEY
-
 on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: 'Test release without publishing (creates PR but skips npm publish)'
+        description: Test release without publishing
         type: boolean
         default: false
         required: false
 
+permissions:
+  contents: read
+
 jobs:
-  validate:
-    runs-on: pub-hk-ubuntu-24.04-ip  # Options: ubuntu-latest | sfdc-hk-ubuntu-latest | pub-hk-ubuntu-24.04-ip
+  trust-configuration-notice:
+    if: >-
+      github.repository == 'heroku/heroku-cli-command' &&
+      vars.CREDENTIAL_MANAGER_INSTALL_ENABLED != 'true'
+    runs-on: ubuntu-latest
     steps:
-      # owner scopes the token to the org installation so it can access other repos (e.g. private npm-release-workflows)
-      - name: Generate GitHub App token
-        id: app-token
-        uses: actions/create-github-app-token@v3
-        with:
-          app-id: ${{ vars.DEV_TOOLS_RELEASE_WORKFLOW_APP_ID }}
-          private-key: ${{ secrets.DEV_TOOLS_RELEASE_WORKFLOW_APP_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
+      - name: Explain fail-closed release
+        run: echo 'Release is disabled until an owner protects CredentialManagerInstall and main/beta, configures npm trusted publishing, then sets CREDENTIAL_MANAGER_INSTALL_ENABLED=true.'
 
-      - uses: actions/checkout@v7
-
-      - name: Checkout workflows repository
-        uses: actions/checkout@v7
+  validate:
+    if: >-
+      github.repository == 'heroku/heroku-cli-command' &&
+      vars.CREDENTIAL_MANAGER_INSTALL_ENABLED == 'true' &&
+      github.event_name == 'workflow_dispatch' &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/beta')
+    environment: CredentialManagerInstall
+    runs-on: pub-hk-ubuntu-24.04-ip
+    steps:
+      - name: Check out trusted action definition
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          repository: heroku/npm-release-workflows
-          token: ${{ steps.app-token.outputs.token }}
-          path: workflows-repo
-          ref: main
-
-      - name: Validate and test
-        uses: ./workflows-repo/.github/actions/release-validate-public
+          ref: ${{ github.sha }}
+          path: trusted-action
+          persist-credentials: false
+      - name: Check out exact candidate source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          package-manager: npm  # npm | yarn | pnpm
-          lint_command: 'run lint'
-          test_command: 'run test'
+          ref: ${{ github.sha }}
+          path: candidate
+          persist-credentials: false
+      - name: Install private dependencies
+        id: private-install
+        uses: ./trusted-action/.github/actions/private-npm-install
+        with:
+          node-version: 22.x
+          read-token: ${{ secrets.NPM_READ_TOKEN_HEROKU_CREDENTIAL_MANAGER }}
+          expected-action-sha: ${{ github.sha }}
+          working-directory: candidate
+      - name: Build
+        working-directory: candidate
+        run: npm run build
+      - name: Lint
+        working-directory: candidate
+        run: npm run lint
+      - name: Test
+        working-directory: candidate
+        run: npm test
+      - name: Remove token-free npm paths
+        if: always()
+        env:
+          PRIVATE_NPM_BASE: ${{ runner.temp }}
+          PRIVATE_NPM_CLEAN_ROOT: ${{ steps.private-install.outputs.clean-root }}
+        run: node trusted-action/.github/actions/private-npm-install/finalize.mjs
 
   release-please-pr:
     needs: validate
-    runs-on: pub-hk-ubuntu-24.04-ip  # Options: ubuntu-latest | sfdc-hk-ubuntu-latest | pub-hk-ubuntu-24.04-ip
+    if: >-
+      needs.validate.result == 'success' &&
+      github.repository == 'heroku/heroku-cli-command' &&
+      vars.CREDENTIAL_MANAGER_INSTALL_ENABLED == 'true' &&
+      github.event_name == 'workflow_dispatch' &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/beta')
+    environment: CredentialManagerInstall
+    runs-on: pub-hk-ubuntu-24.04-ip
     permissions:
       contents: write
       pull-requests: write
     outputs:
-      release_created: ${{ steps.release-workflow.outputs.release_created }}
-      tag_name: ${{ steps.release-workflow.outputs.tag_name }}
-      pr_number: ${{ steps.release-workflow.outputs.pr_number }}
-      config_file: ${{ steps.release-workflow.outputs.config_file }}
-      manifest_file: ${{ steps.release-workflow.outputs.manifest_file }}
-      npm_tag: ${{ steps.release-workflow.outputs.npm_tag }}
-      package_name: ${{ steps.release-workflow.outputs.package_name }}
-      no_release_needed: ${{ steps.release-workflow.outputs.no_release_needed }}
-      pr_already_exists: ${{ steps.release-workflow.outputs.pr_already_exists }}
+      pr_number: ${{ steps.release-metadata.outputs.pr_number }}
+      pr_branch: ${{ steps.release-metadata.outputs.pr_branch }}
+      candidate_sha: ${{ steps.release-metadata.outputs.candidate_sha }}
+      npm_tag: ${{ steps.channel.outputs.npm_tag }}
+      manifest_file: ${{ steps.channel.outputs.manifest_file }}
+      release_candidate: ${{ steps.release-metadata.outputs.release_candidate }}
     steps:
-      # owner scopes the token to the org installation so it can access other repos (e.g. private npm-release-workflows)
-      - name: Generate GitHub App token
+      - name: Confirm owner-controlled release prerequisites
+        run: echo 'CredentialManagerInstall approval and protected main/beta source are required; repository enablement defaults fail-closed.'
+      - name: Generate release GitHub App token
         id: app-token
-        uses: actions/create-github-app-token@v3
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
         with:
           app-id: ${{ vars.DEV_TOOLS_RELEASE_WORKFLOW_APP_ID }}
           private-key: ${{ secrets.DEV_TOOLS_RELEASE_WORKFLOW_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
-
-      - uses: actions/checkout@v7
-
-      - name: Checkout workflows repository
-        uses: actions/checkout@v7
+          repositories: heroku-cli-command
+          permission-contents: write
+          permission-pull-requests: write
+      - name: Check out trusted release metadata
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          repository: heroku/npm-release-workflows
-          token: ${{ steps.app-token.outputs.token }}
-          path: workflows-repo
-          ref: main
-
-      - name: Create release PR
-        id: release-workflow
-        uses: ./workflows-repo/.github/actions/release-please-pr-public
+          ref: ${{ github.ref }}
+          persist-credentials: false
+      - name: Select release channel metadata
+        id: channel
+        shell: bash
+        env:
+          BRANCH_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          case "$BRANCH_NAME" in
+            main)
+              echo 'config_file=.github/release-configs/release-please-config.json' >> "$GITHUB_OUTPUT"
+              echo 'manifest_file=.github/release-configs/release-please-manifest.json' >> "$GITHUB_OUTPUT"
+              echo 'npm_tag=latest' >> "$GITHUB_OUTPUT"
+              ;;
+            beta)
+              echo 'config_file=.github/release-configs/release-please-config.beta.json' >> "$GITHUB_OUTPUT"
+              echo 'manifest_file=.github/release-configs/release-please-manifest.beta.json' >> "$GITHUB_OUTPUT"
+              echo 'npm_tag=beta' >> "$GITHUB_OUTPUT"
+              ;;
+            *) exit 1 ;;
+          esac
+      - name: Verify release metadata files
+        shell: bash
+        env:
+          CONFIG_FILE: ${{ steps.channel.outputs.config_file }}
+          MANIFEST_FILE: ${{ steps.channel.outputs.manifest_file }}
+        run: test -f "$CONFIG_FILE" && test -f "$MANIFEST_FILE"
+      - name: Create or update release PR
+        id: release-please
+        uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4.4.1
         with:
-          package-manager: npm  # npm | yarn | pnpm
-          branch_name: ${{ github.ref_name }}
-          dry_run: ${{ inputs.dry_run }}
           token: ${{ steps.app-token.outputs.token }}
+          target-branch: ${{ github.ref_name }}
+          config-file: ${{ steps.channel.outputs.config_file }}
+          manifest-file: ${{ steps.channel.outputs.manifest_file }}
+          skip-github-release: true
+      - name: Resolve release PR metadata
+        id: release-metadata
+        shell: bash
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PR_JSON: ${{ steps.release-please.outputs.pr }}
+          REPOSITORY: ${{ github.repository }}
+          TARGET_BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          test -n "$PR_JSON"
+          PR_NUMBER=$(node -e 'const pr=JSON.parse(process.env.PR_JSON); process.stdout.write(String(pr.number ?? ""))')
+          PR_BRANCH=$(node -e 'const pr=JSON.parse(process.env.PR_JSON); process.stdout.write(pr.headBranchName ?? "")')
+          PR_BASE=$(node -e 'const pr=JSON.parse(process.env.PR_JSON); process.stdout.write(pr.baseBranchName ?? "")')
+          test -n "$PR_NUMBER"
+          test -n "$PR_BRANCH"
+          test "$PR_BASE" = "$TARGET_BRANCH"
+          PR_DATA=$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER")
+          PR_STATE=$(PR_DATA="$PR_DATA" node -e 'const pr=JSON.parse(process.env.PR_DATA); process.stdout.write(pr.state ?? "")')
+          PR_HEAD_REPO=$(PR_DATA="$PR_DATA" node -e 'const pr=JSON.parse(process.env.PR_DATA); process.stdout.write(pr.head?.repo?.full_name ?? "")')
+          PR_HEAD_BRANCH=$(PR_DATA="$PR_DATA" node -e 'const pr=JSON.parse(process.env.PR_DATA); process.stdout.write(pr.head?.ref ?? "")')
+          PR_BASE_BRANCH=$(PR_DATA="$PR_DATA" node -e 'const pr=JSON.parse(process.env.PR_DATA); process.stdout.write(pr.base?.ref ?? "")')
+          CANDIDATE_SHA=$(PR_DATA="$PR_DATA" node -e 'const pr=JSON.parse(process.env.PR_DATA); process.stdout.write(pr.head?.sha ?? "")')
+          test "$PR_STATE" = 'open'
+          test "$PR_HEAD_REPO" = "$REPOSITORY"
+          test "$PR_HEAD_BRANCH" = "$PR_BRANCH"
+          test "$PR_BASE_BRANCH" = "$TARGET_BRANCH"
+          test "$CANDIDATE_SHA" = "$(gh api "repos/$REPOSITORY/git/ref/heads/$PR_BRANCH" --jq '.object.sha')"
+          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "pr_branch=$PR_BRANCH" >> "$GITHUB_OUTPUT"
+          echo "candidate_sha=$CANDIDATE_SHA" >> "$GITHUB_OUTPUT"
+          echo 'release_candidate=true' >> "$GITHUB_OUTPUT"
+
+  build-package:
+    needs: release-please-pr
+    if: >-
+      needs.release-please-pr.outputs.release_candidate == 'true' &&
+      github.repository == 'heroku/heroku-cli-command' &&
+      vars.CREDENTIAL_MANAGER_INSTALL_ENABLED == 'true' &&
+      github.event_name == 'workflow_dispatch' &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/beta')
+    environment: CredentialManagerInstall
+    runs-on: pub-hk-ubuntu-24.04-ip
+    permissions:
+      contents: read
+    outputs:
+      artifact_name: ${{ steps.pack.outputs.artifact_name }}
+      tarball_name: ${{ steps.pack.outputs.tarball_name }}
+      tarball_sha256: ${{ steps.pack.outputs.tarball_sha256 }}
+      artifact_id: ${{ steps.upload.outputs.artifact-id }}
+    steps:
+      - name: Check out trusted action definition
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          path: trusted-action
+          persist-credentials: false
+      - name: Check out exact release candidate source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.release-please-pr.outputs.candidate_sha }}
+          fetch-depth: 0
+          path: candidate
+          persist-credentials: false
+      - name: Assert exact candidate package and channel
+        id: candidate
+        shell: bash
+        working-directory: candidate
+        env:
+          CANDIDATE_SHA: ${{ needs.release-please-pr.outputs.candidate_sha }}
+          MANIFEST_FILE: ${{ needs.release-please-pr.outputs.manifest_file }}
+          NPM_TAG: ${{ needs.release-please-pr.outputs.npm_tag }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$CANDIDATE_SHA"
+          PACKAGE_NAME=$(node -p 'require("./package.json").name')
+          PACKAGE_VERSION=$(node -p 'require("./package.json").version')
+          MANIFEST_VERSION=$(MANIFEST_FILE="$MANIFEST_FILE" node -e 'process.stdout.write(require("./" + process.env.MANIFEST_FILE)["."] ?? "")')
+          test "$PACKAGE_NAME" = '@heroku-cli/command'
+          test "$PACKAGE_VERSION" = "$MANIFEST_VERSION"
+          case "$NPM_TAG" in
+            latest) [[ "$PACKAGE_VERSION" != *-* ]] ;;
+            beta) [[ "$PACKAGE_VERSION" == *-beta.* ]] ;;
+            *) exit 1 ;;
+          esac
+          echo "package_name=$PACKAGE_NAME" >> "$GITHUB_OUTPUT"
+          echo "package_version=$PACKAGE_VERSION" >> "$GITHUB_OUTPUT"
+      - name: Install private dependencies
+        id: private-install
+        uses: ./trusted-action/.github/actions/private-npm-install
+        with:
+          node-version: 22.x
+          read-token: ${{ secrets.NPM_READ_TOKEN_HEROKU_CREDENTIAL_MANAGER }}
+          expected-action-sha: ${{ github.sha }}
+          working-directory: candidate
+      - name: Build and test release candidate
+        working-directory: candidate
+        run: |
+          npm run build
+          npm test
+          npm run verify:packed-consumer
+          npm run verify:rollback
+      - name: Pack command tarball
+        id: pack
+        shell: bash
+        working-directory: candidate
+        env:
+          CANDIDATE_SHA: ${{ needs.release-please-pr.outputs.candidate_sha }}
+          PACKAGE_NAME: ${{ steps.candidate.outputs.package_name }}
+          PACKAGE_VERSION: ${{ steps.candidate.outputs.package_version }}
+          NPM_TAG: ${{ needs.release-please-pr.outputs.npm_tag }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/release-artifact"
+          TARBALL=$(npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP/release-artifact" --json | node -e 'let data=""; process.stdin.on("data", chunk => data += chunk); process.stdin.on("end", () => process.stdout.write(JSON.parse(data)[0].filename))')
+          SHA256=$(shasum -a 256 "$RUNNER_TEMP/release-artifact/$TARBALL" | cut -d ' ' -f 1)
+          printf '%s  %s\n' "$SHA256" "$TARBALL" > "$RUNNER_TEMP/release-artifact/SHA256SUMS"
+          printf '%s\n' "$CANDIDATE_SHA" > "$RUNNER_TEMP/release-artifact/SOURCE_SHA"
+          printf '%s\n' "$PACKAGE_NAME" > "$RUNNER_TEMP/release-artifact/PACKAGE_NAME"
+          printf '%s\n' "$PACKAGE_VERSION" > "$RUNNER_TEMP/release-artifact/PACKAGE_VERSION"
+          printf '%s\n' "$NPM_TAG" > "$RUNNER_TEMP/release-artifact/NPM_TAG"
+          echo 'artifact_name=command-release-candidate' >> "$GITHUB_OUTPUT"
+          echo "tarball_name=$TARBALL" >> "$GITHUB_OUTPUT"
+          echo "tarball_sha256=$SHA256" >> "$GITHUB_OUTPUT"
+      - name: Upload command tarball and digest
+        id: upload
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: command-release-candidate
+          path: |
+            ${{ runner.temp }}/release-artifact/${{ steps.pack.outputs.tarball_name }}
+            ${{ runner.temp }}/release-artifact/SHA256SUMS
+            ${{ runner.temp }}/release-artifact/SOURCE_SHA
+            ${{ runner.temp }}/release-artifact/PACKAGE_NAME
+            ${{ runner.temp }}/release-artifact/PACKAGE_VERSION
+            ${{ runner.temp }}/release-artifact/NPM_TAG
+          if-no-files-found: error
+          retention-days: 1
+      - name: Remove token-free npm paths
+        if: always()
+        env:
+          PRIVATE_NPM_BASE: ${{ runner.temp }}
+          PRIVATE_NPM_CLEAN_ROOT: ${{ steps.private-install.outputs.clean-root }}
+        run: node trusted-action/.github/actions/private-npm-install/finalize.mjs
 
   publish:
-    needs: release-please-pr
-    if: needs.release-please-pr.result == 'success' && (needs.release-please-pr.outputs.pr_number != '' || needs.release-please-pr.outputs.pr_already_exists == 'true')
-    runs-on: pub-hk-ubuntu-24.04-ip  # Options: ubuntu-latest | sfdc-hk-ubuntu-latest | pub-hk-ubuntu-24.04-ip
+    needs: [release-please-pr, build-package]
+    if: >-
+      needs.build-package.result == 'success' &&
+      github.repository == 'heroku/heroku-cli-command' &&
+      vars.CREDENTIAL_MANAGER_INSTALL_ENABLED == 'true' &&
+      github.event_name == 'workflow_dispatch' &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/beta')
+    environment: CredentialManagerInstall
+    runs-on: pub-hk-ubuntu-24.04-ip
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
+      actions: read
       id-token: write
     steps:
-      # owner scopes the token to the org installation so it can access other repos (e.g. private npm-release-workflows)
-      - name: Generate GitHub App token
-        id: app-token
-        uses: actions/create-github-app-token@v3
+      - name: Download exact release artifact
+        shell: bash
+        env:
+          ARTIFACT_ID: ${{ needs.build-package.outputs.artifact_id }}
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/release-artifact"
+          gh api "repos/$REPOSITORY/actions/runs/$RUN_ID/artifacts" --paginate --slurp |
+            ARTIFACT_ID="$ARTIFACT_ID" node -e '
+              let input = "";
+              process.stdin.on("data", chunk => input += chunk);
+              process.stdin.on("end", () => {
+                const pages = JSON.parse(input);
+                const artifacts = pages.flatMap(page => page.artifacts || []);
+                const artifact = artifacts.find(item => String(item.id) === process.env.ARTIFACT_ID);
+                if (!artifact || artifact.expired || artifact.name !== "command-release-candidate" || artifact.size_in_bytes <= 0) process.exit(1);
+              });
+            '
+          gh api "repos/$REPOSITORY/actions/artifacts/$ARTIFACT_ID/zip" > "$RUNNER_TEMP/release-artifact.zip"
+          unzip -q "$RUNNER_TEMP/release-artifact.zip" -d "$RUNNER_TEMP/release-artifact"
+      - name: Set up Node.js for OIDC publish
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
-          app-id: ${{ vars.DEV_TOOLS_RELEASE_WORKFLOW_APP_ID }}
-          private-key: ${{ secrets.DEV_TOOLS_RELEASE_WORKFLOW_APP_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-
-      - uses: actions/checkout@v7
-
-      - name: Checkout workflows repository
-        uses: actions/checkout@v7
-        with:
-          repository: heroku/npm-release-workflows
-          token: ${{ steps.app-token.outputs.token }}
-          path: workflows-repo
-          ref: main
-
-      - name: Publish to npm
-        uses: ./workflows-repo/.github/actions/release-publish-public
-        with:
-          package-manager: npm  # npm | yarn | pnpm
-          workflows_token: ${{ steps.app-token.outputs.token }}
-          build_command: ''
-          dry_run: ${{ inputs.dry_run }}
-          npm_tag: ${{ needs.release-please-pr.outputs.npm_tag }}
-          package_name: ${{ needs.release-please-pr.outputs.package_name }}
-          pr_number: ${{ needs.release-please-pr.outputs.pr_number }}
-          branch_name: ${{ github.ref_name }}
+          node-version: 22.x
+          package-manager-cache: false
+      - name: Install exact npm trusted-publishing client
+        env:
+          EXPECTED_NPM_VERSION: 11.6.2
+        run: |
+          set -euo pipefail
+          npm install --global --ignore-scripts --no-audit --no-fund "npm@$EXPECTED_NPM_VERSION"
+          test "$(npm --version)" = "$EXPECTED_NPM_VERSION"
+          node -e '
+            const actual = process.argv[1].split(".").map(Number)
+            const minimum = [11, 5, 1]
+            const meetsMinimum = actual.some((part, index) => part > minimum[index] && actual.slice(0, index).every((value, prior) => value === minimum[prior])) || actual.every((part, index) => part === minimum[index])
+            if (!meetsMinimum) process.exit(1)
+          ' "$(npm --version)"
+      - name: Verify and publish tarball
+        shell: bash
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+          NPM_TAG: ${{ needs.release-please-pr.outputs.npm_tag }}
+          TARBALL_NAME: ${{ needs.build-package.outputs.tarball_name }}
+          TARBALL_SHA256: ${{ needs.build-package.outputs.tarball_sha256 }}
+          CANDIDATE_SHA: ${{ needs.release-please-pr.outputs.candidate_sha }}
+          EXPECTED_PACKAGE_NAME: '@heroku-cli/command'
+        run: |
+          set -euo pipefail
+          ARTIFACT="$RUNNER_TEMP/release-artifact/$TARBALL_NAME"
+          test "$(cat "$RUNNER_TEMP/release-artifact/SOURCE_SHA")" = "$CANDIDATE_SHA"
+          test "$(cat "$RUNNER_TEMP/release-artifact/PACKAGE_NAME")" = "$EXPECTED_PACKAGE_NAME"
+          test "$(cat "$RUNNER_TEMP/release-artifact/NPM_TAG")" = "$NPM_TAG"
+          PACKED_MANIFEST=$(tar -xOf "$ARTIFACT" package/package.json)
+          PACKED_NAME=$(PACKED_MANIFEST="$PACKED_MANIFEST" node -e 'process.stdout.write(JSON.parse(process.env.PACKED_MANIFEST).name ?? "")')
+          PACKED_VERSION=$(PACKED_MANIFEST="$PACKED_MANIFEST" node -e 'process.stdout.write(JSON.parse(process.env.PACKED_MANIFEST).version ?? "")')
+          test "$PACKED_NAME" = "$EXPECTED_PACKAGE_NAME"
+          test "$PACKED_VERSION" = "$(cat "$RUNNER_TEMP/release-artifact/PACKAGE_VERSION")"
+          case "$NPM_TAG" in
+            latest) [[ "$PACKED_VERSION" != *-* ]] ;;
+            beta) [[ "$PACKED_VERSION" == *-beta.* ]] ;;
+            *) exit 1 ;;
+          esac
+          test "$(shasum -a 256 "$ARTIFACT" | cut -d ' ' -f 1)" = "$TARBALL_SHA256"
+          (cd "$RUNNER_TEMP/release-artifact" && shasum -a 256 -c SHA256SUMS)
+          if [ "$DRY_RUN" = 'true' ]; then
+            npm publish "$ARTIFACT" --ignore-scripts --dry-run --tag "$NPM_TAG"
+          else
+            npm publish "$ARTIFACT" --ignore-scripts --tag "$NPM_TAG"
+          fi

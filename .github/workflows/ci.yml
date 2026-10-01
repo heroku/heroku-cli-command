@@ -2,38 +2,200 @@ name: Node CI Suite
 
 on:
   push:
-    branches:
-      - main
+    # v14.0.0 is the integration branch. main and beta also need trusted CI
+    # after integration because the package retains a private dependency.
+    branches: [v14.0.0, main, beta]
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
-  lint:
+  structural-gate:
+    name: Secret-free structural gate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - name: Use Node.js
-        uses: actions/setup-node@v7
+      - name: Check out candidate source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Parse owned workflow and action YAML
+        shell: ruby {0}
+        run: |
+          require 'yaml'
+          files = Dir['.github/workflows/*.{yml,yaml}', '.github/actions/**/*.{yml,yaml}']
+          files.each { |file| YAML.parse_file(file) }
+          puts "parsed #{files.length} workflow/action YAML files"
+      - name: Enforce trust invariants
+        run: node .github/actions/private-npm-install/test/workflow-trust.mjs
+      - name: Install checksum-verified actionlint
+        shell: bash
+        env:
+          EXPECTED_RUNNER_ARCH: X64
+          EXPECTED_RUNNER_OS: Linux
+        run: |
+          set -euo pipefail
+          test "$RUNNER_OS" = "$EXPECTED_RUNNER_OS"
+          test "$RUNNER_ARCH" = "$EXPECTED_RUNNER_ARCH"
+          ACTIONLINT_VERSION='1.7.7'
+          ACTIONLINT_SHA256='023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757'
+          ARCHIVE="$RUNNER_TEMP/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          curl --fail --silent --show-error --location \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" \
+            --output "$ARCHIVE"
+          printf '%s  %s\n' "$ACTIONLINT_SHA256" "$ARCHIVE" | sha256sum --check --strict
+          mkdir -p "$RUNNER_TEMP/actionlint-bin"
+          tar -xzf "$ARCHIVE" -C "$RUNNER_TEMP/actionlint-bin" actionlint
+          "$RUNNER_TEMP/actionlint-bin/actionlint" -version
+      - name: Run mandatory actionlint
+        run: >-
+          "$RUNNER_TEMP/actionlint-bin/actionlint"
+          -ignore 'label "pub-hk-ubuntu-24.04-ip" is unknown'
+      - name: Run private npm fake-token canaries
+        run: node .github/actions/private-npm-install/test/canary.mjs .github/actions/private-npm-install
+
+  trust-configuration-notice:
+    if: >-
+      github.repository == 'heroku/heroku-cli-command' &&
+      vars.CREDENTIAL_MANAGER_INSTALL_ENABLED != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain fail-closed trusted jobs
+        run: |
+          echo 'Trusted lint/test/acceptance/release jobs are disabled.'
+          echo 'An owner must create and protect CredentialManagerInstall, protect v14.0.0/main/beta, store the environment secrets, then set CREDENTIAL_MANAGER_INSTALL_ENABLED=true.'
+
+  lint:
+    if: >-
+      (github.event_name == 'push' &&
+       github.repository == 'heroku/heroku-cli-command' &&
+       vars.CREDENTIAL_MANAGER_INSTALL_ENABLED == 'true' &&
+       (github.ref == 'refs/heads/v14.0.0' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/beta')) ||
+      (github.event_name == 'workflow_dispatch' &&
+       github.repository == 'heroku/heroku-cli-command' &&
+       vars.CREDENTIAL_MANAGER_INSTALL_ENABLED == 'true' &&
+       (github.ref == 'refs/heads/v14.0.0' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/beta'))
+    environment: CredentialManagerInstall
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out trusted action definition
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          path: trusted-action
+          persist-credentials: false
+      - name: Check out exact candidate source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          path: candidate
+          persist-credentials: false
+      - name: Install private dependencies
+        id: private-install
+        uses: ./trusted-action/.github/actions/private-npm-install
         with:
           node-version: 22.x
-          cache: npm
-      - run: npm ci
-      - name: linting
+          read-token: ${{ secrets.NPM_READ_TOKEN_HEROKU_CREDENTIAL_MANAGER }}
+          expected-action-sha: ${{ github.sha }}
+          working-directory: candidate
+      - name: Lint
+        working-directory: candidate
         run: npm run lint
+      - name: Remove token-free npm paths
+        if: always()
+        env:
+          PRIVATE_NPM_BASE: ${{ runner.temp }}
+          PRIVATE_NPM_CLEAN_ROOT: ${{ steps.private-install.outputs.clean-root }}
+        run: node trusted-action/.github/actions/private-npm-install/finalize.mjs
 
   test:
+    if: >-
+      (github.event_name == 'push' &&
+       github.repository == 'heroku/heroku-cli-command' &&
+       vars.CREDENTIAL_MANAGER_INSTALL_ENABLED == 'true' &&
+       (github.ref == 'refs/heads/v14.0.0' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/beta')) ||
+      (github.event_name == 'workflow_dispatch' &&
+       github.repository == 'heroku/heroku-cli-command' &&
+       vars.CREDENTIAL_MANAGER_INSTALL_ENABLED == 'true' &&
+       (github.ref == 'refs/heads/v14.0.0' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/beta'))
+    environment: CredentialManagerInstall
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [windows-latest, ubuntu-latest, macos-latest]
         node-version: [20.x, 22.x]
     steps:
-      - uses: actions/checkout@v7
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v7
+      - name: Check out trusted action definition
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          path: trusted-action
+          persist-credentials: false
+      - name: Check out exact candidate source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          path: candidate
+          persist-credentials: false
+      - name: Install private dependencies
+        id: private-install
+        uses: ./trusted-action/.github/actions/private-npm-install
         with:
           node-version: ${{ matrix.node-version }}
-          cache: npm
-      - run: npm ci
-      - name: unit tests
+          read-token: ${{ secrets.NPM_READ_TOKEN_HEROKU_CREDENTIAL_MANAGER }}
+          expected-action-sha: ${{ github.sha }}
+          working-directory: candidate
+      - name: Run unit tests
+        working-directory: candidate
         run: npm run test:coverage
+      - name: Remove token-free npm paths
+        if: always()
+        env:
+          PRIVATE_NPM_BASE: ${{ runner.temp }}
+          PRIVATE_NPM_CLEAN_ROOT: ${{ steps.private-install.outputs.clean-root }}
+        run: node trusted-action/.github/actions/private-npm-install/finalize.mjs
+
+  trusted-verifiers:
+    if: >-
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+      github.repository == 'heroku/heroku-cli-command' &&
+      vars.CREDENTIAL_MANAGER_INSTALL_ENABLED == 'true' &&
+      (github.ref == 'refs/heads/v14.0.0' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/beta')
+    environment: CredentialManagerInstall
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out trusted action definition
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          path: trusted-action
+          persist-credentials: false
+      - name: Check out exact candidate source and baseline history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          path: candidate
+          persist-credentials: false
+      - name: Install private dependencies
+        id: private-install
+        uses: ./trusted-action/.github/actions/private-npm-install
+        with:
+          node-version: 22.x
+          read-token: ${{ secrets.NPM_READ_TOKEN_HEROKU_CREDENTIAL_MANAGER }}
+          expected-action-sha: ${{ github.sha }}
+          working-directory: candidate
+      - name: Run packed consumer and rollback verification
+        working-directory: candidate
+        run: |
+          npm run verify:packed-consumer
+          npm run verify:rollback
+      - name: Remove token-free npm paths
+        if: always()
+        env:
+          PRIVATE_NPM_BASE: ${{ runner.temp }}
+          PRIVATE_NPM_CLEAN_ROOT: ${{ steps.private-install.outputs.clean-root }}
+        run: node trusted-action/.github/actions/private-npm-install/finalize.mjs

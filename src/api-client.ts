@@ -1,14 +1,22 @@
 import type {Config} from '@oclif/core/interfaces'
 
+import {NativeCredentialNotFoundError} from '@heroku/heroku-credential-manager'
 import {HTTP, HTTPError, HTTPRequestOptions} from '@heroku/http-call'
 import {CLIError, warn} from '@oclif/core/errors'
 import {ux} from '@oclif/core/ux'
 import debug from 'debug'
+import {access} from 'node:fs/promises'
+import {join} from 'node:path'
 import * as url from 'node:url'
 
 import {getStorageConfig} from './credential-manager-core/lib/credential-storage-selector.js'
-import {deleteLoginState, readLoginState} from './credential-manager-core/lib/login-state.js'
+import {readLoginState} from './credential-manager-core/lib/login-state.js'
 import {type AuthEntry, getAuth as getStoredAuth, removeAuth} from './credential-manager.js'
+import {
+  deleteLoginStateIf,
+  getLoginStateRevision,
+  type LoginStateRevision,
+} from './login-state-coordinator.js'
 import {Login} from './login.js'
 import {Mutex} from './mutex.js'
 import {IDelinquencyConfig, IDelinquencyInfo, ParticleboardClient} from './particleboard-client.js'
@@ -19,6 +27,10 @@ import {yubikey} from './yubikey.js'
 
 export const ALLOWED_HEROKU_DOMAINS = Object.freeze(['heroku.com', 'herokai.com', 'herokuspace.com', 'herokudev.com'])
 export const LOCALHOST_DOMAINS = Object.freeze(['localhost', '127.0.0.1'])
+
+function credentialService(): string {
+  return vars.apiHost === 'api.heroku.com' ? 'heroku-cli' : `heroku-cli@${vars.apiHost}`
+}
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace APIClient {
@@ -67,6 +79,10 @@ export class APIClient {
   preauthPromises: {[k: string]: Promise<HTTP<any>>}
   private _account?: string
   private _auth?: string
+  /** Orders explicit login/logout transactions without blocking unrelated API requests. */
+  private _authLifecycle = Promise.resolve()
+  /** Invalidates async credential reads and conditional logout resets after newer auth mutations. */
+  private _authResolutionGeneration = 0
   private readonly _login: Login
   private _particleboard!: ParticleboardClient
   /** In-flight dedupe for concurrent getAuthEntry() calls before resolution completes. */
@@ -302,6 +318,7 @@ export class APIClient {
   set auth(token: string | undefined) {
     delete this.authPromise
     this._auth = token
+    this.resetStoredAuthResolution()
   }
 
   get defaults(): typeof HTTP.defaults {
@@ -339,57 +356,92 @@ export class APIClient {
     if (this._auth) return {account: this._account, token: this._auth}
     if (process.env.HEROKU_API_TOKEN && !process.env.HEROKU_API_KEY) warn('HEROKU_API_TOKEN is set but you probably meant HEROKU_API_KEY')
     if (process.env.HEROKU_API_KEY) {
-      this._account = undefined
-      this._auth = process.env.HEROKU_API_KEY
+      this.setAuthEntry({account: undefined, token: process.env.HEROKU_API_KEY})
       return {account: this._account, token: this._auth}
     }
 
     if (this._storedAuthResolvedAbsent) return undefined
 
     if (!this._storedAuthPromise) {
-      this._storedAuthPromise = (async (): Promise<AuthEntry | undefined> => {
+      const generation = this._authResolutionGeneration
+      const storedAuthPromise = (async (): Promise<AuthEntry | undefined> => {
         const {credentialStore} = getStorageConfig()
         const useLoginState = Boolean(credentialStore && this.config.dataDir)
+        let cachedAccount: string | undefined
+        let loginStatePresent = false
+        let loginStateRevision: LoginStateRevision | undefined
         try {
-          const cachedAccount = useLoginState
+          loginStateRevision = useLoginState
+            ? await getLoginStateRevision(this.config.dataDir)
+            : undefined
+          loginStatePresent = useLoginState && await this.loginStateExists()
+          cachedAccount = useLoginState
             ? (await readLoginState(this.config.dataDir))?.account
             : undefined
-          const {account, token} = await getStoredAuth(cachedAccount, vars.apiHost)
-          this._auth = token
-          this._account = account
-          this._storedAuthResolvedAbsent = false
-          return {account: this._account, token: this._auth}
-        } catch {
-          if (useLoginState) {
-            await deleteLoginState(this.config.dataDir)
+          const {account, token} = await getStoredAuth(cachedAccount, vars.apiHost, credentialService())
+          const entry = {account, token}
+          if (generation === this._authResolutionGeneration) {
+            this._auth = token
+            this._account = account
+            this._storedAuthResolvedAbsent = false
           }
 
-          this._storedAuthResolvedAbsent = true
+          return entry
+        } catch (error) {
+          if (!this.isMissingCredentialError(error)) throw error
+
+          if (useLoginState && generation === this._authResolutionGeneration) {
+            this.scheduleStaleLoginStateCleanup(cachedAccount, generation, loginStatePresent, loginStateRevision)
+          }
+
+          if (generation === this._authResolutionGeneration) this._storedAuthResolvedAbsent = true
           return undefined
         } finally {
-          this._storedAuthPromise = undefined
+          if (generation === this._authResolutionGeneration) this._storedAuthPromise = undefined
         }
       })()
+      this._storedAuthPromise = storedAuthPromise
     }
 
     return this._storedAuthPromise
   }
 
-  login(opts: Login.Options = {}) {
-    return this._login.login(opts)
+  login(opts: Login.Options = {}): Promise<void> {
+    return this.serializeAuthLifecycle(() => this._login.login(opts))
   }
 
-  async logout() {
-    const entry = await this.getAuthEntry()
-    try {
-      await this._login.logout(entry?.token)
-    } catch (error) {
-      if (error instanceof CLIError) warn(error)
-    }
-
-    this.setAuthEntry(undefined)
-    await removeAuth(entry?.account, [vars.apiHost, vars.httpGitHost])
-    await this.clearLoginState()
+  logout(): Promise<void> {
+    return this.serializeAuthLifecycle(async () => {
+      const entry = await this.getAuthEntry()
+      const generation = this._authResolutionGeneration
+      try {
+        if (entry?.account?.trim() && entry.token?.trim()) {
+          await this._login.logoutEntry({account: entry.account, token: entry.token})
+        } else if (entry?.token) {
+          const results = await Promise.allSettled([
+            this._login.logout(entry.token),
+            removeAuth(undefined, [vars.apiHost, vars.httpGitHost], credentialService(), entry.token),
+          ])
+          const localFailure = results.slice(1).find(result => result.status === 'rejected')
+          if (localFailure?.status === 'rejected') throw localFailure.reason
+          if (results[0].status === 'rejected') throw results[0].reason
+        }
+      } catch (error) {
+        if (error instanceof CLIError) warn(error)
+      } finally {
+        if (
+          generation === this._authResolutionGeneration
+          && this._account === entry?.account
+          && this._auth === entry?.token
+        ) {
+          if (entry === undefined && this._account === undefined && this._auth === undefined) {
+            this.resetStoredAuthResolutionWithoutInvalidation()
+          } else {
+            this.setAuthEntry(undefined)
+          }
+        }
+      }
+    })
   }
 
   patch<T>(url: string, options: APIClient.Options = {}) {
@@ -454,14 +506,57 @@ export class APIClient {
     })
   }
 
-  private async clearLoginState(): Promise<void> {
-    if (this.config.dataDir) {
-      await deleteLoginState(this.config.dataDir)
+  private isMissingCredentialError(error: unknown): boolean {
+    if (error instanceof NativeCredentialNotFoundError) return true
+    if (!(error instanceof Error)) return false
+    return error.message === 'No auth found'
+      || error.message === `No auth found for ${vars.apiHost}`
+      || error.message === 'Netrc credential does not match the requested account for host'
+  }
+
+  private async loginStateExists(): Promise<boolean> {
+    if (!this.config.dataDir) return false
+    try {
+      await access(join(this.config.dataDir, 'login.json'))
+      return true
+    } catch {
+      return false
     }
   }
 
   private resetStoredAuthResolution(): void {
+    this._authResolutionGeneration++
     this._storedAuthPromise = undefined
     this._storedAuthResolvedAbsent = false
+  }
+
+  private resetStoredAuthResolutionWithoutInvalidation(): void {
+    this._storedAuthPromise = undefined
+    this._storedAuthResolvedAbsent = false
+  }
+
+  private scheduleStaleLoginStateCleanup(
+    account: string | undefined,
+    generation: number,
+    loginStatePresent: boolean,
+    loginStateRevision: LoginStateRevision | undefined,
+  ): void {
+    if (!this.config.dataDir || !loginStatePresent || !loginStateRevision) return
+    const cleanup = async () => {
+      await deleteLoginStateIf(this.config.dataDir, loginStateRevision, current => {
+        const stateMatches = account === undefined ? current === undefined : current?.account === account
+        return stateMatches && generation === this._authResolutionGeneration
+      })
+    }
+
+    // Credential-read callers must resolve before queued login/logout work that may be awaiting the same read.
+    // Keep cleanup best-effort and ordered behind already-invoked lifecycle transactions.
+    this.serializeAuthLifecycle(cleanup).catch(() => {})
+  }
+
+  private serializeAuthLifecycle<T>(operation: () => Promise<T>): Promise<T> {
+    const result = this._authLifecycle.then(operation, operation)
+    this._authLifecycle = result.then(() => {}, () => {})
+    return result
   }
 }
