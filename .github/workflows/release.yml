@@ -168,10 +168,12 @@ jobs:
           test "$PR_HEAD_BRANCH" = "$PR_BRANCH"
           test "$PR_BASE_BRANCH" = "$TARGET_BRANCH"
           test "$CANDIDATE_SHA" = "$(gh api "repos/$REPOSITORY/git/ref/heads/$PR_BRANCH" --jq '.object.sha')"
-          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
-          echo "pr_branch=$PR_BRANCH" >> "$GITHUB_OUTPUT"
-          echo "candidate_sha=$CANDIDATE_SHA" >> "$GITHUB_OUTPUT"
-          echo 'release_candidate=true' >> "$GITHUB_OUTPUT"
+          {
+            echo "pr_number=$PR_NUMBER"
+            echo "pr_branch=$PR_BRANCH"
+            echo "candidate_sha=$CANDIDATE_SHA"
+            echo 'release_candidate=true'
+          } >> "$GITHUB_OUTPUT"
 
   build-package:
     needs: release-please-pr
@@ -261,9 +263,11 @@ jobs:
           printf '%s\n' "$PACKAGE_NAME" > "$RUNNER_TEMP/release-artifact/PACKAGE_NAME"
           printf '%s\n' "$PACKAGE_VERSION" > "$RUNNER_TEMP/release-artifact/PACKAGE_VERSION"
           printf '%s\n' "$NPM_TAG" > "$RUNNER_TEMP/release-artifact/NPM_TAG"
-          echo 'artifact_name=command-release-candidate' >> "$GITHUB_OUTPUT"
-          echo "tarball_name=$TARBALL" >> "$GITHUB_OUTPUT"
-          echo "tarball_sha256=$SHA256" >> "$GITHUB_OUTPUT"
+          {
+            echo 'artifact_name=command-release-candidate'
+            echo "tarball_name=$TARBALL"
+            echo "tarball_sha256=$SHA256"
+          } >> "$GITHUB_OUTPUT"
       - name: Upload command tarball and digest
         id: upload
         uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
