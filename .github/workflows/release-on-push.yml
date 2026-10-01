@@ -1,44 +1,72 @@
 name: Release on Push
 
-# Automatically creates GitHub releases after release PRs are merged
-# Uses vars.DEV_TOOLS_RELEASE_WORKFLOW_APP_ID and secrets.DEV_TOOLS_RELEASE_WORKFLOW_APP_PRIVATE_KEY
-
 on:
   push:
-    branches:
-      - main
-      - beta
-      # - alpha  # Uncomment if you have an alpha channel
+    branches: [main, beta]
+
+permissions:
+  contents: read
 
 jobs:
+  trust-configuration-notice:
+    if: >-
+      github.repository == 'heroku/heroku-cli-command' &&
+      vars.CREDENTIAL_MANAGER_INSTALL_ENABLED != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain fail-closed release completion
+        run: echo 'GitHub release completion is disabled until an owner protects CredentialManagerInstall and main/beta, then sets CREDENTIAL_MANAGER_INSTALL_ENABLED=true.'
+
   create-release:
-    runs-on: pub-hk-ubuntu-24.04-ip  # Options: ubuntu-latest | sfdc-hk-ubuntu-latest | pub-hk-ubuntu-24.04-ip
+    if: >-
+      github.repository == 'heroku/heroku-cli-command' &&
+      vars.CREDENTIAL_MANAGER_INSTALL_ENABLED == 'true' &&
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/beta')
+    environment: CredentialManagerInstall
+    runs-on: pub-hk-ubuntu-24.04-ip
     permissions:
       contents: write
-      pull-requests: write
     steps:
-      # owner scopes the token to the org installation so it can access other repos (e.g. private npm-release-workflows)
-      - name: Generate GitHub App token
+      - name: Generate release GitHub App token
         id: app-token
-        uses: actions/create-github-app-token@v3
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
         with:
           app-id: ${{ vars.DEV_TOOLS_RELEASE_WORKFLOW_APP_ID }}
           private-key: ${{ secrets.DEV_TOOLS_RELEASE_WORKFLOW_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
-
-      - uses: actions/checkout@v7
-
-      - name: Checkout workflows repository
-        uses: actions/checkout@v7
+          repositories: heroku-cli-command
+          permission-contents: write
+      - name: Check out release metadata only
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          repository: heroku/npm-release-workflows
-          token: ${{ steps.app-token.outputs.token }}
-          path: workflows-repo
-          ref: main
-
-      - name: Create GitHub Release
-        uses: ./workflows-repo/.github/actions/release-on-push-create-release-public
+          ref: ${{ github.sha }}
+          sparse-checkout: |
+            .github/release-configs
+          persist-credentials: false
+      - name: Select release channel metadata
+        id: channel
+        shell: bash
+        env:
+          BRANCH_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          case "$BRANCH_NAME" in
+            main)
+              echo 'config_file=.github/release-configs/release-please-config.json' >> "$GITHUB_OUTPUT"
+              echo 'manifest_file=.github/release-configs/release-please-manifest.json' >> "$GITHUB_OUTPUT"
+              ;;
+            beta)
+              echo 'config_file=.github/release-configs/release-please-config.beta.json' >> "$GITHUB_OUTPUT"
+              echo 'manifest_file=.github/release-configs/release-please-manifest.beta.json' >> "$GITHUB_OUTPUT"
+              ;;
+            *) exit 1 ;;
+          esac
+      - name: Create GitHub release metadata
+        uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4.4.1
         with:
-          package-manager: npm  # npm | yarn | pnpm
-          branch_name: ${{ github.ref_name }}
           token: ${{ steps.app-token.outputs.token }}
+          target-branch: ${{ github.ref_name }}
+          config-file: ${{ steps.channel.outputs.config_file }}
+          manifest-file: ${{ steps.channel.outputs.manifest_file }}
+          skip-github-pull-request: true

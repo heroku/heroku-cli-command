@@ -2,7 +2,7 @@ import {expect} from 'chai'
 import {execa, ExecaError} from 'execa'
 import fs from 'fs-extra'
 
-import {Netrc} from '../../../src/credential-manager-core/lib/netrc-parser.js'
+import {Netrc} from '../../../src/deprecated/credential-manager-core/lib/netrc-parser.js'
 
 process.env.NETRC_PARSER_DEBUG = '1'
 

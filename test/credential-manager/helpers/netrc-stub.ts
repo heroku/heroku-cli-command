@@ -1,6 +1,6 @@
 import {type SinonStub, stub} from 'sinon'
 
-import {Netrc} from '../../../src/credential-manager-core/lib/netrc-parser.js'
+import {Netrc} from '../../../src/deprecated/credential-manager-core/lib/netrc-parser.js'
 
 /**
  * Mock netrc object used to simulate a parsed .netrc file with test credentials.

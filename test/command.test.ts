@@ -1,12 +1,15 @@
 import {Config} from '@oclif/core/config'
 import {expect, fancy} from 'fancy-test'
+import nock from 'nock'
 import {dirname, resolve} from 'node:path'
 import {fileURLToPath} from 'node:url'
+import * as sinon from 'sinon'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
 import {Command} from '../src/command.js'
+import {setCredentialManagerProvider} from '../src/credential-manager.js'
 import * as flags from '../src/flags/index.js'
 import {restoreCredentialManagerStub, stubCredentialManager, stubCredentialManagerWithNoCredentials} from './helpers/credential-manager-stub.js'
 
@@ -76,6 +79,55 @@ describe('command', () => {
         cmd.config = ctx.config
         await cmd.init()
         expect(cmd.heroku.auth).to.be.undefined
+      })
+  })
+
+  describe('logout operation auth', () => {
+    beforeEach(() => {
+      process.env = {}
+      nock.cleanAll()
+    })
+
+    afterEach(() => {
+      process.env = processEnv
+      sinon.restore()
+      nock.cleanAll()
+      restoreCredentialManagerStub()
+    })
+
+    test
+      .it('keeps snapshot token B on logout get/delete requests when ambient auth rotates to token A', async (ctx: any) => {
+        const removeCalls: unknown[][] = []
+        const cmd = new MyCommand([], ctx.config)
+        cmd.config = ctx.config
+        setCredentialManagerProvider({
+          async getAuth() {
+            return {account: 'operation@example.com', token: 'token-b'}
+          },
+          async removeAuth(...args) {
+            removeCalls.push(args)
+            cmd.heroku.setAuthEntry({account: 'ambient@example.com', token: 'token-a'})
+          },
+          async saveAuth() {},
+        })
+        const api = nock('https://api.heroku.com', {reqheaders: {authorization: 'Bearer token-b'}})
+          .delete('/oauth/sessions/~')
+          .reply(401, {})
+          .get('/oauth/authorizations')
+          .reply(401, {})
+        const commandLogin = sinon.spy(cmd.heroku, 'login')
+
+        await cmd.heroku.logout()
+
+        expect(api.isDone()).to.equal(true)
+        expect(commandLogin.called).to.equal(false)
+        expect(removeCalls).to.deep.equal([[
+          'operation@example.com',
+          ['api.heroku.com', 'git.heroku.com'],
+          'heroku-cli',
+          'token-b',
+        ]])
+        expect(cmd.heroku.auth).to.equal('token-a')
       })
   })
 

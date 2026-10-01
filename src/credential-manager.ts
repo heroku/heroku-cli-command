@@ -1,17 +1,23 @@
 /**
- * Thin wrapper around credential-manager-core so tests can inject a mock
+ * Thin wrapper around the credential manager so tests can inject a mock
  * (ESM module exports cannot be stubbed with sinon).
  */
+
 import {
-  type AuthEntry,
   getAuth as realGetAuth,
   removeAuth as realRemoveAuth,
   saveAuth as realSaveAuth,
-} from './credential-manager-core/index.js'
+} from './credential-manager-core/lib/credential-manager-adapter.js'
+
+/** Backward-compatible shape used by command consumers before storage extraction. */
+export type AuthEntry = {
+  account: string | undefined
+  token: string | undefined
+}
 
 export interface CredentialManagerProvider {
   getAuth: (account: string | undefined, host: string, service?: string) => Promise<AuthEntry>
-  removeAuth: (account: string | undefined, hosts: string[], service?: string) => Promise<void>
+  removeAuth: (account: string | undefined, hosts: string[], service?: string, expectedToken?: string) => Promise<void>
   saveAuth: (account: string, token: string, hosts: string[], service?: string) => Promise<void>
 }
 
@@ -37,8 +43,9 @@ export async function removeAuth(
   account: string | undefined,
   hosts: string[],
   service?: string,
+  expectedToken?: string,
 ): Promise<void> {
-  return provider.removeAuth(account, hosts, service)
+  return provider.removeAuth(account, hosts, service, expectedToken)
 }
 
 export async function saveAuth(
@@ -49,5 +56,3 @@ export async function saveAuth(
 ): Promise<void> {
   return provider.saveAuth(account, token, hosts, service)
 }
-
-export type {AuthEntry} from './credential-manager-core/index.js'

@@ -217,8 +217,11 @@ describe('credential-manager acceptance', function () {
       try {
         await saveAuth(CREDENTIAL.account, CREDENTIAL.token, CREDENTIAL.hosts, CREDENTIAL.service)
 
-        const netrcAuth = await getAuth('missing-account@example.com', CREDENTIAL.hosts[0], CREDENTIAL.service)
-        expect(netrcAuth).to.deep.equal({account: CREDENTIAL.account, token: CREDENTIAL.token})
+        const netrc = new Netrc()
+        await netrc.load()
+        for (const host of CREDENTIAL.hosts) {
+          expect(netrc.machines[host]).to.deep.equal({login: CREDENTIAL.account, password: CREDENTIAL.token})
+        }
       } finally {
         fakeSetup?.cleanup()
       }

@@ -1,11 +1,12 @@
 {
   "name": "@heroku-cli/command",
   "description": "base class for Heroku CLI commands",
-  "version": "13.2.2",
+  "version": "13.2.3",
   "author": "Heroku",
   "bugs": "https://github.com/heroku/heroku-cli-command/issues",
   "dependencies": {
-    "@heroku/http-call": "^5.5.2",
+    "@heroku/heroku-credential-manager": "0.1.0",
+    "@heroku/http-call": "5.5.2",
     "@heroku/js-blanket": "^1.0.0",
     "@oclif/core": "^4.3.0",
     "@sentry/node": "^10.45.0",
@@ -72,6 +73,11 @@
     "test:coverage": "c8 --all --check-coverage --reporter=text-summary --reporter=lcovonly mocha --forbid-only \"test/**/*.test.ts\" --ignore \"test/**/acceptance/**/*.test.ts\"",
     "test:file": "c8 mocha",
     "test:ci:acceptance": "c8 mocha --forbid-only \"test/credential-manager/acceptance/index.acceptance.test.ts\"",
+    "verify:packed-consumer": "node scripts/verify-packed-consumer.mjs",
+    "verify:rollback": "node scripts/verify-credential-manager-rollback.mjs",
+    "verify:rollback:guards": "node scripts/verify-credential-manager-rollback.mjs --self-test-guards",
+    "verify:rollback:cleanup": "node scripts/verify-credential-manager-rollback.mjs --self-test-cleanup",
+    "verify:trusted": "npm run verify:packed-consumer && npm run verify:rollback:guards && npm run verify:rollback:cleanup && npm run verify:rollback",
     "prepare": "npm run build",
     "example": "sh examples/run.sh"
   },

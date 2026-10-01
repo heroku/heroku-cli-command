@@ -1,5 +1,7 @@
 import {Config} from '@oclif/core/config'
 import {ux} from '@oclif/core/ux'
+import {expect as chaiExpect, use} from 'chai'
+import chaiAsPromised from 'chai-as-promised'
 import debug from 'debug'
 import {expect, fancy} from 'fancy-test'
 import nock from 'nock'
@@ -13,11 +15,14 @@ import {stderr} from 'stdout-stderr'
 const SYSTEM_TMPDIR = os.tmpdir()
 
 import {Command as CommandBase} from '../src/command.js'
-import {writeLoginState} from '../src/credential-manager-core/lib/login-state.js'
+import {readLoginState, writeLoginState} from '../src/credential-manager-core/lib/login-state.js'
 import {setCredentialManagerProvider} from '../src/credential-manager.js'
+import {writeLoginStateCoordinated} from '../src/login-state-coordinator.js'
 import {prompter} from '../src/prompter.js'
 import {RequestId, requestIdHeader} from '../src/request-id.js'
 import {restoreCredentialManagerStub, stubCredentialManager} from './helpers/credential-manager-stub.js'
+
+use(chaiAsPromised)
 
 class Command extends CommandBase {
   async run() {}
@@ -27,6 +32,16 @@ const {env} = process
 let api: nock.Scope
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
+function deferred<T = void>() {
+  let reject!: (reason?: unknown) => void
+  let resolve!: (value: PromiseLike<T> | T) => void
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    reject = rejectPromise
+    resolve = resolvePromise
+  })
+  return {promise, reject, resolve}
+}
+
 const test = fancy
   .add('config', () => {
     const config = new Config({root: resolve(__dirname, '../package.json')})
@@ -113,6 +128,108 @@ describe('api_client', () => {
       })
 
     test
+      .it('does not let a delayed credential read overwrite a newer auth entry', async ctx => {
+        const lookupStarted = deferred()
+        const releaseLookup = deferred()
+        setCredentialManagerProvider({
+          async getAuth() {
+            lookupStarted.resolve()
+            await releaseLookup.promise
+            return {account: 'stale@example.com', token: 'stale-token'}
+          },
+          async removeAuth() {},
+          async saveAuth() {},
+        })
+        const cmd = new Command([], ctx.config)
+        cmd.config = ctx.config
+
+        const staleRead = cmd.heroku.getAuthEntry()
+        await lookupStarted.promise
+        cmd.heroku.setAuthEntry({account: 'new@example.com', token: 'new-token'})
+        releaseLookup.resolve()
+
+        expect(await staleRead).to.deep.equal({account: 'stale@example.com', token: 'stale-token'})
+        expect(await cmd.heroku.getAuthEntry()).to.deep.equal({account: 'new@example.com', token: 'new-token'})
+        expect(cmd.heroku.auth).to.equal('new-token')
+      })
+
+    test
+      .it('does not let a delayed missing-credential read clear newer auth resolution state', async ctx => {
+        const lookupStarted = deferred()
+        const releaseLookup = deferred()
+        let getCalls = 0
+        setCredentialManagerProvider({
+          async getAuth() {
+            getCalls++
+            if (getCalls === 1) {
+              lookupStarted.resolve()
+              await releaseLookup.promise
+              throw new Error('No auth found')
+            }
+
+            return {account: 'stored@example.com', token: 'stored-token'}
+          },
+          async removeAuth() {},
+          async saveAuth() {},
+        })
+        const cmd = new Command([], ctx.config)
+        cmd.config = ctx.config
+
+        const staleRead = cmd.heroku.getAuthEntry()
+        await lookupStarted.promise
+        cmd.heroku.setAuthEntry({account: 'new@example.com', token: 'new-token'})
+        releaseLookup.resolve()
+
+        expect(await staleRead).to.be.undefined
+        expect(await cmd.heroku.getAuthEntry()).to.deep.equal({account: 'new@example.com', token: 'new-token'})
+        cmd.heroku.setAuthEntry(undefined)
+        expect(await cmd.heroku.getAuthEntry()).to.deep.equal({account: 'stored@example.com', token: 'stored-token'})
+        expect(getCalls).to.equal(2)
+      })
+
+    test
+      .it('does not let a stale read clear the current generation in-flight dedupe promise', async ctx => {
+        const firstStarted = deferred()
+        const secondStarted = deferred()
+        const releaseFirst = deferred()
+        const releaseSecond = deferred()
+        let getCalls = 0
+        setCredentialManagerProvider({
+          async getAuth() {
+            getCalls++
+            if (getCalls === 1) {
+              firstStarted.resolve()
+              await releaseFirst.promise
+              return {account: 'stale@example.com', token: 'stale-token'}
+            }
+
+            secondStarted.resolve()
+            await releaseSecond.promise
+            return {account: 'current@example.com', token: 'current-token'}
+          },
+          async removeAuth() {},
+          async saveAuth() {},
+        })
+        const cmd = new Command([], ctx.config)
+        cmd.config = ctx.config
+
+        const staleRead = cmd.heroku.getAuthEntry()
+        await firstStarted.promise
+        cmd.heroku.setAuthEntry(undefined)
+        const currentRead = cmd.heroku.getAuthEntry()
+        await secondStarted.promise
+        releaseFirst.resolve()
+        await staleRead
+        const dedupedCurrentRead = cmd.heroku.getAuthEntry()
+        releaseSecond.resolve()
+
+        const expected = {account: 'current@example.com', token: 'current-token'}
+        expect(await currentRead).to.deep.equal(expected)
+        expect(await dedupedCurrentRead).to.deep.equal(expected)
+        expect(getCalls).to.equal(2)
+      })
+
+    test
       .it('does not call credential store twice when no credentials exist', async ctx => {
         let getCalls = 0
         setCredentialManagerProvider({
@@ -128,6 +245,56 @@ describe('api_client', () => {
         expect(await cmd.heroku.getAuthEntry()).to.be.undefined
         expect(await cmd.heroku.getAuthEntry()).to.be.undefined
         expect(getCalls).to.equal(1)
+      })
+
+    test
+      .it('treats the exact current-host missing-auth error as normal absence', async ctx => {
+        setCredentialManagerProvider({
+          async getAuth() {
+            throw new Error('No auth found for api.heroku.com')
+          },
+          async removeAuth() {},
+          async saveAuth() {},
+        })
+        const cmd = new Command([], ctx.config)
+        cmd.config = ctx.config
+
+        expect(await cmd.heroku.getAuthEntry()).to.be.undefined
+      })
+
+    test
+      .it('surfaces other No auth errors as operational failures', async ctx => {
+        const operationalFailure = new Error('No auth backend available')
+        setCredentialManagerProvider({
+          async getAuth() {
+            throw operationalFailure
+          },
+          async removeAuth() {},
+          async saveAuth() {},
+        })
+        const cmd = new Command([], ctx.config)
+        cmd.config = ctx.config
+
+        expect(await cmd.heroku.getAuthEntry().catch((error: unknown) => error)).to.equal(operationalFailure)
+      })
+
+    test
+      .it('uses the host-specific credential service for a custom HEROKU_HOST lookup', async ctx => {
+        process.env.HEROKU_HOST = 'staging.heroku.com'
+        let receivedService: string | undefined
+        setCredentialManagerProvider({
+          async getAuth(_account, _host, service) {
+            receivedService = service
+            return {account: 'custom@example.com', token: 'custom-token'}
+          },
+          async removeAuth() {},
+          async saveAuth() {},
+        })
+        const cmd = new Command([], ctx.config)
+        cmd.config = ctx.config
+
+        expect(await cmd.heroku.getAuthEntry()).to.deep.equal({account: 'custom@example.com', token: 'custom-token'})
+        expect(receivedService).to.equal('heroku-cli@api.staging.heroku.com')
       })
 
     test
@@ -162,7 +329,7 @@ describe('api_client', () => {
         })
         api.delete('/oauth/sessions/~').reply(200, {})
         api.get('/oauth/authorizations').reply(200, [])
-        api.get('/oauth/authorizations/~').reply(200, {})
+        api.get('/oauth/authorizations/~').reply(404, {id: 'not_found', resource: 'authorization'})
 
         const cmd = new Command([], ctx.config)
         cmd.config = ctx.config
@@ -246,7 +413,7 @@ describe('api_client', () => {
         await writeLoginState(tmpDir, 'logout-int@example.com')
         api.delete('/oauth/sessions/~').reply(200, {})
         api.get('/oauth/authorizations').reply(200, [])
-        api.get('/oauth/authorizations/~').reply(200, {})
+        api.get('/oauth/authorizations/~').reply(404, {id: 'not_found', resource: 'authorization'})
         const cmd = new Command([], ctx.config)
         cmd.config = {...ctx.config, dataDir: tmpDir} as Config
         await cmd.heroku.logout()
@@ -266,7 +433,317 @@ describe('api_client', () => {
         const cmd = new Command([], ctx.config)
         cmd.config = {...ctx.config, dataDir: tmpDir} as Config
         await cmd.heroku.getAuthEntry()
+        await (cmd.heroku as unknown as {_authLifecycle: Promise<void>})._authLifecycle
         expect(fs.existsSync(join(tmpDir, 'login.json'))).to.be.false
+      })
+
+    test
+      .it('surfaces credential backend failures without deleting login.json or caching absence', async ctx => {
+        const backendFailure = Object.assign(new Error('security process failed'), {code: 'EACCES'})
+        let getCalls = 0
+        setCredentialManagerProvider({
+          async getAuth() {
+            getCalls++
+            if (getCalls === 1) throw backendFailure
+            return {account: 'cached@example.com', token: 'recovered-token'}
+          },
+          async removeAuth() {},
+          async saveAuth() {},
+        })
+        await writeLoginState(tmpDir, 'cached@example.com')
+        const cmd = new Command([], ctx.config)
+        cmd.config = {...ctx.config, dataDir: tmpDir} as Config
+
+        const error = await cmd.heroku.getAuthEntry().catch((error: unknown) => error)
+
+        expect(error).to.equal(backendFailure)
+        expect(await readLoginState(tmpDir)).to.deep.equal({account: 'cached@example.com'})
+        expect(await cmd.heroku.getAuthEntry()).to.deep.equal({account: 'cached@example.com', token: 'recovered-token'})
+        expect(getCalls).to.equal(2)
+      })
+
+    test
+      .it('clears malformed login.json when credential lookup also fails', async ctx => {
+        setCredentialManagerProvider({
+          async getAuth() {
+            throw new Error('No auth found')
+          },
+          async removeAuth() {},
+          async saveAuth() {},
+        })
+        fs.writeFileSync(join(tmpDir, 'login.json'), '{malformed')
+        const cmd = new Command([], ctx.config)
+        cmd.config = {...ctx.config, dataDir: tmpDir} as Config
+
+        await cmd.heroku.getAuthEntry()
+        await (cmd.heroku as unknown as {_authLifecycle: Promise<void>})._authLifecycle
+
+        expect(fs.existsSync(join(tmpDir, 'login.json'))).to.be.false
+      })
+
+    test
+      .it('finishes stale login-state cleanup before a newer login writes login.json', async ctx => {
+        const deleteStarted = deferred()
+        const loginWriteFinished = deferred()
+        const releaseDelete = deferred()
+        const originalUnlink = fs.promises.unlink.bind(fs.promises)
+        const unlink = sinon.stub(fs.promises, 'unlink').callsFake(async path => {
+          deleteStarted.resolve()
+          await releaseDelete.promise
+          return originalUnlink(path)
+        })
+        setCredentialManagerProvider({
+          async getAuth() {
+            throw new Error('No auth found')
+          },
+          async removeAuth() {},
+          async saveAuth() {},
+        })
+        await writeLoginState(tmpDir, 'stale@example.com')
+        const cmd = new Command([], ctx.config)
+        cmd.config = {...ctx.config, dataDir: tmpDir} as Config
+        const facade = (cmd.heroku as unknown as {
+          _login: {login(): Promise<void>}
+        })._login
+        const login = sinon.stub(facade, 'login').callsFake(async () => {
+          await writeLoginStateCoordinated(tmpDir, 'new@example.com')
+          cmd.heroku.setAuthEntry({account: 'new@example.com', token: 'new-token'})
+          loginWriteFinished.resolve()
+        })
+
+        try {
+          const staleRead = cmd.heroku.getAuthEntry()
+          await deleteStarted.promise
+          const newLogin = cmd.heroku.login()
+          await Promise.resolve()
+          if (login.called) await loginWriteFinished.promise
+          releaseDelete.resolve()
+          await Promise.all([staleRead, newLogin])
+
+          expect(await readLoginState(tmpDir)).to.deep.equal({account: 'new@example.com'})
+          expect(await cmd.heroku.getAuthEntry()).to.deep.equal({account: 'new@example.com', token: 'new-token'})
+        } finally {
+          unlink.restore()
+        }
+      })
+
+    test
+      .it('does not unlink a newer package-coordinated login state after stale validation', async ctx => {
+        const deleteStarted = deferred()
+        const releaseDelete = deferred()
+        const originalUnlink = fs.promises.unlink.bind(fs.promises)
+        const unlink = sinon.stub(fs.promises, 'unlink').callsFake(async path => {
+          deleteStarted.resolve()
+          await releaseDelete.promise
+          return originalUnlink(path)
+        })
+        setCredentialManagerProvider({
+          async getAuth() {
+            throw new Error('No auth found')
+          },
+          async removeAuth() {},
+          async saveAuth() {},
+        })
+        await writeLoginState(tmpDir, 'stale@example.com')
+        const cmd = new Command([], ctx.config)
+        cmd.config = {...ctx.config, dataDir: tmpDir} as Config
+        const {_login} = cmd.heroku as unknown as {
+          _login: {createDelegate(): {storage: {writeLoginState(dataDir: string, account: string): Promise<void>}}}
+        }
+        const {storage} = _login.createDelegate()
+
+        try {
+          const staleRead = cmd.heroku.getAuthEntry()
+          await deleteStarted.promise
+          let newerWriteFinished = false
+          const newerWrite = storage.writeLoginState(tmpDir, 'new@example.com').then(() => {
+            newerWriteFinished = true
+            cmd.heroku.setAuthEntry({account: 'new@example.com', token: 'new-token'})
+          })
+          await Promise.resolve()
+
+          expect(newerWriteFinished).to.equal(false)
+          expect(await readLoginState(tmpDir)).to.deep.equal({account: 'stale@example.com'})
+          releaseDelete.resolve()
+          await Promise.all([staleRead, newerWrite])
+          await (cmd.heroku as unknown as {_authLifecycle: Promise<void>})._authLifecycle
+
+          expect(await readLoginState(tmpDir)).to.deep.equal({account: 'new@example.com'})
+          expect(await cmd.heroku.getAuthEntry()).to.deep.equal({account: 'new@example.com', token: 'new-token'})
+        } finally {
+          releaseDelete.resolve()
+          unlink.restore()
+        }
+      })
+
+    for (const [description, newerAccount] of [
+      ['same-account', 'same@example.com'],
+      ['different-account', 'different@example.com'],
+    ] as const) {
+      test
+        .it(`keeps a newer ${description} write from another APIClient when stale cleanup enters later`, async ctx => {
+          const lookupStarted = deferred()
+          const releaseLookup = deferred()
+          setCredentialManagerProvider({
+            async getAuth() {
+              lookupStarted.resolve()
+              await releaseLookup.promise
+              throw new Error('No auth found')
+            },
+            async removeAuth() {},
+            async saveAuth() {},
+          })
+          await writeLoginStateCoordinated(tmpDir, 'same@example.com')
+          const staleCommand = new Command([], ctx.config)
+          staleCommand.config = {...ctx.config, dataDir: tmpDir} as Config
+          const newerCommand = new Command([], ctx.config)
+          newerCommand.config = {...ctx.config, dataDir: tmpDir} as Config
+          const {_login} = newerCommand.heroku as unknown as {
+            _login: {createDelegate(): {storage: {writeLoginState(dataDir: string, account: string): Promise<void>}}}
+          }
+          const {storage} = _login.createDelegate()
+
+          const staleRead = staleCommand.heroku.getAuthEntry()
+          await lookupStarted.promise
+          await storage.writeLoginState(tmpDir, newerAccount)
+          newerCommand.heroku.setAuthEntry({account: newerAccount, token: 'new-token'})
+          releaseLookup.resolve()
+          await staleRead
+          await (staleCommand.heroku as unknown as {_authLifecycle: Promise<void>})._authLifecycle
+
+          expect(await readLoginState(tmpDir)).to.deep.equal({account: newerAccount})
+          expect(await newerCommand.heroku.getAuthEntry()).to.deep.equal({account: newerAccount, token: 'new-token'})
+        })
+    }
+
+    test
+      .it('lets a real login finish when it dedupes an external failed credential read', async ctx => {
+        const lookupStarted = deferred()
+        const releaseLookup = deferred()
+        let getCalls = 0
+        setCredentialManagerProvider({
+          async getAuth() {
+            getCalls++
+            lookupStarted.resolve()
+            await releaseLookup.promise
+            throw new Error('No auth found')
+          },
+          async removeAuth() {},
+          async saveAuth() {},
+        })
+        await writeLoginState(tmpDir, 'stale@example.com')
+        const prompt = sinon.stub(prompter, 'prompt').callsFake(async questions => {
+          const [question] = questions
+          return question.name === 'email'
+            ? {email: 'new@example.com'}
+            : {password: 'password'}
+        })
+        const oauthStarted = deferred()
+        api.post('/oauth/authorizations').reply(() => {
+          oauthStarted.resolve()
+          return [200, {access_token: {token: 'new-token'}, user: {email: 'new@example.com'}}]
+        })
+        const cmd = new Command([], ctx.config)
+        cmd.config = {...ctx.config, dataDir: tmpDir} as Config
+
+        const externalRead = cmd.heroku.getAuthEntry()
+        await lookupStarted.promise
+        const login = cmd.heroku.login({method: 'interactive'})
+        releaseLookup.resolve()
+        const reachedOAuth = await Promise.race([
+          oauthStarted.promise.then(() => true),
+          new Promise<false>(resolve => {
+            setTimeout(() => resolve(false), 250)
+          }),
+        ])
+
+        expect(reachedOAuth).to.be.true
+        await Promise.all([externalRead, login])
+        expect(getCalls).to.equal(2)
+        expect(prompt.called).to.be.true
+        expect(await readLoginState(tmpDir)).to.deep.equal({account: 'new@example.com'})
+        expect(await cmd.heroku.getAuthEntry()).to.deep.equal({account: 'new@example.com', token: 'new-token'})
+      })
+
+    test
+      .it('does not let detached work from a completed transaction bypass the current queue owner', async ctx => {
+        const triggerDetachedRead = deferred()
+        const detachedReadStarted = deferred()
+        const detachedReadFinished = deferred()
+        const currentLoginStarted = deferred()
+        const releaseCurrentLogin = deferred()
+        const unlink = sinon.stub(fs.promises, 'unlink').resolves()
+        setCredentialManagerProvider({
+          async getAuth() {
+            detachedReadStarted.resolve()
+            throw new Error('No auth found')
+          },
+          async removeAuth() {},
+          async saveAuth() {},
+        })
+        await writeLoginState(tmpDir, 'stale@example.com')
+        const cmd = new Command([], ctx.config)
+        cmd.config = {...ctx.config, dataDir: tmpDir} as Config
+        const facade = (cmd.heroku as unknown as {
+          _login: {login(): Promise<void>}
+        })._login
+        const login = sinon.stub(facade, 'login')
+        login.onFirstCall().callsFake(async () => {
+          setImmediate(async () => {
+            await triggerDetachedRead.promise
+            await cmd.heroku.getAuthEntry()
+            detachedReadFinished.resolve()
+          })
+        })
+        login.onSecondCall().callsFake(async () => {
+          currentLoginStarted.resolve()
+          await releaseCurrentLogin.promise
+        })
+
+        try {
+          await cmd.heroku.login()
+          const currentLogin = cmd.heroku.login()
+          await currentLoginStarted.promise
+          triggerDetachedRead.resolve()
+          await detachedReadStarted.promise
+          await detachedReadFinished.promise
+          await new Promise(resolve => {
+            setImmediate(resolve)
+          })
+
+          expect(unlink.called).to.be.false
+          releaseCurrentLogin.resolve()
+          await currentLogin
+          await (cmd.heroku as unknown as {_authLifecycle: Promise<void>})._authLifecycle
+          expect(unlink.calledOnce).to.be.true
+        } finally {
+          releaseCurrentLogin.resolve()
+          unlink.restore()
+        }
+      })
+
+    test
+      .it('keeps credential lookup failure nonfatal when stale login-state cleanup fails', async ctx => {
+        const cleanupFailure = Object.assign(new Error('cleanup denied'), {code: 'EACCES'})
+        const unlink = sinon.stub(fs.promises, 'unlink').rejects(cleanupFailure)
+        setCredentialManagerProvider({
+          async getAuth() {
+            throw new Error('No auth found')
+          },
+          async removeAuth() {},
+          async saveAuth() {},
+        })
+        await writeLoginState(tmpDir, 'stale@example.com')
+        const cmd = new Command([], ctx.config)
+        cmd.config = {...ctx.config, dataDir: tmpDir} as Config
+
+        try {
+          expect(await cmd.heroku.getAuthEntry()).to.be.undefined
+          await (cmd.heroku as unknown as {_authLifecycle: Promise<void>})._authLifecycle
+          expect(await readLoginState(tmpDir)).to.deep.equal({account: 'stale@example.com'})
+        } finally {
+          unlink.restore()
+        }
       })
   })
 
@@ -327,8 +804,98 @@ describe('api_client', () => {
       })
   })
 
+  describe('auth lifecycle serialization', () => {
+    type LoginFacade = {
+      login(options?: unknown): Promise<void>
+      logoutEntry(entry: {account: string; token: string}): Promise<void>
+    }
+
+    function facade(cmd: Command): LoginFacade {
+      return (cmd.heroku as unknown as {_login: LoginFacade})._login
+    }
+
+    test
+      .it('completes logout before a subsequently invoked login and preserves the later login state', async ctx => {
+        const logoutStarted = deferred()
+        const releaseLogout = deferred()
+        const cmd = new Command([], ctx.config)
+        cmd.config = ctx.config
+        cmd.heroku.setAuthEntry({account: 'old@example.com', token: 'old-token'})
+        const logoutEntry = sinon.stub(facade(cmd), 'logoutEntry').callsFake(async () => {
+          logoutStarted.resolve()
+          await releaseLogout.promise
+        })
+        const login = sinon.stub(facade(cmd), 'login').callsFake(async () => {
+          cmd.heroku.setAuthEntry({account: 'new@example.com', token: 'new-token'})
+        })
+
+        const logoutResult = cmd.heroku.logout()
+        await logoutStarted.promise
+        const loginResult = cmd.heroku.login()
+        await Promise.resolve()
+
+        expect(login.called).to.be.false
+        releaseLogout.resolve()
+        await Promise.all([logoutResult, loginResult])
+
+        expect(logoutEntry.calledOnceWithExactly({account: 'old@example.com', token: 'old-token'})).to.be.true
+        expect(login.calledOnce).to.be.true
+        expect(await cmd.heroku.getAuthEntry()).to.deep.equal({account: 'new@example.com', token: 'new-token'})
+      })
+
+    test
+      .it('completes login before a subsequently invoked logout and logs out the resulting entry', async ctx => {
+        const loginStarted = deferred()
+        const releaseLogin = deferred()
+        const cmd = new Command([], ctx.config)
+        cmd.config = ctx.config
+        cmd.heroku.setAuthEntry({account: 'old@example.com', token: 'old-token'})
+        const login = sinon.stub(facade(cmd), 'login').callsFake(async () => {
+          loginStarted.resolve()
+          await releaseLogin.promise
+          cmd.heroku.setAuthEntry({account: 'new@example.com', token: 'new-token'})
+        })
+        const logoutEntry = sinon.stub(facade(cmd), 'logoutEntry').resolves()
+
+        const loginResult = cmd.heroku.login()
+        await loginStarted.promise
+        const logoutResult = cmd.heroku.logout()
+        await Promise.resolve()
+
+        expect(logoutEntry.called).to.be.false
+        releaseLogin.resolve()
+        await Promise.all([loginResult, logoutResult])
+
+        expect(login.calledOnce).to.be.true
+        expect(logoutEntry.calledOnceWithExactly({account: 'new@example.com', token: 'new-token'})).to.be.true
+        expect(cmd.heroku.auth).to.be.undefined
+      })
+
+    test
+      .it('recovers the lifecycle queue after a failed login', async ctx => {
+        const cmd = new Command([], ctx.config)
+        cmd.config = ctx.config
+        cmd.heroku.setAuthEntry({account: 'old@example.com', token: 'old-token'})
+        const loginFailure = new Error('login failed')
+        sinon.stub(facade(cmd), 'login').rejects(loginFailure)
+        const logoutEntry = sinon.stub(facade(cmd), 'logoutEntry').resolves()
+
+        const loginError = await cmd.heroku.login().catch((error: unknown) => error)
+        await cmd.heroku.logout()
+
+        expect(loginError).to.equal(loginFailure)
+        expect(logoutEntry.calledOnceWithExactly({account: 'old@example.com', token: 'old-token'})).to.be.true
+        expect(cmd.heroku.auth).to.be.undefined
+      })
+  })
+
   describe('logout', () => {
-    const removeAuthCalls: {account: string | undefined; hosts: string[]}[] = []
+    const removeAuthCalls: {
+      account: string | undefined
+      expectedToken: string | undefined
+      hosts: string[]
+      service: string | undefined
+    }[] = []
 
     beforeEach(() => {
       removeAuthCalls.length = 0
@@ -336,14 +903,22 @@ describe('api_client', () => {
         async getAuth() {
           return {account: 'logout@example.com', token: 'logout-test-token'}
         },
-        async removeAuth(account: string | undefined, hosts: string[]) {
-          removeAuthCalls.push({account, hosts})
+        async removeAuth(account: string | undefined, hosts: string[], service?: string, expectedToken?: string) {
+          removeAuthCalls.push({
+            account,
+            expectedToken,
+            hosts,
+            service,
+          })
         },
         async saveAuth() {},
       })
       api.delete('/oauth/sessions/~').reply(200, {})
       api.get('/oauth/authorizations').reply(200, [])
-      api.get('/oauth/authorizations/~').reply(200, {})
+      api.get('/oauth/authorizations/~').reply(404, {
+        id: 'not_found',
+        resource: 'authorization',
+      })
     })
 
     afterEach(() => {
@@ -351,26 +926,360 @@ describe('api_client', () => {
     })
 
     test
-      .it('calls removeAuth with api and git hosts after revoking session', async ctx => {
+      .it('delegates complete logout cleanup once with the snapshot token', async ctx => {
         const cmd = new Command([], ctx.config)
         cmd.config = ctx.config
         await cmd.heroku.logout()
         expect(removeAuthCalls).to.have.length(1)
-        expect(removeAuthCalls[0].account).to.equal('logout@example.com')
-        expect(removeAuthCalls[0].hosts).to.deep.equal(['api.heroku.com', 'git.heroku.com'])
+        expect(removeAuthCalls[0]).to.deep.equal({
+          account: 'logout@example.com',
+          expectedToken: 'logout-test-token',
+          hosts: ['api.heroku.com', 'git.heroku.com'],
+          service: 'heroku-cli',
+        })
         expect(cmd.heroku.auth).to.be.undefined
       })
 
     test
-      .it('calls removeAuth with undefined account when HEROKU_API_KEY is set', async ctx => {
+      .it('revokes an account-less HEROKU_API_KEY and unconditionally cleans persistent hosts', async ctx => {
         process.env.HEROKU_API_KEY = 'env-api-key'
         removeAuthCalls.length = 0
         const cmd = new Command([], ctx.config)
         cmd.config = ctx.config
         await cmd.heroku.logout()
-        expect(removeAuthCalls).to.have.length(1)
-        expect(removeAuthCalls[0].account).to.be.undefined
-        expect(removeAuthCalls[0].hosts).to.deep.equal(['api.heroku.com', 'git.heroku.com'])
+        expect(removeAuthCalls).to.deep.equal([{
+          account: undefined,
+          expectedToken: 'env-api-key',
+          hosts: ['api.heroku.com', 'git.heroku.com'],
+          service: 'heroku-cli',
+        }])
+        expect(cmd.heroku.auth).to.be.undefined
+      })
+
+    test
+      .it('revokes legacy token-only state and unconditionally cleans persistent hosts', async ctx => {
+        const cmd = new Command([], ctx.config)
+        cmd.config = ctx.config
+        cmd.heroku.setAuthEntry({account: undefined, token: 'legacy-token'})
+
+        await cmd.heroku.logout()
+
+        expect(removeAuthCalls).to.deep.equal([{
+          account: undefined,
+          expectedToken: 'legacy-token',
+          hosts: ['api.heroku.com', 'git.heroku.com'],
+          service: 'heroku-cli',
+        }])
+        expect(cmd.heroku.auth).to.be.undefined
+      })
+
+    test
+      .it('cleans account-less hosts but preserves unrelated login state when remote revocation fails', async ctx => {
+        nock.cleanAll()
+        api = nock('https://api.heroku.com')
+        api.delete('/oauth/sessions/~').reply(500, {id: 'server_error', message: 'remote failed'})
+        api.get('/oauth/authorizations').reply(200, [])
+        api.get('/oauth/authorizations/~').reply(404, {
+          id: 'not_found',
+          resource: 'authorization',
+        })
+        const tmpDir = fs.mkdtempSync(join(SYSTEM_TMPDIR, 'heroku-api-client-token-logout-'))
+        const cmd = new Command([], ctx.config)
+        cmd.config = {...ctx.config, dataDir: tmpDir} as Config
+        cmd.heroku.setAuthEntry({account: undefined, token: 'legacy-token'})
+        await writeLoginState(tmpDir, 'stale@example.com')
+
+        try {
+          await cmd.heroku.logout()
+
+          expect(removeAuthCalls).to.deep.equal([{
+            account: undefined,
+            expectedToken: 'legacy-token',
+            hosts: ['api.heroku.com', 'git.heroku.com'],
+            service: 'heroku-cli',
+          }])
+          expect(await readLoginState(tmpDir)).to.deep.equal({account: 'stale@example.com'})
+        } finally {
+          fs.rmSync(tmpDir, {force: true, recursive: true})
+        }
+      })
+
+    test
+      .it('uses the host-specific credential service for custom-host token-only cleanup', async ctx => {
+        nock.cleanAll()
+        process.env.HEROKU_HOST = 'staging.heroku.com'
+        api = nock('https://api.staging.heroku.com')
+        api.delete('/oauth/sessions/~').reply(200, {})
+        api.get('/oauth/authorizations').reply(200, [])
+        api.get('/oauth/authorizations/~').reply(404, {id: 'not_found', resource: 'authorization'})
+        const cmd = new Command([], ctx.config)
+        cmd.config = ctx.config
+        cmd.heroku.setAuthEntry({account: undefined, token: 'custom-host-token'})
+
+        await cmd.heroku.logout()
+
+        expect(removeAuthCalls).to.deep.equal([{
+          account: undefined,
+          expectedToken: 'custom-host-token',
+          hosts: ['api.staging.heroku.com', 'git.staging.heroku.com'],
+          service: 'heroku-cli@api.staging.heroku.com',
+        }])
+      })
+
+    test
+      .it('resets memory and allows a storage re-read after remote logout failure', async ctx => {
+        nock.cleanAll()
+        api = nock('https://api.heroku.com')
+        api.delete('/oauth/sessions/~').reply(500, {id: 'server_error', message: 'remote failed'})
+        api.get('/oauth/authorizations').reply(200, [])
+        api.get('/oauth/authorizations/~').reply(404, {
+          id: 'not_found',
+          resource: 'authorization',
+        })
+        let getCalls = 0
+        setCredentialManagerProvider({
+          async getAuth() {
+            getCalls++
+            return getCalls === 1
+              ? {account: 'logout@example.com', token: 'logout-test-token'}
+              : {account: 'replacement@example.com', token: 'replacement-token'}
+          },
+          async removeAuth(account: string | undefined, hosts: string[], service?: string, expectedToken?: string) {
+            removeAuthCalls.push({
+              account,
+              expectedToken,
+              hosts,
+              service,
+            })
+          },
+          async saveAuth() {},
+        })
+        const cmd = new Command([], ctx.config)
+        cmd.config = ctx.config
+
+        stderr.start()
+        try {
+          await cmd.heroku.logout()
+        } finally {
+          stderr.stop()
+        }
+
+        expect(stderr.output).to.contain('Error: remote failed')
+        expect(cmd.heroku.auth).to.be.undefined
+        expect(await cmd.heroku.getAuthEntry()).to.deep.equal({
+          account: 'replacement@example.com',
+          token: 'replacement-token',
+        })
+        expect(getCalls).to.equal(2)
+      })
+
+    test
+      .it('resets memory and suppresses local cleanup failure after remote success', async ctx => {
+        const localFailure = new Error('local cleanup failed')
+        setCredentialManagerProvider({
+          async getAuth() {
+            return {account: 'logout@example.com', token: 'logout-test-token'}
+          },
+          async removeAuth() {
+            throw localFailure
+          },
+          async saveAuth() {},
+        })
+        const cmd = new Command([], ctx.config)
+        cmd.config = ctx.config
+
+        stderr.start()
+        const result = await cmd.heroku.logout()
+        stderr.stop()
+
+        expect(result).to.be.undefined
+        expect(stderr.output).to.equal('')
+        expect(cmd.heroku.auth).to.be.undefined
+      })
+
+    test
+      .it('suppresses package local-failure precedence when local and remote logout both fail', async ctx => {
+        nock.cleanAll()
+        api = nock('https://api.heroku.com')
+        api.delete('/oauth/sessions/~').reply(500, {id: 'server_error', message: 'remote failed'})
+        api.get('/oauth/authorizations').reply(200, [])
+        api.get('/oauth/authorizations/~').reply(404, {
+          id: 'not_found',
+          resource: 'authorization',
+        })
+        const localFailure = new Error('local cleanup won')
+        setCredentialManagerProvider({
+          async getAuth() {
+            return {account: 'logout@example.com', token: 'logout-test-token'}
+          },
+          async removeAuth() {
+            throw localFailure
+          },
+          async saveAuth() {},
+        })
+        const cmd = new Command([], ctx.config)
+        cmd.config = ctx.config
+
+        const result = await cmd.heroku.logout()
+
+        expect(result).to.be.undefined
+        expect(cmd.heroku.auth).to.be.undefined
+      })
+
+    test
+      .it('keeps no-token logout a no-op and resets missing-auth resolution', async ctx => {
+        nock.cleanAll()
+        api = nock('https://api.heroku.com')
+        let getCalls = 0
+        setCredentialManagerProvider({
+          async getAuth() {
+            getCalls++
+            throw new Error('No auth found')
+          },
+          async removeAuth(account: string | undefined, hosts: string[], service?: string, expectedToken?: string) {
+            removeAuthCalls.push({
+              account,
+              expectedToken,
+              hosts,
+              service,
+            })
+          },
+          async saveAuth() {},
+        })
+        const cmd = new Command([], ctx.config)
+        cmd.config = ctx.config
+
+        await cmd.heroku.logout()
+        expect(await cmd.heroku.getAuthEntry()).to.be.undefined
+
+        expect(removeAuthCalls).to.have.length(0)
+        expect(getCalls).to.equal(2)
+      })
+
+    test
+      .it('lets no-token logout preserve queued cleanup for stale login.json', async ctx => {
+        nock.cleanAll()
+        api = nock('https://api.heroku.com')
+        const tmpDir = fs.mkdtempSync(join(SYSTEM_TMPDIR, 'heroku-api-client-no-token-'))
+        const platformStub = sinon.stub(process, 'platform').value('darwin')
+        setCredentialManagerProvider({
+          async getAuth() {
+            throw new Error('No auth found')
+          },
+          async removeAuth() {},
+          async saveAuth() {},
+        })
+        await writeLoginState(tmpDir, 'stale@example.com')
+        const cmd = new Command([], ctx.config)
+        cmd.config = {...ctx.config, dataDir: tmpDir} as Config
+
+        try {
+          await cmd.heroku.logout()
+          await (cmd.heroku as unknown as {_authLifecycle: Promise<void>})._authLifecycle
+
+          expect(fs.existsSync(join(tmpDir, 'login.json'))).to.be.false
+          expect(cmd.heroku.auth).to.be.undefined
+        } finally {
+          platformStub.restore()
+          fs.rmSync(tmpDir, {force: true, recursive: true})
+        }
+      })
+
+    test
+      .it('lets no-token logout preserve queued cleanup for malformed login.json', async ctx => {
+        nock.cleanAll()
+        api = nock('https://api.heroku.com')
+        const tmpDir = fs.mkdtempSync(join(SYSTEM_TMPDIR, 'heroku-api-client-no-token-'))
+        const platformStub = sinon.stub(process, 'platform').value('darwin')
+        setCredentialManagerProvider({
+          async getAuth() {
+            throw new Error('No auth found')
+          },
+          async removeAuth() {},
+          async saveAuth() {},
+        })
+        fs.writeFileSync(join(tmpDir, 'login.json'), '{malformed')
+        const cmd = new Command([], ctx.config)
+        cmd.config = {...ctx.config, dataDir: tmpDir} as Config
+
+        try {
+          await cmd.heroku.logout()
+          await (cmd.heroku as unknown as {_authLifecycle: Promise<void>})._authLifecycle
+
+          expect(fs.existsSync(join(tmpDir, 'login.json'))).to.be.false
+        } finally {
+          platformStub.restore()
+          fs.rmSync(tmpDir, {force: true, recursive: true})
+        }
+      })
+
+    test
+      .it('keeps no-token logout with no login state a clean no-op', async ctx => {
+        nock.cleanAll()
+        api = nock('https://api.heroku.com')
+        const tmpDir = fs.mkdtempSync(join(SYSTEM_TMPDIR, 'heroku-api-client-no-token-'))
+        const platformStub = sinon.stub(process, 'platform').value('darwin')
+        const unlink = sinon.spy(fs.promises, 'unlink')
+        setCredentialManagerProvider({
+          async getAuth() {
+            throw new Error('No auth found')
+          },
+          async removeAuth() {},
+          async saveAuth() {},
+        })
+        const cmd = new Command([], ctx.config)
+        cmd.config = {...ctx.config, dataDir: tmpDir} as Config
+
+        try {
+          await cmd.heroku.logout()
+          await (cmd.heroku as unknown as {_authLifecycle: Promise<void>})._authLifecycle
+
+          expect(unlink.called).to.be.false
+          expect(cmd.heroku.auth).to.be.undefined
+        } finally {
+          unlink.restore()
+          platformStub.restore()
+          fs.rmSync(tmpDir, {force: true, recursive: true})
+        }
+      })
+
+    test
+      .it('keeps newer auth and login state when no-token logout cleanup becomes stale', async ctx => {
+        nock.cleanAll()
+        api = nock('https://api.heroku.com')
+        const tmpDir = fs.mkdtempSync(join(SYSTEM_TMPDIR, 'heroku-api-client-no-token-'))
+        const platformStub = sinon.stub(process, 'platform').value('darwin')
+        const lookupStarted = deferred()
+        const releaseLookup = deferred()
+        setCredentialManagerProvider({
+          async getAuth() {
+            lookupStarted.resolve()
+            await releaseLookup.promise
+            throw new Error('No auth found')
+          },
+          async removeAuth() {},
+          async saveAuth() {},
+        })
+        await writeLoginState(tmpDir, 'stale@example.com')
+        const cmd = new Command([], ctx.config)
+        cmd.config = {...ctx.config, dataDir: tmpDir} as Config
+
+        try {
+          const logout = cmd.heroku.logout()
+          await lookupStarted.promise
+          await writeLoginState(tmpDir, 'new@example.com')
+          cmd.heroku.setAuthEntry({account: 'new@example.com', token: 'new-token'})
+          releaseLookup.resolve()
+          await logout
+          await (cmd.heroku as unknown as {_authLifecycle: Promise<void>})._authLifecycle
+
+          expect(await readLoginState(tmpDir)).to.deep.equal({account: 'new@example.com'})
+          expect(await cmd.heroku.getAuthEntry()).to.deep.equal({account: 'new@example.com', token: 'new-token'})
+        } finally {
+          releaseLookup.resolve()
+          platformStub.restore()
+          fs.rmSync(tmpDir, {force: true, recursive: true})
+        }
       })
   })
 
@@ -859,7 +1768,7 @@ describe('api_client', () => {
       const promptStub = sinon.stub(prompter, 'prompt')
 
       try {
-        await expect(cmd.heroku.twoFactorPrompt()).to.be.rejectedWith('Two-factor authentication requires an interactive terminal.')
+        await chaiExpect(cmd.heroku.twoFactorPrompt()).to.be.rejectedWith('Two-factor authentication requires an interactive terminal.')
         expect(promptStub.called).to.be.false
       } finally {
         promptStub.restore()
@@ -881,7 +1790,7 @@ describe('api_client', () => {
       })
 
       try {
-        await expect(cmd.heroku.twoFactorPrompt()).to.be.rejectedWith('Two-factor prompt canceled')
+        await chaiExpect(cmd.heroku.twoFactorPrompt()).to.be.rejectedWith('Two-factor prompt canceled')
         expect(pauseCallbackCompleted).to.be.true
         expect(pauseStub.calledOnce).to.be.true
       } finally {
