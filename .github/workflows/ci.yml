@@ -73,11 +73,16 @@ jobs:
        github.repository == 'heroku/heroku-cli-command' &&
        vars.CREDENTIAL_MANAGER_INSTALL_ENABLED == 'true' &&
        (github.ref == 'refs/heads/v14.0.0' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/beta')) ||
+      (github.event_name == 'pull_request' &&
+       github.repository == 'heroku/heroku-cli-command' &&
+       vars.CREDENTIAL_MANAGER_INSTALL_ENABLED == 'true' &&
+       github.base_ref == 'v14.0.0' &&
+       github.event.pull_request.head.repo.full_name == github.repository &&
+       github.event.pull_request.user.login != 'dependabot[bot]') ||
       (github.event_name == 'workflow_dispatch' &&
        github.repository == 'heroku/heroku-cli-command' &&
        vars.CREDENTIAL_MANAGER_INSTALL_ENABLED == 'true' &&
        (github.ref == 'refs/heads/v14.0.0' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/beta'))
-    environment: CredentialManagerInstall
     runs-on: ubuntu-latest
     steps:
       - name: Check out trusted action definition
@@ -116,11 +121,16 @@ jobs:
        github.repository == 'heroku/heroku-cli-command' &&
        vars.CREDENTIAL_MANAGER_INSTALL_ENABLED == 'true' &&
        (github.ref == 'refs/heads/v14.0.0' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/beta')) ||
+      (github.event_name == 'pull_request' &&
+       github.repository == 'heroku/heroku-cli-command' &&
+       vars.CREDENTIAL_MANAGER_INSTALL_ENABLED == 'true' &&
+       github.base_ref == 'v14.0.0' &&
+       github.event.pull_request.head.repo.full_name == github.repository &&
+       github.event.pull_request.user.login != 'dependabot[bot]') ||
       (github.event_name == 'workflow_dispatch' &&
        github.repository == 'heroku/heroku-cli-command' &&
        vars.CREDENTIAL_MANAGER_INSTALL_ENABLED == 'true' &&
        (github.ref == 'refs/heads/v14.0.0' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/beta'))
-    environment: CredentialManagerInstall
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -160,11 +170,16 @@ jobs:
 
   trusted-verifiers:
     if: >-
-      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
-      github.repository == 'heroku/heroku-cli-command' &&
-      vars.CREDENTIAL_MANAGER_INSTALL_ENABLED == 'true' &&
-      (github.ref == 'refs/heads/v14.0.0' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/beta')
-    environment: CredentialManagerInstall
+      ((github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+       github.repository == 'heroku/heroku-cli-command' &&
+       vars.CREDENTIAL_MANAGER_INSTALL_ENABLED == 'true' &&
+       (github.ref == 'refs/heads/v14.0.0' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/beta')) ||
+      (github.event_name == 'pull_request' &&
+       github.repository == 'heroku/heroku-cli-command' &&
+       vars.CREDENTIAL_MANAGER_INSTALL_ENABLED == 'true' &&
+       github.base_ref == 'v14.0.0' &&
+       github.event.pull_request.head.repo.full_name == github.repository &&
+       github.event.pull_request.user.login != 'dependabot[bot]')
     runs-on: ubuntu-latest
     steps:
       - name: Check out trusted action definition

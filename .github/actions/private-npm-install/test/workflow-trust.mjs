@@ -257,7 +257,7 @@ const scan = repositoryRoot => {
     }
   }
 
-  for (const name of ['ci.yml', 'ci-acceptance.yml', 'release.yml']) {
+  for (const name of ['release.yml']) {
     const workflow = readFileSync(resolve(workflowDirectory, name), 'utf8')
     const jobs = workflow.match(/^  [A-Za-z0-9_-]+:\n(?:(?!^  [A-Za-z0-9_-]+:\n)[\s\S])*/gm) || []
     for (const job of jobs.filter(value => value.includes(readTokenReference))) {
@@ -277,7 +277,19 @@ const scan = repositoryRoot => {
   for (const [name, workflow] of workflows) {
     const jobs = workflow.match(/^  [A-Za-z0-9_-]+:\n(?:(?!^  [A-Za-z0-9_-]+:\n)[\s\S])*/gm) || []
     for (const job of jobs.filter(value => /secrets\.|private-key:|read-token:/.test(value))) {
-      if (!job.includes('environment: CredentialManagerInstall')) {
+      if (name === 'ci.yml' || name === 'ci-acceptance.yml') {
+        if (job.includes('environment: CredentialManagerInstall')) {
+          throw new Error(`${name}: PR-capable CI job cannot use the protected-branch environment`)
+        }
+        for (const requirement of [
+          "github.event_name == 'pull_request'",
+          "github.base_ref == 'v14.0.0'",
+          'github.event.pull_request.head.repo.full_name == github.repository',
+          "github.event.pull_request.user.login != 'dependabot[bot]'",
+        ]) {
+          if (!job.includes(requirement)) throw new Error(`${name}: PR-capable secret job is missing guard: ${requirement}`)
+        }
+      } else if (!job.includes('environment: CredentialManagerInstall')) {
         throw new Error(`${name}: secret-bearing job is missing the protected environment`)
       }
       if (!job.includes("vars.CREDENTIAL_MANAGER_INSTALL_ENABLED == 'true'")) {
@@ -356,6 +368,10 @@ const mutationCases = [
   ['mutable trusted action checkout', 'workflows/ci.yml', text => text.replace('ref: ${{ github.sha }}\n          path: trusted-action', 'ref: ${{ github.ref }}\n          path: trusted-action')],
   ['npm cache', 'workflows/ci.yml', text => `${text}\n# cache: npm\n`],
   ['secret outside trusted action', 'workflows/ci.yml', text => `${text}\n# NODE_AUTH_TOKEN: \${{ secrets.NPM_READ_TOKEN_HEROKU_CREDENTIAL_MANAGER }}\n`],
+  ['CI same-repository PR guard removed', 'workflows/ci.yml', text => text.replace('github.event.pull_request.head.repo.full_name == github.repository', 'true')],
+  ['CI Dependabot PR guard removed', 'workflows/ci.yml', text => text.replace("github.event.pull_request.user.login != 'dependabot[bot]'", 'true')],
+  ['CI protected environment restored', 'workflows/ci.yml', text => text.replace('  lint:\n    if:', '  lint:\n    environment: CredentialManagerInstall\n    if:')],
+  ['acceptance v14 PR guard removed', 'workflows/ci-acceptance.yml', text => text.replace("github.base_ref == 'v14.0.0'", 'true')],
   [
     'read token mask removed',
     'actions/private-npm-install/action.yml',
