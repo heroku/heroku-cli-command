@@ -10,6 +10,13 @@ With this major version release we will be improving the security by storing aut
 
 * remove dual write for credential storage ([#389](https://github.com/heroku/heroku-cli-command/issues/389)) ([e50b5be](https://github.com/heroku/heroku-cli-command/commit/e50b5be106f7997d85f7a5a53ff06ff1eadecb9c))
 
+## [13.2.3](https://github.com/heroku/heroku-cli-command/compare/command-v13.2.2...command-v13.2.3) (2026-10-01)
+
+
+### Dependencies
+
+* bump open from 11.0.0 to 11.0.4 ([#412](https://github.com/heroku/heroku-cli-command/issues/412)) ([3a9d1a9](https://github.com/heroku/heroku-cli-command/commit/3a9d1a90c7c2e7fbae40833908d5ec16b280433c))
+
 ## [13.2.2](https://github.com/heroku/heroku-cli-command/compare/command-v13.2.1...command-v13.2.2) (2026-09-25)
 
 
