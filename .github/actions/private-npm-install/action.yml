@@ -208,6 +208,7 @@ runs:
         PRIVATE_NPM_BASE: ${{ runner.temp }}
         PRIVATE_NPM_ROOT: ${{ steps.npm-paths.outputs.root }}
         PRIVATE_NPM_USERCONFIG: ${{ steps.npm-paths.outputs.userconfig }}
+        PRIVATE_NPM_CLEAN_USERCONFIG: ${{ steps.npm-paths.outputs.clean_userconfig }}
       run: |
         set -euo pipefail
         test ! -e "$PRIVATE_NPM_USERCONFIG"

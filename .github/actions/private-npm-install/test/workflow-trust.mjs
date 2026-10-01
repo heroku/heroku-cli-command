@@ -80,6 +80,10 @@ const scan = repositoryRoot => {
   if (/NPM_CONFIG_USERCONFIG:\s*''/.test(action)) {
     throw new Error('private npm action clears userconfig to an uncontrolled default')
   }
+  const posixCleanup = action.split('    - name: Verify POSIX credential cleanup')[1]?.split('    - name: Verify Windows credential cleanup')[0] || ''
+  if (!/PRIVATE_NPM_CLEAN_USERCONFIG:\s*\$\{\{ steps\.npm-paths\.outputs\.clean_userconfig \}\}/.test(posixCleanup)) {
+    throw new Error('private npm action does not expose the clean userconfig to POSIX cleanup verification')
+  }
   for (const name of ['ROOT', 'CACHE', 'LOGS', 'USERCONFIG']) {
     if (!action.includes(`PRIVATE_NPM_${name}:`)) throw new Error(`private npm action omits ${name} ACL coverage`)
   }
