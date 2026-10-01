@@ -1,34 +1,90 @@
 name: Update Release Configs
 
-# Generates release-please config files from release-channels.yml
-# Uses vars.DEV_TOOLS_RELEASE_WORKFLOW_APP_ID and secrets.DEV_TOOLS_RELEASE_WORKFLOW_APP_PRIVATE_KEY
-
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
+  trust-configuration-notice:
+    if: >-
+      github.repository == 'heroku/heroku-cli-command' &&
+      vars.CREDENTIAL_MANAGER_INSTALL_ENABLED != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain fail-closed metadata updates
+        run: echo 'Release metadata updates are disabled until an owner protects CredentialManagerInstall and main/beta, then sets CREDENTIAL_MANAGER_INSTALL_ENABLED=true.'
+
   update-configs:
-    runs-on: pub-hk-ubuntu-24.04-ip  # Options: ubuntu-latest | sfdc-hk-ubuntu-latest | pub-hk-ubuntu-24.04-ip
+    if: >-
+      github.repository == 'heroku/heroku-cli-command' &&
+      vars.CREDENTIAL_MANAGER_INSTALL_ENABLED == 'true' &&
+      github.event_name == 'workflow_dispatch' &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/beta')
+    environment: CredentialManagerInstall
+    runs-on: pub-hk-ubuntu-24.04-ip
     permissions:
       contents: write
       pull-requests: write
     steps:
-      - name: Generate GitHub App token
-        id: app-token
-        uses: actions/create-github-app-token@v3
+      - name: Generate command repository write token
+        id: command-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
         with:
           app-id: ${{ vars.DEV_TOOLS_RELEASE_WORKFLOW_APP_ID }}
           private-key: ${{ secrets.DEV_TOOLS_RELEASE_WORKFLOW_APP_PRIVATE_KEY }}
-
-      - uses: actions/checkout@v7
-
-      - name: Checkout workflows repository
-        uses: actions/checkout@v7
+          owner: ${{ github.repository_owner }}
+          repositories: heroku-cli-command
+          permission-contents: write
+          permission-pull-requests: write
+      - name: Generate metadata helper read token
+        id: helper-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        with:
+          app-id: ${{ vars.DEV_TOOLS_RELEASE_WORKFLOW_APP_ID }}
+          private-key: ${{ secrets.DEV_TOOLS_RELEASE_WORKFLOW_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: npm-release-workflows
+          permission-contents: read
+      - name: Check out trusted release metadata
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.ref }}
+          persist-credentials: false
+      - name: Check out pinned metadata helpers
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: heroku/npm-release-workflows
-          token: ${{ steps.app-token.outputs.token }}
+          token: ${{ steps.helper-token.outputs.token }}
           path: workflows-repo
-          ref: main
-
-      - name: Update release configs
-        uses: ./workflows-repo/.github/actions/update-release-configs-job-public
+          ref: 753436625b1c8e39093f321cef758765d591d9a7
+          persist-credentials: false
+      - name: Set up Node.js for metadata generation
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22.x
+          package-manager-cache: false
+      - name: Generate release configs
+        uses: ./workflows-repo/.github/actions/generate-release-configs
+      - name: Check for release metadata changes
+        id: changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- .github/release-configs; then
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+          else
+            echo 'changed=true' >> "$GITHUB_OUTPUT"
+          fi
+      - name: Create release metadata pull request
+        if: steps.changes.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8
+        with:
+          token: ${{ steps.command-token.outputs.token }}
+          add-paths: .github/release-configs
+          commit-message: 'chore: update release-please configs from release-channels.yml'
+          title: 'chore: update release-please configs'
+          body: Generated from the protected release channel metadata.
+          branch: update-release-configs
+          delete-branch: true

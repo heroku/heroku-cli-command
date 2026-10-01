@@ -3,11 +3,11 @@ import chaiAsPromised from 'chai-as-promised'
 import fs from 'fs-extra'
 import {resolve} from 'node:path'
 
-import {MachineToken} from '../../../src/credential-manager-core/lib/netrc-parser.js'
+import {MachineToken} from '../../../src/deprecated/credential-manager-core/lib/netrc-parser.js'
 
 use(chaiAsPromised)
 
-import {NetrcHandler} from '../../../src/credential-manager-core/credential-handlers/netrc-handler.js'
+import {NetrcHandler} from '../../../src/deprecated/credential-manager-core/credential-handlers/netrc-handler.js'
 import {restoreNetrcStub, stubNetrc} from '../helpers/netrc-stub.js'
 
 describe('NetrcHandler', function () {

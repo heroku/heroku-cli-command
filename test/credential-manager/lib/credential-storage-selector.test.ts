@@ -2,7 +2,7 @@ import {expect} from 'chai'
 import childProcess from 'node:child_process'
 import sinon from 'sinon'
 
-import {CredentialStore, getNativeCredentialStore, getStorageConfig} from '../../../src/credential-manager-core/lib/credential-storage-selector.js'
+import {CredentialStore, getNativeCredentialStore, getStorageConfig} from '../../../src/deprecated/credential-manager-core/lib/credential-storage-selector.js'
 
 describe('credential-storage-selector', function () {
   describe('getStorageConfig', function () {

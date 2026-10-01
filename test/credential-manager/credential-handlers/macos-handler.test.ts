@@ -2,7 +2,7 @@ import {expect} from 'chai'
 import childProcess from 'node:child_process'
 import sinon from 'sinon'
 
-import {MacOSHandler} from '../../../src/credential-manager-core/credential-handlers/macos-handler.js'
+import {MacOSHandler} from '../../../src/deprecated/credential-manager-core/credential-handlers/macos-handler.js'
 
 describe('MacOSHandler', function () {
   let execSyncStub: sinon.SinonStub
