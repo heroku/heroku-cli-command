@@ -77,6 +77,19 @@ const scan = repositoryRoot => {
   if (!/NPM_CONFIG_USERCONFIG:\s*\$\{\{ steps\.npm-paths\.outputs\.clean_userconfig \}\}/.test(action)) {
     throw new Error('private npm action does not use its known-empty config for rebuild')
   }
+  const installStep = action.split('    - name: Install private dependencies')[1]?.split('    - name: Remove npm credentials')[0] || ''
+  if (!/NPM_CONFIG_USERCONFIG:\s*\$\{\{ steps\.npm-paths\.outputs\.userconfig \}\}/.test(installStep)) {
+    throw new Error('private npm action does not bind npm ci to its reviewed token-placeholder config')
+  }
+  const cleanupStep = action.split('    - name: Remove npm credentials')[1]?.split('    - name: Verify POSIX credential cleanup')[0] || ''
+  for (const requirement of [
+    'PRIVATE_NPM_CACHE: ${{ steps.npm-paths.outputs.cache }}',
+    'PRIVATE_NPM_RETAIN_CACHE: ${{ inputs.retain-clean-cache }}',
+    'PRIVATE_NPM_CLEAN_CACHE: ${{ steps.npm-paths.outputs.clean_cache }}',
+    'READ_TOKEN: ${{ inputs.read-token }}',
+  ]) {
+    if (!cleanupStep.includes(requirement)) throw new Error(`private npm cleanup is missing exact cache handoff input: ${requirement}`)
+  }
   if (/NPM_CONFIG_USERCONFIG:\s*''/.test(action)) {
     throw new Error('private npm action clears userconfig to an uncontrolled default')
   }
@@ -184,6 +197,10 @@ const scan = repositoryRoot => {
           throw new Error(`${name}: private action invocation ${index + 1} requires exact input: ${input}`)
         }
       }
+      const shouldRetainCache = retainedCacheInvocationIndexes.get(`workflows/${name}`)?.has(index) ?? false
+      if (countExactLines(invocation, 'retain-clean-cache: true') !== (shouldRetainCache ? 1 : 0)) {
+        throw new Error(`${name}: private action invocation ${index + 1} has an unexpected clean-cache retention policy`)
+      }
     }
     const expectedActionInputs = workflow.match(/expected-action-sha:/g) || []
     if (expectedActionInputs.length !== privateActionInvocations.length) {
@@ -226,6 +243,9 @@ const scan = repositoryRoot => {
   if (!baselineExistence.test(packedVerifier)) throw new Error('packed verifier does not prove the authoritative baseline commit exists')
   for (const requirement of ['baseline-sha', 'PACKED_CONSUMER_BASELINE_SHA', 'packed-consumer-baseline', 'heroku-credential-manager[^/]*\\.tgz', 'MUTATION_ANCHOR_PACKED_LOGIN_HTTP']) {
     if (!packedVerifier.includes(requirement)) throw new Error(`packed verifier invariant missing: ${requirement}`)
+  }
+  if (!/process\.env\.npm_config_cache \|\| process\.env\.NPM_CONFIG_CACHE \|\|/.test(packedVerifier)) {
+    throw new Error('packed verifier does not prefer the explicit npm cache before the local HOME fallback')
   }
   const rollbackVerifier = readFileSync(resolve(repositoryRoot, 'scripts/verify-credential-manager-rollback.mjs'), 'utf8')
   if (!rollbackVerifier.includes('NODE_AUTH_TOKEN: npmAuthToken') || !rollbackVerifier.includes('_authToken=\\${NODE_AUTH_TOKEN}')) {
@@ -311,6 +331,10 @@ const privateActionNodeVersions = new Map([
   ['workflows/ci-acceptance.yml', ['${{ matrix.node-version }}']],
   ['workflows/release.yml', ['22.x', '22.x']],
 ])
+const retainedCacheInvocationIndexes = new Map([
+  ['workflows/ci.yml', new Set([2])],
+  ['workflows/release.yml', new Set([1])],
+])
 const privateActionPath = './trusted-action/.github/actions/private-npm-install'
 const replaceOccurrence = (text, target, replacement, occurrence) => {
   let index = -1
@@ -372,6 +396,10 @@ const mutationCases = [
   ['CI Dependabot PR guard removed', 'workflows/ci.yml', text => text.replace("github.event.pull_request.user.login != 'dependabot[bot]'", 'true')],
   ['CI protected environment restored', 'workflows/ci.yml', text => text.replace('  lint:\n    if:', '  lint:\n    environment: CredentialManagerInstall\n    if:')],
   ['acceptance v14 PR guard removed', 'workflows/ci-acceptance.yml', text => text.replace("github.base_ref == 'v14.0.0'", 'true')],
+  ['CI verifier cache retention removed', 'workflows/ci.yml', text => text.replace('          retain-clean-cache: true\n', '')],
+  ['release verifier cache retention removed', 'workflows/release.yml', text => text.replace('          retain-clean-cache: true\n', '')],
+  ['lint unexpectedly retains npm cache', 'workflows/ci.yml', text => text.replace('          node-version: 22.x\n', '          node-version: 22.x\n          retain-clean-cache: true\n')],
+  ['packed verifier explicit cache ignored', '../scripts/verify-packed-consumer.mjs', text => text.replace('process.env.npm_config_cache || process.env.NPM_CONFIG_CACHE ||', '')],
   [
     'read token mask removed',
     'actions/private-npm-install/action.yml',

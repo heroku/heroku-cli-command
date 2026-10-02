@@ -236,6 +236,7 @@ jobs:
           node-version: 22.x
           read-token: ${{ secrets.NPM_READ_TOKEN_HEROKU_CREDENTIAL_MANAGER }}
           expected-action-sha: ${{ github.sha }}
+          retain-clean-cache: true
           working-directory: candidate
       - name: Build and test release candidate
         working-directory: candidate

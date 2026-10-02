@@ -717,7 +717,11 @@ async function initializeWorkspace() {
   workspace.npmUserConfig = join(workspace.root, 'npmrc')
   workspace.npmEnvironment = await createMinimalNpmConfig(workspace.npmUserConfig)
   workspace.seedCache = join(workspace.root, 'seed-cache')
-  await cp(join(process.env.HOME, '.npm', '_cacache'), join(workspace.seedCache, '_cacache'), {recursive: true})
+  const sourceCache = process.env.npm_config_cache || process.env.NPM_CONFIG_CACHE || (process.env.HOME && join(process.env.HOME, '.npm'))
+  check(sourceCache, 'an npm cache is required for offline consumer verification')
+  workspace.redactions.add(sourceCache)
+  workspace.redactions.add(normalizePath(sourceCache))
+  await cp(join(sourceCache, '_cacache'), join(workspace.seedCache, '_cacache'), {recursive: true})
   const control = await createIsolatedEnvironment('control')
   workspace.controlPaths = control.paths
   workspace.baseEnvironment = control.environment

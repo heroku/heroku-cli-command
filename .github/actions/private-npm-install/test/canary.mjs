@@ -1,5 +1,5 @@
 import {spawnSync, execFileSync} from 'node:child_process'
-import {mkdtempSync, readFileSync, readdirSync, statSync, writeFileSync} from 'node:fs'
+import {existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, statSync, writeFileSync} from 'node:fs'
 import {tmpdir} from 'node:os'
 import {join, resolve} from 'node:path'
 import {fileURLToPath} from 'node:url'
@@ -9,7 +9,7 @@ const actionDirectory = process.argv[2]
   : fileURLToPath(new URL('..', import.meta.url))
 const token = `fake-private-token-${Date.now()}`
 
-const runScenario = shouldFail => {
+const runScenario = (shouldFail, retainCache = false, cacheContainsToken = false) => {
   const temp = mkdtempSync(join(tmpdir(), 'private-npm-canary-'))
   const output = join(temp, 'output')
   const environment = join(temp, 'environment')
@@ -83,6 +83,11 @@ const runScenario = shouldFail => {
   if (readFileSync(join(outputs.logs, 'npm.log'), 'utf8').includes(token)) {
     throw new Error('The fake token appeared in an npm log')
   }
+  const contentCache = join(outputs.cache, '_cacache')
+  mkdirSync(contentCache, {recursive: true})
+  writeFileSync(join(contentCache, 'package-data'), cacheContainsToken
+    ? `downloaded package content containing ${token}\n`
+    : 'downloaded package content without credentials\n')
   writeFileSync(output, `${readFileSync(output, 'utf8')}canary_status=${shouldFail ? 'failure' : 'success'}\n`)
 
   try {
@@ -90,19 +95,28 @@ const runScenario = shouldFail => {
   } catch {
     // The composite action's always() cleanup is modeled by the finally block.
   } finally {
-    execFileSync(process.execPath, [join(actionDirectory, 'cleanup.mjs')], {
-      env: {
-        ...env,
-        PRIVATE_NPM_ROOT: outputs.root,
-        PRIVATE_NPM_USERCONFIG: outputs.userconfig,
-        PRIVATE_NPM_CLEAN_ROOT: outputs.clean_root,
-        PRIVATE_NPM_CLEAN_CACHE: outputs.clean_cache,
-        PRIVATE_NPM_CLEAN_LOGS: outputs.clean_logs,
-        PRIVATE_NPM_CLEAN_USERCONFIG: outputs.clean_userconfig,
-      },
-      stdio: 'pipe',
+    const cleanupEnvironment = {
+      ...env,
+      PRIVATE_NPM_CACHE: outputs.cache,
+      PRIVATE_NPM_ROOT: outputs.root,
+      PRIVATE_NPM_USERCONFIG: outputs.userconfig,
+      PRIVATE_NPM_RETAIN_CACHE: String(retainCache),
+      PRIVATE_NPM_CLEAN_ROOT: outputs.clean_root,
+      PRIVATE_NPM_CLEAN_CACHE: outputs.clean_cache,
+      PRIVATE_NPM_CLEAN_LOGS: outputs.clean_logs,
+      PRIVATE_NPM_CLEAN_USERCONFIG: outputs.clean_userconfig,
+      READ_TOKEN: token,
+    }
+    const cleanup = spawnSync(process.execPath, [join(actionDirectory, 'cleanup.mjs')], {
+      env: cleanupEnvironment,
+      encoding: 'utf8',
     })
+    if (cacheContainsToken ? cleanup.status === 0 : cleanup.status !== 0) {
+      throw new Error(`Cleanup returned unexpected status ${cleanup.status}: ${cleanup.stderr}`)
+    }
   }
+
+  if (existsSync(outputs.root)) throw new Error('The authenticated npm directory survived cleanup')
 
   const cleanEnvironment = readFileSync(environment, 'utf8')
   if (!cleanEnvironment.includes(`NPM_CONFIG_USERCONFIG=${outputs.clean_userconfig}`)) {
@@ -111,6 +125,20 @@ const runScenario = shouldFail => {
   const cleanConfig = readFileSync(outputs.clean_userconfig, 'utf8')
   if (/_authToken|NODE_AUTH_TOKEN|fake-private-token/.test(cleanConfig)) {
     throw new Error('The clean npm userconfig contains authentication material')
+  }
+  const retainedContent = join(outputs.clean_cache, '_cacache', 'package-data')
+  if (existsSync(retainedContent) !== (retainCache && !cacheContainsToken)) {
+    throw new Error('Cleanup did not apply the requested clean-cache retention policy')
+  }
+  if (cacheContainsToken) {
+    execFileSync(process.execPath, [join(actionDirectory, 'finalize.mjs')], {
+      env: {...env, PRIVATE_NPM_CLEAN_ROOT: outputs.clean_root},
+      stdio: 'pipe',
+    })
+    if (readdirSync(temp).some(name => name.startsWith('private-npm-'))) {
+      throw new Error('The temporary npm directory survived rejected cache cleanup')
+    }
+    return
   }
   const downstream = spawnSync(
     process.execPath,
@@ -153,4 +181,6 @@ const runScenario = shouldFail => {
 
 runScenario(false)
 runScenario(true)
-console.log('private npm fake-token canaries passed (success and simulated failure)')
+runScenario(false, true)
+runScenario(false, true, true)
+console.log('private npm fake-token canaries passed (success, simulated failure, retained cache, and token rejection)')

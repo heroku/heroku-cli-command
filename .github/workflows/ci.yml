@@ -202,6 +202,7 @@ jobs:
           node-version: 22.x
           read-token: ${{ secrets.NPM_READ_TOKEN_HEROKU_CREDENTIAL_MANAGER }}
           expected-action-sha: ${{ github.sha }}
+          retain-clean-cache: true
           working-directory: candidate
       - name: Run packed consumer and rollback verification
         working-directory: candidate

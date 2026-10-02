@@ -11,6 +11,10 @@ inputs:
   expected-action-sha:
     description: Protected commit SHA that supplied this action definition.
     required: true
+  retain-clean-cache:
+    description: Retain the downloaded package cache without credentials for an offline verifier.
+    required: false
+    default: 'false'
   working-directory:
     description: Repository-relative package directory.
     required: false
@@ -186,6 +190,7 @@ runs:
         NODE_AUTH_TOKEN: ${{ inputs.read-token }}
         NPM_CONFIG_CACHE: ${{ steps.npm-paths.outputs.cache }}
         NPM_CONFIG_LOGS_DIR: ${{ steps.npm-paths.outputs.logs }}
+        NPM_CONFIG_USERCONFIG: ${{ steps.npm-paths.outputs.userconfig }}
       run: npm ci --ignore-scripts
 
     - name: Remove npm credentials
@@ -193,12 +198,15 @@ runs:
       shell: bash
       env:
         PRIVATE_NPM_BASE: ${{ runner.temp }}
+        PRIVATE_NPM_CACHE: ${{ steps.npm-paths.outputs.cache }}
         PRIVATE_NPM_ROOT: ${{ steps.npm-paths.outputs.root }}
         PRIVATE_NPM_USERCONFIG: ${{ steps.npm-paths.outputs.userconfig }}
+        PRIVATE_NPM_RETAIN_CACHE: ${{ inputs.retain-clean-cache }}
         PRIVATE_NPM_CLEAN_ROOT: ${{ steps.npm-paths.outputs.clean_root }}
         PRIVATE_NPM_CLEAN_CACHE: ${{ steps.npm-paths.outputs.clean_cache }}
         PRIVATE_NPM_CLEAN_LOGS: ${{ steps.npm-paths.outputs.clean_logs }}
         PRIVATE_NPM_CLEAN_USERCONFIG: ${{ steps.npm-paths.outputs.clean_userconfig }}
+        READ_TOKEN: ${{ inputs.read-token }}
       run: node "${{ github.action_path }}/cleanup.mjs"
 
     - name: Verify POSIX credential cleanup
