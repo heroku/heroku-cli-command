@@ -3,7 +3,9 @@
   "description": "base class for Heroku CLI commands",
   "version": "13.2.6",
   "author": "Heroku",
-  "bugs": "https://github.com/heroku/heroku-cli-command/issues",
+  "bugs": {
+    "url": "https://github.com/heroku/heroku-cli-command/issues"
+  },
   "dependencies": {
     "@heroku/heroku-credential-manager": "0.1.0",
     "@heroku/http-call": "5.5.2",
@@ -63,7 +65,10 @@
   ],
   "license": "ISC",
   "main": "lib/index.js",
-  "repository": "heroku/heroku-cli-command",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/heroku/heroku-cli-command.git"
+  },
   "scripts": {
     "clean": "rimraf lib",
     "build": "npm run clean && tsc && node scripts/copy-linux-keyring-search.mjs",
@@ -87,5 +92,10 @@
   "overrides": {
     "serialize-javascript": "^7.1.4",
     "diff": "^8.0.3"
+  },
+  "directories": {
+    "example": "examples",
+    "lib": "lib",
+    "test": "test"
   }
 }

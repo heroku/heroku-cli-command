@@ -65,7 +65,7 @@ jobs:
       - name: Explain fail-closed trusted jobs
         run: |
           echo 'Trusted lint/test/acceptance/release jobs are disabled.'
-          echo 'An owner must create and protect CredentialManagerInstall, protect v14.0.0/main/beta, store the environment secrets, then set CREDENTIAL_MANAGER_INSTALL_ENABLED=true.'
+          echo 'An owner must protect v14.0.0/main/beta, store the read token as a repository or organization secret, then set CREDENTIAL_MANAGER_INSTALL_ENABLED=true.'
 
   lint:
     if: >-
@@ -73,11 +73,16 @@ jobs:
        github.repository == 'heroku/heroku-cli-command' &&
        vars.CREDENTIAL_MANAGER_INSTALL_ENABLED == 'true' &&
        (github.ref == 'refs/heads/v14.0.0' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/beta')) ||
+      (github.event_name == 'pull_request' &&
+       github.repository == 'heroku/heroku-cli-command' &&
+       vars.CREDENTIAL_MANAGER_INSTALL_ENABLED == 'true' &&
+       github.base_ref == 'v14.0.0' &&
+       github.event.pull_request.head.repo.full_name == github.repository &&
+       github.event.pull_request.user.login != 'dependabot[bot]') ||
       (github.event_name == 'workflow_dispatch' &&
        github.repository == 'heroku/heroku-cli-command' &&
        vars.CREDENTIAL_MANAGER_INSTALL_ENABLED == 'true' &&
        (github.ref == 'refs/heads/v14.0.0' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/beta'))
-    environment: CredentialManagerInstall
     runs-on: ubuntu-latest
     steps:
       - name: Check out trusted action definition
@@ -116,11 +121,16 @@ jobs:
        github.repository == 'heroku/heroku-cli-command' &&
        vars.CREDENTIAL_MANAGER_INSTALL_ENABLED == 'true' &&
        (github.ref == 'refs/heads/v14.0.0' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/beta')) ||
+      (github.event_name == 'pull_request' &&
+       github.repository == 'heroku/heroku-cli-command' &&
+       vars.CREDENTIAL_MANAGER_INSTALL_ENABLED == 'true' &&
+       github.base_ref == 'v14.0.0' &&
+       github.event.pull_request.head.repo.full_name == github.repository &&
+       github.event.pull_request.user.login != 'dependabot[bot]') ||
       (github.event_name == 'workflow_dispatch' &&
        github.repository == 'heroku/heroku-cli-command' &&
        vars.CREDENTIAL_MANAGER_INSTALL_ENABLED == 'true' &&
        (github.ref == 'refs/heads/v14.0.0' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/beta'))
-    environment: CredentialManagerInstall
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -158,21 +168,22 @@ jobs:
           PRIVATE_NPM_CLEAN_ROOT: ${{ steps.private-install.outputs.clean-root }}
         run: node trusted-action/.github/actions/private-npm-install/finalize.mjs
 
-  trusted-verifiers:
+  verifiers:
+    # Same-repository, non-Dependabot PR authors are trusted with the read-only
+    # npm token. Fork PRs remain secret-free and cannot run this job.
     if: >-
-      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
-      github.repository == 'heroku/heroku-cli-command' &&
-      vars.CREDENTIAL_MANAGER_INSTALL_ENABLED == 'true' &&
-      (github.ref == 'refs/heads/v14.0.0' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/beta')
-    environment: CredentialManagerInstall
+      ((github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+       github.repository == 'heroku/heroku-cli-command' &&
+       vars.CREDENTIAL_MANAGER_INSTALL_ENABLED == 'true' &&
+       (github.ref == 'refs/heads/v14.0.0' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/beta')) ||
+      (github.event_name == 'pull_request' &&
+       github.repository == 'heroku/heroku-cli-command' &&
+       vars.CREDENTIAL_MANAGER_INSTALL_ENABLED == 'true' &&
+       github.base_ref == 'v14.0.0' &&
+       github.event.pull_request.head.repo.full_name == github.repository &&
+       github.event.pull_request.user.login != 'dependabot[bot]')
     runs-on: ubuntu-latest
     steps:
-      - name: Check out trusted action definition
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          ref: ${{ github.sha }}
-          path: trusted-action
-          persist-credentials: false
       - name: Check out exact candidate source and baseline history
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -182,20 +193,25 @@ jobs:
           persist-credentials: false
       - name: Install private dependencies
         id: private-install
-        uses: ./trusted-action/.github/actions/private-npm-install
+        uses: ./candidate/.github/actions/private-npm-install
         with:
           node-version: 22.x
           read-token: ${{ secrets.NPM_READ_TOKEN_HEROKU_CREDENTIAL_MANAGER }}
           expected-action-sha: ${{ github.sha }}
           working-directory: candidate
-      - name: Run packed consumer and rollback verification
+      - name: Run packed consumer verification
         working-directory: candidate
+        env:
+          PACKED_VERIFY_NPM_TOKEN: ${{ secrets.NPM_READ_TOKEN_HEROKU_CREDENTIAL_MANAGER }}
         run: |
           npm run verify:packed-consumer
+      - name: Run rollback verification
+        working-directory: candidate
+        run: |
           npm run verify:rollback
       - name: Remove token-free npm paths
         if: always()
         env:
           PRIVATE_NPM_BASE: ${{ runner.temp }}
           PRIVATE_NPM_CLEAN_ROOT: ${{ steps.private-install.outputs.clean-root }}
-        run: node trusted-action/.github/actions/private-npm-install/finalize.mjs
+        run: node candidate/.github/actions/private-npm-install/finalize.mjs

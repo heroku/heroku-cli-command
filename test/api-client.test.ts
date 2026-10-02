@@ -13,6 +13,7 @@ import * as sinon from 'sinon'
 import {stderr} from 'stdout-stderr'
 
 const SYSTEM_TMPDIR = os.tmpdir()
+const TEST_PLATFORM = process.platform === 'win32' ? 'win32' : 'darwin'
 
 import {Command as CommandBase} from '../src/command.js'
 import {readLoginState, writeLoginState} from '../src/credential-manager-core/lib/login-state.js'
@@ -375,7 +376,7 @@ describe('api_client', () => {
 
     beforeEach(() => {
       tmpDir = fs.mkdtempSync(join(SYSTEM_TMPDIR, 'heroku-api-client-'))
-      platformStub = sinon.stub(process, 'platform').value('darwin')
+      platformStub = sinon.stub(process, 'platform').value(TEST_PLATFORM)
     })
 
     afterEach(() => {
@@ -1161,7 +1162,7 @@ describe('api_client', () => {
         nock.cleanAll()
         api = nock('https://api.heroku.com')
         const tmpDir = fs.mkdtempSync(join(SYSTEM_TMPDIR, 'heroku-api-client-no-token-'))
-        const platformStub = sinon.stub(process, 'platform').value('darwin')
+        const platformStub = sinon.stub(process, 'platform').value(TEST_PLATFORM)
         setCredentialManagerProvider({
           async getAuth() {
             throw new Error('No auth found')
@@ -1190,7 +1191,7 @@ describe('api_client', () => {
         nock.cleanAll()
         api = nock('https://api.heroku.com')
         const tmpDir = fs.mkdtempSync(join(SYSTEM_TMPDIR, 'heroku-api-client-no-token-'))
-        const platformStub = sinon.stub(process, 'platform').value('darwin')
+        const platformStub = sinon.stub(process, 'platform').value(TEST_PLATFORM)
         setCredentialManagerProvider({
           async getAuth() {
             throw new Error('No auth found')
@@ -1218,7 +1219,7 @@ describe('api_client', () => {
         nock.cleanAll()
         api = nock('https://api.heroku.com')
         const tmpDir = fs.mkdtempSync(join(SYSTEM_TMPDIR, 'heroku-api-client-no-token-'))
-        const platformStub = sinon.stub(process, 'platform').value('darwin')
+        const platformStub = sinon.stub(process, 'platform').value(TEST_PLATFORM)
         const unlink = sinon.spy(fs.promises, 'unlink')
         setCredentialManagerProvider({
           async getAuth() {
@@ -1248,7 +1249,7 @@ describe('api_client', () => {
         nock.cleanAll()
         api = nock('https://api.heroku.com')
         const tmpDir = fs.mkdtempSync(join(SYSTEM_TMPDIR, 'heroku-api-client-no-token-'))
-        const platformStub = sinon.stub(process, 'platform').value('darwin')
+        const platformStub = sinon.stub(process, 'platform').value(TEST_PLATFORM)
         const lookupStarted = deferred()
         const releaseLookup = deferred()
         setCredentialManagerProvider({

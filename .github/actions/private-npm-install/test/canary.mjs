@@ -1,5 +1,5 @@
 import {spawnSync, execFileSync} from 'node:child_process'
-import {mkdtempSync, readFileSync, readdirSync, statSync, writeFileSync} from 'node:fs'
+import {existsSync, mkdtempSync, readFileSync, readdirSync, statSync, writeFileSync} from 'node:fs'
 import {tmpdir} from 'node:os'
 import {join, resolve} from 'node:path'
 import {fileURLToPath} from 'node:url'
@@ -90,19 +90,26 @@ const runScenario = shouldFail => {
   } catch {
     // The composite action's always() cleanup is modeled by the finally block.
   } finally {
-    execFileSync(process.execPath, [join(actionDirectory, 'cleanup.mjs')], {
-      env: {
-        ...env,
-        PRIVATE_NPM_ROOT: outputs.root,
-        PRIVATE_NPM_USERCONFIG: outputs.userconfig,
-        PRIVATE_NPM_CLEAN_ROOT: outputs.clean_root,
-        PRIVATE_NPM_CLEAN_CACHE: outputs.clean_cache,
-        PRIVATE_NPM_CLEAN_LOGS: outputs.clean_logs,
-        PRIVATE_NPM_CLEAN_USERCONFIG: outputs.clean_userconfig,
-      },
-      stdio: 'pipe',
+    const cleanupEnvironment = {
+      ...env,
+      PRIVATE_NPM_CACHE: outputs.cache,
+      PRIVATE_NPM_ROOT: outputs.root,
+      PRIVATE_NPM_USERCONFIG: outputs.userconfig,
+      PRIVATE_NPM_CLEAN_ROOT: outputs.clean_root,
+      PRIVATE_NPM_CLEAN_CACHE: outputs.clean_cache,
+      PRIVATE_NPM_CLEAN_LOGS: outputs.clean_logs,
+      PRIVATE_NPM_CLEAN_USERCONFIG: outputs.clean_userconfig,
+    }
+    const cleanup = spawnSync(process.execPath, [join(actionDirectory, 'cleanup.mjs')], {
+      env: cleanupEnvironment,
+      encoding: 'utf8',
     })
+    if (cleanup.status !== 0) {
+      throw new Error(`Cleanup returned unexpected status ${cleanup.status}: ${cleanup.stderr}`)
+    }
   }
+
+  if (existsSync(outputs.root)) throw new Error('The authenticated npm directory survived cleanup')
 
   const cleanEnvironment = readFileSync(environment, 'utf8')
   if (!cleanEnvironment.includes(`NPM_CONFIG_USERCONFIG=${outputs.clean_userconfig}`)) {
