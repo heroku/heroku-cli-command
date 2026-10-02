@@ -324,7 +324,7 @@ async function runMutationChecks() {
     const output = mutationOutput(error)
     check(!/SyntaxError/.test(output), `${label} mutation failed with SyntaxError instead of its intended assertion`)
     check(!/Cannot find module ['"]typescript['"]|ERR_MODULE_NOT_FOUND[^\n]*typescript/i.test(output), `${label} mutation could not resolve TypeScript`)
-    check(output.includes(expected), `${label} mutation output did not contain expected failure: ${expected}`)
+    check(output.includes(expected), `${label} mutation output did not contain expected failure: ${expected}\nActual mutation output:\n${redact(output)}`)
     return expected
   }
 
