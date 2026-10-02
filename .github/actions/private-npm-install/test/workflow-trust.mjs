@@ -253,6 +253,9 @@ const scan = repositoryRoot => {
   if (!packedVerifier.includes('Actual mutation output:\\n${redact(output)}')) {
     throw new Error('packed verifier does not report redacted mutation subprocess output')
   }
+  if (!packedVerifier.includes('const tarOptions = {...pacote.DirFetcher.tarCreateOptions(manifest), cwd: directory}')) {
+    throw new Error('packed verifier does not bind tar creation to the package directory')
+  }
   const rollbackVerifier = readFileSync(resolve(repositoryRoot, 'scripts/verify-credential-manager-rollback.mjs'), 'utf8')
   if (!rollbackVerifier.includes('NODE_AUTH_TOKEN: npmAuthToken') || !rollbackVerifier.includes('_authToken=\\${NODE_AUTH_TOKEN}')) {
     throw new Error('rollback verifier does not keep the token placeholder and confine the resolved token to npm ci')
@@ -408,6 +411,7 @@ const mutationCases = [
   ['packed verifier explicit cache ignored', '../scripts/verify-packed-consumer.mjs', text => text.replace('process.env.npm_config_cache || process.env.NPM_CONFIG_CACHE ||', '')],
   ['packed verifier mutation cache forwarding removed', '../scripts/verify-packed-consumer.mjs', text => text.replace('          NPM_CONFIG_CACHE: process.env.npm_config_cache || process.env.NPM_CONFIG_CACHE,\n', '')],
   ['packed verifier mutation diagnostics removed', '../scripts/verify-packed-consumer.mjs', text => text.replace('\\nActual mutation output:\\n${redact(output)}', '')],
+  ['packed verifier tar cwd removed', '../scripts/verify-packed-consumer.mjs', text => text.replace(', cwd: directory}', '}')],
   [
     'read token mask removed',
     'actions/private-npm-install/action.yml',

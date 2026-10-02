@@ -468,7 +468,8 @@ async function npmPack(directory, packDirectory, environment, label) {
     const tree = await new workspace.Arborist({path: directory}).loadActual()
     const files = await npmPacklist(tree, {path: directory})
     const chunks = []
-    for await (const chunk of npmTar.c(pacote.DirFetcher.tarCreateOptions(manifest), files)) chunks.push(chunk)
+    const tarOptions = {...pacote.DirFetcher.tarCreateOptions(manifest), cwd: directory}
+    for await (const chunk of npmTar.c(tarOptions, files)) chunks.push(chunk)
     const tarball = Buffer.concat(chunks)
     let timeout
     const timeoutFailure = new Promise((_, reject) => {
