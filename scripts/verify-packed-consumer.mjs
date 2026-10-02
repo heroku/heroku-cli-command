@@ -236,6 +236,13 @@ async function createMinimalNpmConfig(target) {
     }
   }
 
+  if (process.env.PACKED_VERIFY_NPM_TOKEN) {
+    const name = `PACKED_VERIFY_NPM_SECRET_${secretIndex++}`
+    childEnvironment[name] = process.env.PACKED_VERIFY_NPM_TOKEN
+    output.push(`//registry.npmjs.org/:_authToken=\${${name}}`)
+    for (const variant of redactionVariants(process.env.PACKED_VERIFY_NPM_TOKEN)) workspace.redactions.add(variant)
+  }
+
   await writeFile(target, `${output.join('\n')}\n`, {mode: 0o600})
   await chmod(target, 0o600)
   return childEnvironment
@@ -324,7 +331,7 @@ async function runMutationChecks() {
     const output = mutationOutput(error)
     check(!/SyntaxError/.test(output), `${label} mutation failed with SyntaxError instead of its intended assertion`)
     check(!/Cannot find module ['"]typescript['"]|ERR_MODULE_NOT_FOUND[^\n]*typescript/i.test(output), `${label} mutation could not resolve TypeScript`)
-    check(output.includes(expected), `${label} mutation output did not contain expected failure: ${expected}`)
+    check(output.includes(expected), `${label} mutation output did not contain expected failure: ${expected}\nActual mutation output:\n${redact(output)}`)
     return expected
   }
 
@@ -337,7 +344,9 @@ async function runMutationChecks() {
         encoding: 'utf8',
         env: sanitizedEnvironment({
           HOME: process.env.HOME,
+          NPM_CONFIG_CACHE: process.env.npm_config_cache || process.env.NPM_CONFIG_CACHE,
           PACKED_VERIFY_NPM_CLI: npmCliPath,
+          PACKED_VERIFY_NPM_TOKEN: process.env.PACKED_VERIFY_NPM_TOKEN,
           PACKED_CONSUMER_BASELINE_SHA: baselineSha,
           PACKED_VERIFY_SKIP_MUTATIONS: '1',
           USERPROFILE: process.env.USERPROFILE ?? process.env.HOME,
@@ -467,7 +476,8 @@ async function npmPack(directory, packDirectory, environment, label) {
     const tree = await new workspace.Arborist({path: directory}).loadActual()
     const files = await npmPacklist(tree, {path: directory})
     const chunks = []
-    for await (const chunk of npmTar.c(pacote.DirFetcher.tarCreateOptions(manifest), files)) chunks.push(chunk)
+    const tarOptions = {...pacote.DirFetcher.tarCreateOptions(manifest), cwd: directory}
+    for await (const chunk of npmTar.c(tarOptions, files)) chunks.push(chunk)
     const tarball = Buffer.concat(chunks)
     let timeout
     const timeoutFailure = new Promise((_, reject) => {
@@ -658,7 +668,7 @@ void client.getAuthEntry()
 void login.login({method})
 export {type Compatible, commandConstructor, entries, options}
 `)
-  await writeFile(join(consumerDirectory, 'tsconfig.json'), JSON.stringify({compilerOptions: {module: 'NodeNext', moduleResolution: 'NodeNext', noEmit: true, skipLibCheck: false, strict: true, target: 'ES2022'}, files: ['./contract.ts']}, null, 2))
+  await writeFile(join(consumerDirectory, 'tsconfig.json'), JSON.stringify({compilerOptions: {module: 'NodeNext', moduleResolution: 'NodeNext', noEmit: true, skipLibCheck: false, strict: true, target: 'ES2022', typeRoots: [join(repositoryRoot, 'node_modules/@types')], types: ['node']}, files: ['./contract.ts']}, null, 2))
 }
 
 async function listenLoopback() {
@@ -679,12 +689,11 @@ async function listenLoopback() {
 
 async function verifyConsumer(tarball, deepPaths) {
   const isolated = await createIsolatedEnvironment('consumer')
-  await cp(join(workspace.seedCache, '_cacache'), join(isolated.paths.cache, '_cacache'), {recursive: true})
   workspace.consumerPaths = isolated.paths
   workspace.consumerDirectory = join(workspace.root, 'consumer-project')
   await mkdir(workspace.consumerDirectory)
   await writeFile(join(workspace.consumerDirectory, 'package.json'), JSON.stringify({name: 'packed-command-consumer', private: true, type: 'module'}, null, 2))
-  await run('npm', ['install', '--ignore-scripts', '--offline', '--no-audit', '--no-fund', tarball, `typescript@${workspace.typescriptVersion}`, `@types/node@${workspace.nodeTypesVersion}`], {
+  await run('npm', ['install', '--ignore-scripts', '--no-audit', '--no-fund', tarball], {
     cwd: workspace.consumerDirectory,
     env: isolated.environment,
     label: 'fresh consumer npm install --ignore-scripts',
@@ -701,7 +710,7 @@ async function verifyConsumer(tarball, deepPaths) {
   } finally {
     await new Promise(resolvePromise => loopback.server.close(resolvePromise))
   }
-  await run(process.execPath, ['node_modules/typescript/bin/tsc', '--project', 'tsconfig.json'], {cwd: workspace.consumerDirectory, env: isolated.environment, label: 'consumer declaration compile'})
+  await run(process.execPath, [join(repositoryRoot, 'node_modules/typescript/bin/tsc'), '--project', 'tsconfig.json'], {cwd: workspace.consumerDirectory, env: isolated.environment, label: 'consumer declaration compile'})
   const after = await snapshotOutsideWorkspace()
   assert.deepEqual(after, before, 'runtime smoke wrote to isolated home/config/data outside its dedicated data directory')
 }
@@ -716,8 +725,6 @@ async function initializeWorkspace() {
   }
   workspace.npmUserConfig = join(workspace.root, 'npmrc')
   workspace.npmEnvironment = await createMinimalNpmConfig(workspace.npmUserConfig)
-  workspace.seedCache = join(workspace.root, 'seed-cache')
-  await cp(join(process.env.HOME, '.npm', '_cacache'), join(workspace.seedCache, '_cacache'), {recursive: true})
   const control = await createIsolatedEnvironment('control')
   workspace.controlPaths = control.paths
   workspace.baseEnvironment = control.environment
@@ -757,8 +764,6 @@ async function main() {
   assert.deepEqual(await readFile(join(workspace.packageRoot, 'package.json')), await readFile(join(repositoryRoot, 'package.json')), 'packed package.json bytes differ from the current source manifest')
   for (const [name, artifact] of expectedDependencies) assert.equal(workspace.manifest.dependencies?.[name], artifact.version, `${name} must be exact ${artifact.version}`)
   const manifestSummary = await verifyPackManifest(packMetadata, baseline)
-  workspace.typescriptVersion = (await readJson(join(repositoryRoot, 'node_modules/typescript/package.json'))).version
-  workspace.nodeTypesVersion = (await readJson(join(repositoryRoot, 'node_modules/@types/node/package.json'))).version
 
   currentPhase = 'TypeScript AST reachable graph'
   const packedFiles = await walk(workspace.packageRoot)

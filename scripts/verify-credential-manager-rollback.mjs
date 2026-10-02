@@ -17,6 +17,13 @@ const archivedRoot = 'src/deprecated/credential-manager-core'
 const externalPackage = '@heroku/heroku-credential-manager'
 const baselinePackageLookup = "join(dir, '../../../package.json')"
 const relocatedPackageLookup = "join(dir, '../../../../package.json')"
+const expectedRepositoryReferences = new Set([
+  'git+https://github.com/heroku/heroku-cli-command.git',
+  'github:heroku/heroku-cli-command',
+  'heroku/heroku-cli-command',
+  'https://github.com/heroku/heroku-cli-command.git',
+  'https://github.com/heroku/heroku-cli-command',
+])
 const signalExitCodes = {SIGHUP: 129, SIGINT: 130, SIGTERM: 143}
 const supportedSignals = process.platform === 'win32' ? ['SIGINT', 'SIGTERM'] : ['SIGHUP', 'SIGINT', 'SIGTERM']
 const {values: options} = parseArgs({
@@ -313,11 +320,14 @@ function assertExternalSourceActive(root = repositoryRoot) {
   }
 }
 
-function assertNegativePreconditions() {
-  assert.equal(path.basename(repositoryRoot), 'heroku-cli-command', 'run from the heroku-cli-command checkout')
-  assertExternalSourceActive()
+function assertNegativePreconditions(root = repositoryRoot) {
+  const manifest = JSON.parse(read('package.json', root))
+  const repository = typeof manifest.repository === 'string' ? manifest.repository : manifest.repository?.url
+  assert.equal(manifest.name, '@heroku-cli/command', 'run from the @heroku-cli/command checkout')
+  assert.equal(expectedRepositoryReferences.has(repository), true, 'run from the heroku/heroku-cli-command repository')
+  assertExternalSourceActive(root)
   for (const [relativePath, replacements] of rollbackReplacements) {
-    const source = read(relativePath)
+    const source = read(relativePath, root)
     assert.doesNotMatch(source, /(?:from|import\()\s*['"][^'"]*deprecated\//, `${relativePath} is already rolled back`)
     for (const [before] of replacements) {
       assert.ok(source.includes(before), `${relativePath} must contain the rollback target: ${before}`)
@@ -765,6 +775,14 @@ async function selfTestGuards() {
   const probeRoot = fs.mkdtempSync(path.join(os.tmpdir(), `${rollbackPrefix}guard-test-`))
   try {
     makeTemporaryCopy(probeRoot)
+    assertNegativePreconditions(probeRoot)
+    const manifestPath = path.join(probeRoot, 'package.json')
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
+    fs.writeFileSync(manifestPath, JSON.stringify({...manifest, repository: 'github:heroku/heroku-cli-command'}))
+    assertNegativePreconditions(probeRoot)
+    fs.writeFileSync(manifestPath, JSON.stringify({...manifest, repository: 'https://evil.example/github.com/heroku/heroku-cli-command.git'}))
+    assert.throws(() => assertNegativePreconditions(probeRoot), /heroku\/heroku-cli-command repository/)
+    fs.writeFileSync(manifestPath, JSON.stringify(manifest))
     const targetPath = [...rollbackReplacements.keys()][0]
     const [rollbackTarget] = rollbackReplacements.get(targetPath)[0]
     fs.writeFileSync(path.join(probeRoot, targetPath), read(targetPath, probeRoot).replace(rollbackTarget, 'rollback-target-drifted'))
@@ -779,7 +797,7 @@ async function selfTestGuards() {
     fs.rmSync(probeRoot, {force: true, recursive: true})
   }
 
-  console.log('Credential-manager rollback guard self-test passed (wiring drift and archive tamper rejected).')
+  console.log('Credential-manager rollback guard self-test passed (arbitrary checkout name accepted; wiring drift and archive tamper rejected).')
 }
 
 async function waitForMarker(marker) {

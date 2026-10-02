@@ -8,6 +8,7 @@ const root = process.argv[2]
   : resolve(fileURLToPath(new URL('../../../..', import.meta.url)))
 const oldReadTokenReference = ['NPM', 'TOKEN_HEROKU_CREDENTIAL_MANAGER'].join('_')
 const countExactLines = (text, expected) => text.split('\n').filter(line => line.trim() === expected).length
+const namedStep = (workflow, name) => workflow.match(new RegExp(`      - name: ${name.replaceAll(/[.*+?^${}()|[\]\\]/g, '\\$&')}[\\s\\S]*?(?=\\n      - name:|\\n  [A-Za-z0-9_-]+:|$)`))?.[0] || ''
 
 const scan = repositoryRoot => {
   const workflowDirectory = resolve(repositoryRoot, '.github/workflows')
@@ -34,8 +35,9 @@ const scan = repositoryRoot => {
   }
   for (const [name, workflow] of workflows) {
     for (const line of workflow.split('\n').filter(line => line.includes(readTokenReference))) {
-      if (!line.trim().startsWith('read-token:')) {
-        throw new Error(`${name}: private read token is used outside the trusted action invocation`)
+      const trimmed = line.trim()
+      if (!trimmed.startsWith('read-token:') && !trimmed.startsWith('PACKED_VERIFY_NPM_TOKEN:')) {
+        throw new Error(`${name}: private read token is used outside a reviewed npm operation`)
       }
     }
   }
@@ -77,8 +79,22 @@ const scan = repositoryRoot => {
   if (!/NPM_CONFIG_USERCONFIG:\s*\$\{\{ steps\.npm-paths\.outputs\.clean_userconfig \}\}/.test(action)) {
     throw new Error('private npm action does not use its known-empty config for rebuild')
   }
+  const installStep = action.split('    - name: Install private dependencies')[1]?.split('    - name: Remove npm credentials')[0] || ''
+  if (!/NPM_CONFIG_USERCONFIG:\s*\$\{\{ steps\.npm-paths\.outputs\.userconfig \}\}/.test(installStep)) {
+    throw new Error('private npm action does not bind npm ci to its reviewed token-placeholder config')
+  }
+  const cleanupStep = action.split('    - name: Remove npm credentials')[1]?.split('    - name: Verify POSIX credential cleanup')[0] || ''
+  for (const requirement of [
+    'PRIVATE_NPM_CLEAN_CACHE: ${{ steps.npm-paths.outputs.clean_cache }}',
+  ]) {
+    if (!cleanupStep.includes(requirement)) throw new Error(`private npm cleanup is missing exact cache handoff input: ${requirement}`)
+  }
   if (/NPM_CONFIG_USERCONFIG:\s*''/.test(action)) {
     throw new Error('private npm action clears userconfig to an uncontrolled default')
+  }
+  const posixCleanup = action.split('    - name: Verify POSIX credential cleanup')[1]?.split('    - name: Verify Windows credential cleanup')[0] || ''
+  if (!/PRIVATE_NPM_CLEAN_USERCONFIG:\s*\$\{\{ steps\.npm-paths\.outputs\.clean_userconfig \}\}/.test(posixCleanup)) {
+    throw new Error('private npm action does not expose the clean userconfig to POSIX cleanup verification')
   }
   for (const name of ['ROOT', 'CACHE', 'LOGS', 'USERCONFIG']) {
     if (!action.includes(`PRIVATE_NPM_${name}:`)) throw new Error(`private npm action omits ${name} ACL coverage`)
@@ -152,6 +168,30 @@ const scan = repositoryRoot => {
   if (/if command -v actionlint|actionlint is not installed/.test(ci)) {
     throw new Error('ci.yml: actionlint is optional')
   }
+  if (!/^  verifiers:\s*$/m.test(ci) || /^  trusted-verifiers:\s*$/m.test(ci)) {
+    throw new Error('ci.yml: verifier job must use the normal verifiers name')
+  }
+  const verifierJob = ci.split(/^  verifiers:\s*$/m)[1] || ''
+  for (const requirement of [
+    'Same-repository, non-Dependabot PR authors are trusted with the read-only',
+    'github.base_ref == \'v14.0.0\'',
+    'github.event.pull_request.head.repo.full_name == github.repository',
+    "github.event.pull_request.user.login != 'dependabot[bot]'",
+  ]) {
+    if (!verifierJob.includes(requirement)) throw new Error(`ci.yml: trusted-author verifier guard missing: ${requirement}`)
+  }
+  const verifierTokenBinding = 'PACKED_VERIFY_NPM_TOKEN: ${{ secrets.NPM_READ_TOKEN_HEROKU_CREDENTIAL_MANAGER }}'
+  if (countExactLines(ci, verifierTokenBinding) !== 1 || countExactLines(release, verifierTokenBinding) !== 1) {
+    throw new Error('packed verifier token must be bound exactly once in CI and release validation')
+  }
+  for (const [name, step] of [
+    ['ci.yml', namedStep(ci, 'Run packed consumer verification')],
+    ['release.yml', namedStep(release, 'Verify packed consumer')],
+  ]) {
+    if (countExactLines(step, verifierTokenBinding) !== 1 || countExactLines(step, 'npm run verify:packed-consumer') !== 1) {
+      throw new Error(`${name}: packed verifier token is not confined to the packed-consumer step`)
+    }
+  }
 
   for (const [name, workflow] of [['ci.yml', ci], ['release.yml', release]]) {
     const trustedActionCheckouts = workflow.match(/- name: Check out trusted action definition[\s\S]*?(?=\n\s{6}- name:|\n\s{2}[A-Za-z0-9_-]+:|$)/g) || []
@@ -165,11 +205,15 @@ const scan = repositoryRoot => {
   for (const [name, workflow] of workflows) {
     const expectedInvocationCount = privateActionWorkflowCounts.get(`workflows/${name}`) ?? 0
     const expectedNodeVersions = privateActionNodeVersions.get(`workflows/${name}`) ?? []
-    const privateActionInvocations = workflow.match(/uses:\s+\.\/trusted-action\/\.github\/actions\/private-npm-install\n\s+with:\n(?:\s{10}.+\n?)*/g) || []
+    const privateActionInvocations = workflow.match(/uses:\s+\.\/(?:trusted-action|candidate)\/\.github\/actions\/private-npm-install\n\s+with:\n(?:\s{10}.+\n?)*/g) || []
     if (privateActionInvocations.length !== expectedInvocationCount) {
       throw new Error(`${name}: private action invocation count was ${privateActionInvocations.length}, expected ${expectedInvocationCount}`)
     }
     for (const [index, invocation] of privateActionInvocations.entries()) {
+      const expectedPath = privateActionPaths.get(`workflows/${name}`)?.[index]
+      if (!expectedPath || !invocation.startsWith(`uses: ${expectedPath}\n`)) {
+        throw new Error(`${name}: private action invocation ${index + 1} does not use ${expectedPath}`)
+      }
       for (const input of [
         'read-token: ${{ secrets.NPM_READ_TOKEN_HEROKU_CREDENTIAL_MANAGER }}',
         'expected-action-sha: ${{ github.sha }}',
@@ -180,6 +224,7 @@ const scan = repositoryRoot => {
           throw new Error(`${name}: private action invocation ${index + 1} requires exact input: ${input}`)
         }
       }
+      if (invocation.includes('retain-clean-cache:')) throw new Error(`${name}: obsolete clean-cache retention input remains`)
     }
     const expectedActionInputs = workflow.match(/expected-action-sha:/g) || []
     if (expectedActionInputs.length !== privateActionInvocations.length) {
@@ -223,6 +268,20 @@ const scan = repositoryRoot => {
   for (const requirement of ['baseline-sha', 'PACKED_CONSUMER_BASELINE_SHA', 'packed-consumer-baseline', 'heroku-credential-manager[^/]*\\.tgz', 'MUTATION_ANCHOR_PACKED_LOGIN_HTTP']) {
     if (!packedVerifier.includes(requirement)) throw new Error(`packed verifier invariant missing: ${requirement}`)
   }
+  if (!packedVerifier.includes('Actual mutation output:\\n${redact(output)}')) {
+    throw new Error('packed verifier does not report redacted mutation subprocess output')
+  }
+  if (!packedVerifier.includes('const tarOptions = {...pacote.DirFetcher.tarCreateOptions(manifest), cwd: directory}')) {
+    throw new Error('packed verifier does not bind tar creation to the package directory')
+  }
+  if (!packedVerifier.includes("['install', '--ignore-scripts', '--no-audit', '--no-fund', tarball]")) {
+    throw new Error('packed verifier consumer install does not use the packed command with registry access')
+  }
+  if (packedVerifier.includes("'--offline'")) throw new Error('packed verifier still requires an offline npm cache')
+  if (!packedVerifier.includes('PACKED_VERIFY_NPM_TOKEN')) throw new Error('packed verifier does not accept confined registry authentication')
+  if (!packedVerifier.includes("[join(repositoryRoot, 'node_modules/typescript/bin/tsc'), '--project', 'tsconfig.json']")) {
+    throw new Error('packed verifier does not keep its compiler tooling outside the fresh consumer install')
+  }
   const rollbackVerifier = readFileSync(resolve(repositoryRoot, 'scripts/verify-credential-manager-rollback.mjs'), 'utf8')
   if (!rollbackVerifier.includes('NODE_AUTH_TOKEN: npmAuthToken') || !rollbackVerifier.includes('_authToken=\\${NODE_AUTH_TOKEN}')) {
     throw new Error('rollback verifier does not keep the token placeholder and confine the resolved token to npm ci')
@@ -253,7 +312,7 @@ const scan = repositoryRoot => {
     }
   }
 
-  for (const name of ['ci.yml', 'ci-acceptance.yml', 'release.yml']) {
+  for (const name of ['release.yml']) {
     const workflow = readFileSync(resolve(workflowDirectory, name), 'utf8')
     const jobs = workflow.match(/^  [A-Za-z0-9_-]+:\n(?:(?!^  [A-Za-z0-9_-]+:\n)[\s\S])*/gm) || []
     for (const job of jobs.filter(value => value.includes(readTokenReference))) {
@@ -273,7 +332,19 @@ const scan = repositoryRoot => {
   for (const [name, workflow] of workflows) {
     const jobs = workflow.match(/^  [A-Za-z0-9_-]+:\n(?:(?!^  [A-Za-z0-9_-]+:\n)[\s\S])*/gm) || []
     for (const job of jobs.filter(value => /secrets\.|private-key:|read-token:/.test(value))) {
-      if (!job.includes('environment: CredentialManagerInstall')) {
+      if (name === 'ci.yml' || name === 'ci-acceptance.yml') {
+        if (job.includes('environment: CredentialManagerInstall')) {
+          throw new Error(`${name}: PR-capable CI job cannot use the protected-branch environment`)
+        }
+        for (const requirement of [
+          "github.event_name == 'pull_request'",
+          "github.base_ref == 'v14.0.0'",
+          'github.event.pull_request.head.repo.full_name == github.repository',
+          "github.event.pull_request.user.login != 'dependabot[bot]'",
+        ]) {
+          if (!job.includes(requirement)) throw new Error(`${name}: PR-capable secret job is missing guard: ${requirement}`)
+        }
+      } else if (!job.includes('environment: CredentialManagerInstall')) {
         throw new Error(`${name}: secret-bearing job is missing the protected environment`)
       }
       if (!job.includes("vars.CREDENTIAL_MANAGER_INSTALL_ENABLED == 'true'")) {
@@ -296,6 +367,12 @@ const privateActionNodeVersions = new Map([
   ['workflows/release.yml', ['22.x', '22.x']],
 ])
 const privateActionPath = './trusted-action/.github/actions/private-npm-install'
+const candidateActionPath = './candidate/.github/actions/private-npm-install'
+const privateActionPaths = new Map([
+  ['workflows/ci.yml', [privateActionPath, privateActionPath, candidateActionPath]],
+  ['workflows/ci-acceptance.yml', [privateActionPath]],
+  ['workflows/release.yml', [privateActionPath, privateActionPath]],
+])
 const replaceOccurrence = (text, target, replacement, occurrence) => {
   let index = -1
   for (let count = 0; count <= occurrence; count += 1) index = text.indexOf(target, index + 1)
@@ -352,6 +429,32 @@ const mutationCases = [
   ['mutable trusted action checkout', 'workflows/ci.yml', text => text.replace('ref: ${{ github.sha }}\n          path: trusted-action', 'ref: ${{ github.ref }}\n          path: trusted-action')],
   ['npm cache', 'workflows/ci.yml', text => `${text}\n# cache: npm\n`],
   ['secret outside trusted action', 'workflows/ci.yml', text => `${text}\n# NODE_AUTH_TOKEN: \${{ secrets.NPM_READ_TOKEN_HEROKU_CREDENTIAL_MANAGER }}\n`],
+  ['CI same-repository PR guard removed', 'workflows/ci.yml', text => text.replace('github.event.pull_request.head.repo.full_name == github.repository', 'true')],
+  ['CI Dependabot PR guard removed', 'workflows/ci.yml', text => text.replace("github.event.pull_request.user.login != 'dependabot[bot]'", 'true')],
+  ['CI protected environment restored', 'workflows/ci.yml', text => text.replace('  lint:\n    if:', '  lint:\n    environment: CredentialManagerInstall\n    if:')],
+  ['acceptance v14 PR guard removed', 'workflows/ci-acceptance.yml', text => text.replace("github.base_ref == 'v14.0.0'", 'true')],
+  ['CI verifier candidate action changed', 'workflows/ci.yml', text => text.replace(candidateActionPath, privateActionPath)],
+  ['obsolete verifier cache retention restored', 'workflows/ci.yml', text => text.replace('          working-directory: candidate\n', '          retain-clean-cache: true\n          working-directory: candidate\n')],
+  ['packed verifier offline install restored', '../scripts/verify-packed-consumer.mjs', text => text.replace("['install', '--ignore-scripts', '--no-audit'", "['install', '--ignore-scripts', '--offline', '--no-audit'")],
+  ['packed verifier token handling removed', '../scripts/verify-packed-consumer.mjs', text => text.replaceAll('PACKED_VERIFY_NPM_TOKEN', 'REMOVED_VERIFY_TOKEN')],
+  ['CI packed verifier token removed', 'workflows/ci.yml', text => text.replace('          PACKED_VERIFY_NPM_TOKEN: ${{ secrets.NPM_READ_TOKEN_HEROKU_CREDENTIAL_MANAGER }}\n', '')],
+  ['release packed verifier token removed', 'workflows/release.yml', text => text.replace('          PACKED_VERIFY_NPM_TOKEN: ${{ secrets.NPM_READ_TOKEN_HEROKU_CREDENTIAL_MANAGER }}\n', '')],
+  [
+    'CI packed verifier token moved to rollback',
+    'workflows/ci.yml',
+    text => text
+      .replace('        env:\n          PACKED_VERIFY_NPM_TOKEN: ${{ secrets.NPM_READ_TOKEN_HEROKU_CREDENTIAL_MANAGER }}\n        run: |\n          npm run verify:packed-consumer', '        run: |\n          npm run verify:packed-consumer')
+      .replace('      - name: Run rollback verification\n        working-directory: candidate\n        run: |', '      - name: Run rollback verification\n        working-directory: candidate\n        env:\n          PACKED_VERIFY_NPM_TOKEN: ${{ secrets.NPM_READ_TOKEN_HEROKU_CREDENTIAL_MANAGER }}\n        run: |'),
+  ],
+  [
+    'release packed verifier token moved to build',
+    'workflows/release.yml',
+    text => text
+      .replace('        env:\n          PACKED_VERIFY_NPM_TOKEN: ${{ secrets.NPM_READ_TOKEN_HEROKU_CREDENTIAL_MANAGER }}\n        run: |\n          npm run verify:packed-consumer', '        run: |\n          npm run verify:packed-consumer')
+      .replace('      - name: Build and test release candidate\n        working-directory: candidate\n        run: |', '      - name: Build and test release candidate\n        working-directory: candidate\n        env:\n          PACKED_VERIFY_NPM_TOKEN: ${{ secrets.NPM_READ_TOKEN_HEROKU_CREDENTIAL_MANAGER }}\n        run: |'),
+  ],
+  ['packed verifier mutation diagnostics removed', '../scripts/verify-packed-consumer.mjs', text => text.replace('\\nActual mutation output:\\n${redact(output)}', '')],
+  ['packed verifier tar cwd removed', '../scripts/verify-packed-consumer.mjs', text => text.replace(', cwd: directory}', '}')],
   [
     'read token mask removed',
     'actions/private-npm-install/action.yml',
@@ -519,7 +622,7 @@ const mutationCases = [
     text => text.replace("'//registry.npmjs.org/:_authToken=\\${NODE_AUTH_TOKEN}'", "'//registry.npmjs.org/:_authToken=' + npmAuthToken"),
   ],
   [
-    'trusted packed verifier gate removed',
+    'packed verifier gate removed',
     'workflows/ci.yml',
     text => text.replace('npm run verify:packed-consumer', 'echo packed verifier omitted'),
   ],

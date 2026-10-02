@@ -5,9 +5,10 @@ const runnerTemp = process.env.PRIVATE_NPM_BASE || process.env.RUNNER_TEMP
 const root = process.env.PRIVATE_NPM_ROOT
 const userconfig = process.env.PRIVATE_NPM_USERCONFIG
 const cleanRoot = process.env.PRIVATE_NPM_CLEAN_ROOT
+const cleanCache = process.env.PRIVATE_NPM_CLEAN_CACHE
 const cleanUserconfig = process.env.PRIVATE_NPM_CLEAN_USERCONFIG
 
-if (!runnerTemp || !root || !userconfig || !cleanRoot || !cleanUserconfig) {
+if (!runnerTemp || !root || !userconfig || !cleanRoot || !cleanCache || !cleanUserconfig) {
   throw new Error('RUNNER_TEMP and private npm paths are required for cleanup')
 }
 
@@ -40,5 +41,5 @@ rmSync(resolvedRoot, {force: true, recursive: true})
 
 appendFileSync(process.env.GITHUB_ENV, 'NODE_AUTH_TOKEN=\n')
 appendFileSync(process.env.GITHUB_ENV, `NPM_CONFIG_USERCONFIG=${cleanUserconfig}\n`)
-appendFileSync(process.env.GITHUB_ENV, `NPM_CONFIG_CACHE=${process.env.PRIVATE_NPM_CLEAN_CACHE}\n`)
+appendFileSync(process.env.GITHUB_ENV, `NPM_CONFIG_CACHE=${cleanCache}\n`)
 appendFileSync(process.env.GITHUB_ENV, `NPM_CONFIG_LOGS_DIR=${process.env.PRIVATE_NPM_CLEAN_LOGS}\n`)
