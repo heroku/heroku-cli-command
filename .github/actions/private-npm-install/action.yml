@@ -9,7 +9,7 @@ inputs:
     description: Read-only npm token used only by npm ci.
     required: true
   expected-action-sha:
-    description: Protected commit SHA that supplied this action definition.
+    description: Commit SHA expected to supply this action definition.
     required: true
   retain-clean-cache:
     description: Retain the downloaded package cache without credentials for an offline verifier.
@@ -28,7 +28,7 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Verify trusted action checkout
+    - name: Verify action checkout
       shell: bash
       env:
         EXPECTED_ACTION_SHA: ${{ inputs.expected-action-sha }}

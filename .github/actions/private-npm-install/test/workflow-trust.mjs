@@ -35,7 +35,7 @@ const scan = repositoryRoot => {
   for (const [name, workflow] of workflows) {
     for (const line of workflow.split('\n').filter(line => line.includes(readTokenReference))) {
       if (!line.trim().startsWith('read-token:')) {
-        throw new Error(`${name}: private read token is used outside the trusted action invocation`)
+        throw new Error(`${name}: private read token is used outside the reviewed install action invocation`)
       }
     }
   }
@@ -169,6 +169,18 @@ const scan = repositoryRoot => {
   if (/if command -v actionlint|actionlint is not installed/.test(ci)) {
     throw new Error('ci.yml: actionlint is optional')
   }
+  if (!/^  verifiers:\s*$/m.test(ci) || /^  trusted-verifiers:\s*$/m.test(ci)) {
+    throw new Error('ci.yml: verifier job must use the normal verifiers name')
+  }
+  const verifierJob = ci.split(/^  verifiers:\s*$/m)[1] || ''
+  for (const requirement of [
+    'Same-repository, non-Dependabot PR authors are trusted with the read-only',
+    'github.base_ref == \'v14.0.0\'',
+    'github.event.pull_request.head.repo.full_name == github.repository',
+    "github.event.pull_request.user.login != 'dependabot[bot]'",
+  ]) {
+    if (!verifierJob.includes(requirement)) throw new Error(`ci.yml: trusted-author verifier guard missing: ${requirement}`)
+  }
 
   for (const [name, workflow] of [['ci.yml', ci], ['release.yml', release]]) {
     const trustedActionCheckouts = workflow.match(/- name: Check out trusted action definition[\s\S]*?(?=\n\s{6}- name:|\n\s{2}[A-Za-z0-9_-]+:|$)/g) || []
@@ -182,11 +194,15 @@ const scan = repositoryRoot => {
   for (const [name, workflow] of workflows) {
     const expectedInvocationCount = privateActionWorkflowCounts.get(`workflows/${name}`) ?? 0
     const expectedNodeVersions = privateActionNodeVersions.get(`workflows/${name}`) ?? []
-    const privateActionInvocations = workflow.match(/uses:\s+\.\/trusted-action\/\.github\/actions\/private-npm-install\n\s+with:\n(?:\s{10}.+\n?)*/g) || []
+    const privateActionInvocations = workflow.match(/uses:\s+\.\/(?:trusted-action|candidate)\/\.github\/actions\/private-npm-install\n\s+with:\n(?:\s{10}.+\n?)*/g) || []
     if (privateActionInvocations.length !== expectedInvocationCount) {
       throw new Error(`${name}: private action invocation count was ${privateActionInvocations.length}, expected ${expectedInvocationCount}`)
     }
     for (const [index, invocation] of privateActionInvocations.entries()) {
+      const expectedPath = privateActionPaths.get(`workflows/${name}`)?.[index]
+      if (!expectedPath || !invocation.startsWith(`uses: ${expectedPath}\n`)) {
+        throw new Error(`${name}: private action invocation ${index + 1} does not use ${expectedPath}`)
+      }
       for (const input of [
         'read-token: ${{ secrets.NPM_READ_TOKEN_HEROKU_CREDENTIAL_MANAGER }}',
         'expected-action-sha: ${{ github.sha }}',
@@ -255,6 +271,12 @@ const scan = repositoryRoot => {
   }
   if (!packedVerifier.includes('const tarOptions = {...pacote.DirFetcher.tarCreateOptions(manifest), cwd: directory}')) {
     throw new Error('packed verifier does not bind tar creation to the package directory')
+  }
+  if (!packedVerifier.includes("['install', '--ignore-scripts', '--offline', '--no-audit', '--no-fund', tarball]")) {
+    throw new Error('packed verifier consumer install is not limited to the packed runtime artifact')
+  }
+  if (!packedVerifier.includes("[join(repositoryRoot, 'node_modules/typescript/bin/tsc'), '--project', 'tsconfig.json']")) {
+    throw new Error('packed verifier does not keep its compiler tooling outside the offline consumer install')
   }
   const rollbackVerifier = readFileSync(resolve(repositoryRoot, 'scripts/verify-credential-manager-rollback.mjs'), 'utf8')
   if (!rollbackVerifier.includes('NODE_AUTH_TOKEN: npmAuthToken') || !rollbackVerifier.includes('_authToken=\\${NODE_AUTH_TOKEN}')) {
@@ -345,6 +367,12 @@ const retainedCacheInvocationIndexes = new Map([
   ['workflows/release.yml', new Set([1])],
 ])
 const privateActionPath = './trusted-action/.github/actions/private-npm-install'
+const candidateActionPath = './candidate/.github/actions/private-npm-install'
+const privateActionPaths = new Map([
+  ['workflows/ci.yml', [privateActionPath, privateActionPath, candidateActionPath]],
+  ['workflows/ci-acceptance.yml', [privateActionPath]],
+  ['workflows/release.yml', [privateActionPath, privateActionPath]],
+])
 const replaceOccurrence = (text, target, replacement, occurrence) => {
   let index = -1
   for (let count = 0; count <= occurrence; count += 1) index = text.indexOf(target, index + 1)
@@ -406,6 +434,7 @@ const mutationCases = [
   ['CI protected environment restored', 'workflows/ci.yml', text => text.replace('  lint:\n    if:', '  lint:\n    environment: CredentialManagerInstall\n    if:')],
   ['acceptance v14 PR guard removed', 'workflows/ci-acceptance.yml', text => text.replace("github.base_ref == 'v14.0.0'", 'true')],
   ['CI verifier cache retention removed', 'workflows/ci.yml', text => text.replace('          retain-clean-cache: true\n', '')],
+  ['CI verifier candidate action changed', 'workflows/ci.yml', text => text.replace(candidateActionPath, privateActionPath)],
   ['release verifier cache retention removed', 'workflows/release.yml', text => text.replace('          retain-clean-cache: true\n', '')],
   ['lint unexpectedly retains npm cache', 'workflows/ci.yml', text => text.replace('          node-version: 22.x\n', '          node-version: 22.x\n          retain-clean-cache: true\n')],
   ['packed verifier explicit cache ignored', '../scripts/verify-packed-consumer.mjs', text => text.replace('process.env.npm_config_cache || process.env.NPM_CONFIG_CACHE ||', '')],
@@ -579,7 +608,7 @@ const mutationCases = [
     text => text.replace("'//registry.npmjs.org/:_authToken=\\${NODE_AUTH_TOKEN}'", "'//registry.npmjs.org/:_authToken=' + npmAuthToken"),
   ],
   [
-    'trusted packed verifier gate removed',
+    'packed verifier gate removed',
     'workflows/ci.yml',
     text => text.replace('npm run verify:packed-consumer', 'echo packed verifier omitted'),
   ],

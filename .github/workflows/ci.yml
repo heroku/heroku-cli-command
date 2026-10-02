@@ -168,7 +168,9 @@ jobs:
           PRIVATE_NPM_CLEAN_ROOT: ${{ steps.private-install.outputs.clean-root }}
         run: node trusted-action/.github/actions/private-npm-install/finalize.mjs
 
-  trusted-verifiers:
+  verifiers:
+    # Same-repository, non-Dependabot PR authors are trusted with the read-only
+    # npm token. Fork PRs remain secret-free and cannot run this job.
     if: >-
       ((github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
        github.repository == 'heroku/heroku-cli-command' &&
@@ -182,12 +184,6 @@ jobs:
        github.event.pull_request.user.login != 'dependabot[bot]')
     runs-on: ubuntu-latest
     steps:
-      - name: Check out trusted action definition
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          ref: ${{ github.sha }}
-          path: trusted-action
-          persist-credentials: false
       - name: Check out exact candidate source and baseline history
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -197,7 +193,7 @@ jobs:
           persist-credentials: false
       - name: Install private dependencies
         id: private-install
-        uses: ./trusted-action/.github/actions/private-npm-install
+        uses: ./candidate/.github/actions/private-npm-install
         with:
           node-version: 22.x
           read-token: ${{ secrets.NPM_READ_TOKEN_HEROKU_CREDENTIAL_MANAGER }}
@@ -214,4 +210,4 @@ jobs:
         env:
           PRIVATE_NPM_BASE: ${{ runner.temp }}
           PRIVATE_NPM_CLEAN_ROOT: ${{ steps.private-install.outputs.clean-root }}
-        run: node trusted-action/.github/actions/private-npm-install/finalize.mjs
+        run: node candidate/.github/actions/private-npm-install/finalize.mjs

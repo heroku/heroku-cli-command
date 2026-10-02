@@ -660,7 +660,7 @@ void client.getAuthEntry()
 void login.login({method})
 export {type Compatible, commandConstructor, entries, options}
 `)
-  await writeFile(join(consumerDirectory, 'tsconfig.json'), JSON.stringify({compilerOptions: {module: 'NodeNext', moduleResolution: 'NodeNext', noEmit: true, skipLibCheck: false, strict: true, target: 'ES2022'}, files: ['./contract.ts']}, null, 2))
+  await writeFile(join(consumerDirectory, 'tsconfig.json'), JSON.stringify({compilerOptions: {module: 'NodeNext', moduleResolution: 'NodeNext', noEmit: true, skipLibCheck: false, strict: true, target: 'ES2022', typeRoots: [join(repositoryRoot, 'node_modules/@types')], types: ['node']}, files: ['./contract.ts']}, null, 2))
 }
 
 async function listenLoopback() {
@@ -686,7 +686,7 @@ async function verifyConsumer(tarball, deepPaths) {
   workspace.consumerDirectory = join(workspace.root, 'consumer-project')
   await mkdir(workspace.consumerDirectory)
   await writeFile(join(workspace.consumerDirectory, 'package.json'), JSON.stringify({name: 'packed-command-consumer', private: true, type: 'module'}, null, 2))
-  await run('npm', ['install', '--ignore-scripts', '--offline', '--no-audit', '--no-fund', tarball, `typescript@${workspace.typescriptVersion}`, `@types/node@${workspace.nodeTypesVersion}`], {
+  await run('npm', ['install', '--ignore-scripts', '--offline', '--no-audit', '--no-fund', tarball], {
     cwd: workspace.consumerDirectory,
     env: isolated.environment,
     label: 'fresh consumer npm install --ignore-scripts',
@@ -703,7 +703,7 @@ async function verifyConsumer(tarball, deepPaths) {
   } finally {
     await new Promise(resolvePromise => loopback.server.close(resolvePromise))
   }
-  await run(process.execPath, ['node_modules/typescript/bin/tsc', '--project', 'tsconfig.json'], {cwd: workspace.consumerDirectory, env: isolated.environment, label: 'consumer declaration compile'})
+  await run(process.execPath, [join(repositoryRoot, 'node_modules/typescript/bin/tsc'), '--project', 'tsconfig.json'], {cwd: workspace.consumerDirectory, env: isolated.environment, label: 'consumer declaration compile'})
   const after = await snapshotOutsideWorkspace()
   assert.deepEqual(after, before, 'runtime smoke wrote to isolated home/config/data outside its dedicated data directory')
 }
@@ -763,8 +763,6 @@ async function main() {
   assert.deepEqual(await readFile(join(workspace.packageRoot, 'package.json')), await readFile(join(repositoryRoot, 'package.json')), 'packed package.json bytes differ from the current source manifest')
   for (const [name, artifact] of expectedDependencies) assert.equal(workspace.manifest.dependencies?.[name], artifact.version, `${name} must be exact ${artifact.version}`)
   const manifestSummary = await verifyPackManifest(packMetadata, baseline)
-  workspace.typescriptVersion = (await readJson(join(repositoryRoot, 'node_modules/typescript/package.json'))).version
-  workspace.nodeTypesVersion = (await readJson(join(repositoryRoot, 'node_modules/@types/node/package.json'))).version
 
   currentPhase = 'TypeScript AST reachable graph'
   const packedFiles = await walk(workspace.packageRoot)
