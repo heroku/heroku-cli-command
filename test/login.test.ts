@@ -53,7 +53,10 @@ function stubBrowserSpawn(): sinon.SinonStub {
   return sinon.stub(childProcess, 'spawn').callsFake((() => {
     // eslint-disable-next-line unicorn/prefer-event-target -- ChildProcess uses EventEmitter semantics
     const child = Object.assign(new EventEmitter(), {pid: 12_345, unref: sinon.stub()})
-    setImmediate(() => child.emit('spawn'))
+    setImmediate(() => {
+      child.emit('spawn')
+      if (process.platform === 'win32') setImmediate(() => child.emit('close', 0))
+    })
     return child
   }) as unknown as typeof childProcess.spawn)
 }
@@ -418,7 +421,10 @@ describe('Login facade', () => {
     // eslint-disable-next-line unicorn/prefer-event-target -- ChildProcess uses EventEmitter semantics
     const child = Object.assign(new EventEmitter(), {pid: 12_345, unref: sinon.stub()})
     sinon.stub(childProcess, 'spawn').callsFake((() => {
-      setImmediate(() => child.emit('spawn'))
+      setImmediate(() => {
+        child.emit('spawn')
+        if (process.platform === 'win32') setImmediate(() => child.emit('close', 0))
+      })
       return child
     }) as unknown as typeof childProcess.spawn)
     const warn = sinon.stub(ux, 'warn')

@@ -242,8 +242,13 @@ jobs:
         run: |
           npm run build
           npm test
-          npm run verify:packed-consumer
           npm run verify:rollback
+      - name: Verify packed consumer
+        working-directory: candidate
+        env:
+          PACKED_VERIFY_NPM_TOKEN: ${{ secrets.NPM_READ_TOKEN_HEROKU_CREDENTIAL_MANAGER }}
+        run: |
+          npm run verify:packed-consumer
       - name: Pack command tarball
         id: pack
         shell: bash

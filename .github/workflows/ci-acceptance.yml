@@ -5,6 +5,8 @@ on:
     # Keep integration and publishing branches covered because all retain the
     # package-scoped private credential-manager dependency.
     branches: [v14.0.0, main, beta]
+  pull_request:
+    branches: [v14.0.0]
   workflow_dispatch:
 
 permissions:
@@ -24,9 +26,12 @@ jobs:
     if: >-
       github.repository == 'heroku/heroku-cli-command' &&
       vars.CREDENTIAL_MANAGER_INSTALL_ENABLED == 'true' &&
-      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
-      (github.ref == 'refs/heads/v14.0.0' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/beta')
-    environment: CredentialManagerInstall
+      (((github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+        (github.ref == 'refs/heads/v14.0.0' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/beta')) ||
+       (github.event_name == 'pull_request' &&
+        github.base_ref == 'v14.0.0' &&
+        github.event.pull_request.head.repo.full_name == github.repository &&
+        github.event.pull_request.user.login != 'dependabot[bot]'))
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
