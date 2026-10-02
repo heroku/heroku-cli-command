@@ -8,6 +8,7 @@ const root = process.argv[2]
   : resolve(fileURLToPath(new URL('../../../..', import.meta.url)))
 const oldReadTokenReference = ['NPM', 'TOKEN_HEROKU_CREDENTIAL_MANAGER'].join('_')
 const countExactLines = (text, expected) => text.split('\n').filter(line => line.trim() === expected).length
+const namedStep = (workflow, name) => workflow.match(new RegExp(`      - name: ${name.replaceAll(/[.*+?^${}()|[\]\\]/g, '\\$&')}[\\s\\S]*?(?=\\n      - name:|\\n  [A-Za-z0-9_-]+:|$)`))?.[0] || ''
 
 const scan = repositoryRoot => {
   const workflowDirectory = resolve(repositoryRoot, '.github/workflows')
@@ -34,8 +35,9 @@ const scan = repositoryRoot => {
   }
   for (const [name, workflow] of workflows) {
     for (const line of workflow.split('\n').filter(line => line.includes(readTokenReference))) {
-      if (!line.trim().startsWith('read-token:')) {
-        throw new Error(`${name}: private read token is used outside the reviewed install action invocation`)
+      const trimmed = line.trim()
+      if (!trimmed.startsWith('read-token:') && !trimmed.startsWith('PACKED_VERIFY_NPM_TOKEN:')) {
+        throw new Error(`${name}: private read token is used outside a reviewed npm operation`)
       }
     }
   }
@@ -83,10 +85,7 @@ const scan = repositoryRoot => {
   }
   const cleanupStep = action.split('    - name: Remove npm credentials')[1]?.split('    - name: Verify POSIX credential cleanup')[0] || ''
   for (const requirement of [
-    'PRIVATE_NPM_CACHE: ${{ steps.npm-paths.outputs.cache }}',
-    'PRIVATE_NPM_RETAIN_CACHE: ${{ inputs.retain-clean-cache }}',
     'PRIVATE_NPM_CLEAN_CACHE: ${{ steps.npm-paths.outputs.clean_cache }}',
-    'READ_TOKEN: ${{ inputs.read-token }}',
   ]) {
     if (!cleanupStep.includes(requirement)) throw new Error(`private npm cleanup is missing exact cache handoff input: ${requirement}`)
   }
@@ -181,6 +180,18 @@ const scan = repositoryRoot => {
   ]) {
     if (!verifierJob.includes(requirement)) throw new Error(`ci.yml: trusted-author verifier guard missing: ${requirement}`)
   }
+  const verifierTokenBinding = 'PACKED_VERIFY_NPM_TOKEN: ${{ secrets.NPM_READ_TOKEN_HEROKU_CREDENTIAL_MANAGER }}'
+  if (countExactLines(ci, verifierTokenBinding) !== 1 || countExactLines(release, verifierTokenBinding) !== 1) {
+    throw new Error('packed verifier token must be bound exactly once in CI and release validation')
+  }
+  for (const [name, step] of [
+    ['ci.yml', namedStep(ci, 'Run packed consumer verification')],
+    ['release.yml', namedStep(release, 'Verify packed consumer')],
+  ]) {
+    if (countExactLines(step, verifierTokenBinding) !== 1 || countExactLines(step, 'npm run verify:packed-consumer') !== 1) {
+      throw new Error(`${name}: packed verifier token is not confined to the packed-consumer step`)
+    }
+  }
 
   for (const [name, workflow] of [['ci.yml', ci], ['release.yml', release]]) {
     const trustedActionCheckouts = workflow.match(/- name: Check out trusted action definition[\s\S]*?(?=\n\s{6}- name:|\n\s{2}[A-Za-z0-9_-]+:|$)/g) || []
@@ -213,10 +224,7 @@ const scan = repositoryRoot => {
           throw new Error(`${name}: private action invocation ${index + 1} requires exact input: ${input}`)
         }
       }
-      const shouldRetainCache = retainedCacheInvocationIndexes.get(`workflows/${name}`)?.has(index) ?? false
-      if (countExactLines(invocation, 'retain-clean-cache: true') !== (shouldRetainCache ? 1 : 0)) {
-        throw new Error(`${name}: private action invocation ${index + 1} has an unexpected clean-cache retention policy`)
-      }
+      if (invocation.includes('retain-clean-cache:')) throw new Error(`${name}: obsolete clean-cache retention input remains`)
     }
     const expectedActionInputs = workflow.match(/expected-action-sha:/g) || []
     if (expectedActionInputs.length !== privateActionInvocations.length) {
@@ -260,33 +268,19 @@ const scan = repositoryRoot => {
   for (const requirement of ['baseline-sha', 'PACKED_CONSUMER_BASELINE_SHA', 'packed-consumer-baseline', 'heroku-credential-manager[^/]*\\.tgz', 'MUTATION_ANCHOR_PACKED_LOGIN_HTTP']) {
     if (!packedVerifier.includes(requirement)) throw new Error(`packed verifier invariant missing: ${requirement}`)
   }
-  if (!/process\.env\.npm_config_cache \|\| process\.env\.NPM_CONFIG_CACHE \|\|/.test(packedVerifier)) {
-    throw new Error('packed verifier does not prefer the explicit npm cache before the local HOME fallback')
-  }
-  if (countExactLines(packedVerifier, 'NPM_CONFIG_CACHE: process.env.npm_config_cache || process.env.NPM_CONFIG_CACHE,') !== 1) {
-    throw new Error('packed verifier does not forward the explicit npm cache to mutation subprocesses')
-  }
   if (!packedVerifier.includes('Actual mutation output:\\n${redact(output)}')) {
     throw new Error('packed verifier does not report redacted mutation subprocess output')
   }
   if (!packedVerifier.includes('const tarOptions = {...pacote.DirFetcher.tarCreateOptions(manifest), cwd: directory}')) {
     throw new Error('packed verifier does not bind tar creation to the package directory')
   }
-  if (!packedVerifier.includes("['install', '--ignore-scripts', '--offline', '--no-audit', '--no-fund', tarball, credentialManagerTarball]")) {
-    throw new Error('packed verifier consumer install does not use the packed command and verified local credential-manager artifact')
+  if (!packedVerifier.includes("['install', '--ignore-scripts', '--no-audit', '--no-fund', tarball]")) {
+    throw new Error('packed verifier consumer install does not use the packed command with registry access')
   }
-  if (!packedVerifier.includes("npmCache.get.byDigest(join(workspace.seedCache, '_cacache'), artifact.integrity)")) {
-    throw new Error('packed verifier does not recover the private artifact by its reviewed integrity')
-  }
-  for (const requirement of [
-    "check(createHash(algorithm).update(contents).digest('base64') === expectedDigest, `${name} retained tarball integrity mismatch`)",
-    'assert.equal(manifest.name, name, `${name} retained tarball package name mismatch`)',
-    'assert.equal(manifest.version, artifact.version, `${name} retained tarball package version mismatch`)',
-  ]) {
-    if (!packedVerifier.includes(requirement)) throw new Error(`packed verifier private artifact validation missing: ${requirement}`)
-  }
+  if (packedVerifier.includes("'--offline'")) throw new Error('packed verifier still requires an offline npm cache')
+  if (!packedVerifier.includes('PACKED_VERIFY_NPM_TOKEN')) throw new Error('packed verifier does not accept confined registry authentication')
   if (!packedVerifier.includes("[join(repositoryRoot, 'node_modules/typescript/bin/tsc'), '--project', 'tsconfig.json']")) {
-    throw new Error('packed verifier does not keep its compiler tooling outside the offline consumer install')
+    throw new Error('packed verifier does not keep its compiler tooling outside the fresh consumer install')
   }
   const rollbackVerifier = readFileSync(resolve(repositoryRoot, 'scripts/verify-credential-manager-rollback.mjs'), 'utf8')
   if (!rollbackVerifier.includes('NODE_AUTH_TOKEN: npmAuthToken') || !rollbackVerifier.includes('_authToken=\\${NODE_AUTH_TOKEN}')) {
@@ -372,10 +366,6 @@ const privateActionNodeVersions = new Map([
   ['workflows/ci-acceptance.yml', ['${{ matrix.node-version }}']],
   ['workflows/release.yml', ['22.x', '22.x']],
 ])
-const retainedCacheInvocationIndexes = new Map([
-  ['workflows/ci.yml', new Set([2])],
-  ['workflows/release.yml', new Set([1])],
-])
 const privateActionPath = './trusted-action/.github/actions/private-npm-install'
 const candidateActionPath = './candidate/.github/actions/private-npm-install'
 const privateActionPaths = new Map([
@@ -443,17 +433,28 @@ const mutationCases = [
   ['CI Dependabot PR guard removed', 'workflows/ci.yml', text => text.replace("github.event.pull_request.user.login != 'dependabot[bot]'", 'true')],
   ['CI protected environment restored', 'workflows/ci.yml', text => text.replace('  lint:\n    if:', '  lint:\n    environment: CredentialManagerInstall\n    if:')],
   ['acceptance v14 PR guard removed', 'workflows/ci-acceptance.yml', text => text.replace("github.base_ref == 'v14.0.0'", 'true')],
-  ['CI verifier cache retention removed', 'workflows/ci.yml', text => text.replace('          retain-clean-cache: true\n', '')],
   ['CI verifier candidate action changed', 'workflows/ci.yml', text => text.replace(candidateActionPath, privateActionPath)],
-  ['release verifier cache retention removed', 'workflows/release.yml', text => text.replace('          retain-clean-cache: true\n', '')],
-  ['lint unexpectedly retains npm cache', 'workflows/ci.yml', text => text.replace('          node-version: 22.x\n', '          node-version: 22.x\n          retain-clean-cache: true\n')],
-  ['packed verifier explicit cache ignored', '../scripts/verify-packed-consumer.mjs', text => text.replace('process.env.npm_config_cache || process.env.NPM_CONFIG_CACHE ||', '')],
-  ['packed verifier mutation cache forwarding removed', '../scripts/verify-packed-consumer.mjs', text => text.replace('          NPM_CONFIG_CACHE: process.env.npm_config_cache || process.env.NPM_CONFIG_CACHE,\n', '')],
+  ['obsolete verifier cache retention restored', 'workflows/ci.yml', text => text.replace('          working-directory: candidate\n', '          retain-clean-cache: true\n          working-directory: candidate\n')],
+  ['packed verifier offline install restored', '../scripts/verify-packed-consumer.mjs', text => text.replace("['install', '--ignore-scripts', '--no-audit'", "['install', '--ignore-scripts', '--offline', '--no-audit'")],
+  ['packed verifier token handling removed', '../scripts/verify-packed-consumer.mjs', text => text.replaceAll('PACKED_VERIFY_NPM_TOKEN', 'REMOVED_VERIFY_TOKEN')],
+  ['CI packed verifier token removed', 'workflows/ci.yml', text => text.replace('          PACKED_VERIFY_NPM_TOKEN: ${{ secrets.NPM_READ_TOKEN_HEROKU_CREDENTIAL_MANAGER }}\n', '')],
+  ['release packed verifier token removed', 'workflows/release.yml', text => text.replace('          PACKED_VERIFY_NPM_TOKEN: ${{ secrets.NPM_READ_TOKEN_HEROKU_CREDENTIAL_MANAGER }}\n', '')],
+  [
+    'CI packed verifier token moved to rollback',
+    'workflows/ci.yml',
+    text => text
+      .replace('        env:\n          PACKED_VERIFY_NPM_TOKEN: ${{ secrets.NPM_READ_TOKEN_HEROKU_CREDENTIAL_MANAGER }}\n        run: |\n          npm run verify:packed-consumer', '        run: |\n          npm run verify:packed-consumer')
+      .replace('      - name: Run rollback verification\n        working-directory: candidate\n        run: |', '      - name: Run rollback verification\n        working-directory: candidate\n        env:\n          PACKED_VERIFY_NPM_TOKEN: ${{ secrets.NPM_READ_TOKEN_HEROKU_CREDENTIAL_MANAGER }}\n        run: |'),
+  ],
+  [
+    'release packed verifier token moved to build',
+    'workflows/release.yml',
+    text => text
+      .replace('        env:\n          PACKED_VERIFY_NPM_TOKEN: ${{ secrets.NPM_READ_TOKEN_HEROKU_CREDENTIAL_MANAGER }}\n        run: |\n          npm run verify:packed-consumer', '        run: |\n          npm run verify:packed-consumer')
+      .replace('      - name: Build and test release candidate\n        working-directory: candidate\n        run: |', '      - name: Build and test release candidate\n        working-directory: candidate\n        env:\n          PACKED_VERIFY_NPM_TOKEN: ${{ secrets.NPM_READ_TOKEN_HEROKU_CREDENTIAL_MANAGER }}\n        run: |'),
+  ],
   ['packed verifier mutation diagnostics removed', '../scripts/verify-packed-consumer.mjs', text => text.replace('\\nActual mutation output:\\n${redact(output)}', '')],
   ['packed verifier tar cwd removed', '../scripts/verify-packed-consumer.mjs', text => text.replace(', cwd: directory}', '}')],
-  ['packed verifier private artifact digest removed', '../scripts/verify-packed-consumer.mjs', text => text.replace("  check(createHash(algorithm).update(contents).digest('base64') === expectedDigest, `${name} retained tarball integrity mismatch`)\n", '')],
-  ['packed verifier private artifact name check removed', '../scripts/verify-packed-consumer.mjs', text => text.replace('  assert.equal(manifest.name, name, `${name} retained tarball package name mismatch`)\n', '')],
-  ['packed verifier private artifact version check removed', '../scripts/verify-packed-consumer.mjs', text => text.replace('  assert.equal(manifest.version, artifact.version, `${name} retained tarball package version mismatch`)\n', '')],
   [
     'read token mask removed',
     'actions/private-npm-install/action.yml',

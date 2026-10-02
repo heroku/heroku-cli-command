@@ -2,7 +2,7 @@
 
 import assert from 'node:assert/strict'
 import {execFile} from 'node:child_process'
-import {createHash, randomUUID} from 'node:crypto'
+import {randomUUID} from 'node:crypto'
 import {createRequire} from 'node:module'
 import {
   chmod,
@@ -95,7 +95,6 @@ const safeEnvironmentNames = new Set([
 
 let workspace
 let currentPhase = 'initialization'
-let npmCache
 let pacote
 let npmTarContents
 let npmTar
@@ -237,6 +236,13 @@ async function createMinimalNpmConfig(target) {
     }
   }
 
+  if (process.env.PACKED_VERIFY_NPM_TOKEN) {
+    const name = `PACKED_VERIFY_NPM_SECRET_${secretIndex++}`
+    childEnvironment[name] = process.env.PACKED_VERIFY_NPM_TOKEN
+    output.push(`//registry.npmjs.org/:_authToken=\${${name}}`)
+    for (const variant of redactionVariants(process.env.PACKED_VERIFY_NPM_TOKEN)) workspace.redactions.add(variant)
+  }
+
   await writeFile(target, `${output.join('\n')}\n`, {mode: 0o600})
   await chmod(target, 0o600)
   return childEnvironment
@@ -340,6 +346,7 @@ async function runMutationChecks() {
           HOME: process.env.HOME,
           NPM_CONFIG_CACHE: process.env.npm_config_cache || process.env.NPM_CONFIG_CACHE,
           PACKED_VERIFY_NPM_CLI: npmCliPath,
+          PACKED_VERIFY_NPM_TOKEN: process.env.PACKED_VERIFY_NPM_TOKEN,
           PACKED_CONSUMER_BASELINE_SHA: baselineSha,
           PACKED_VERIFY_SKIP_MUTATIONS: '1',
           USERPROFILE: process.env.USERPROFILE ?? process.env.HOME,
@@ -528,31 +535,6 @@ async function extractTarball(tarball, destination) {
   await pacote.extract(tarball, destination, {cache: workspace.controlPaths.cache, preferOffline: true})
 }
 
-async function materializeCachedArtifact(name) {
-  const artifact = expectedDependencies.get(name)
-  check(artifact, `no expected artifact metadata exists for ${name}`)
-  const artifactDirectory = join(workspace.root, 'artifacts')
-  await mkdir(artifactDirectory, {recursive: true})
-  const tarball = join(artifactDirectory, `${name.split('/').pop()}-${artifact.version}.tgz`)
-  let contents
-  try {
-    contents = await npmCache.get.byDigest(join(workspace.seedCache, '_cacache'), artifact.integrity)
-  } catch (error) {
-    throw new Error(`could not recover ${name}@${artifact.version} from the retained npm cache: ${error.message}`)
-  }
-
-  const [algorithm, expectedDigest] = artifact.integrity.split('-', 2)
-  check(createHash(algorithm).update(contents).digest('base64') === expectedDigest, `${name} retained tarball integrity mismatch`)
-  await writeFile(tarball, contents, {mode: 0o600})
-  const extracted = join(artifactDirectory, 'credential-manager')
-  await mkdir(extracted)
-  await extractTarball(tarball, extracted)
-  const manifest = await readJson(join(extracted, 'package.json'))
-  assert.equal(manifest.name, name, `${name} retained tarball package name mismatch`)
-  assert.equal(manifest.version, artifact.version, `${name} retained tarball package version mismatch`)
-  return tarball
-}
-
 async function verifyPackManifest(packMetadata, baseline) {
   const paths = packMetadata.files.map(file => file.path).sort()
   const pathSet = new Set(paths)
@@ -595,7 +577,7 @@ async function resolvePackageManifest(name, commandRequire) {
   }
 }
 
-async function verifyInstalledGraph(commandDirectory, credentialManagerTarball) {
+async function verifyInstalledGraph(commandDirectory) {
   const commandRequire = createRequire(join(commandDirectory, 'package.json'))
   for (const [name, artifact] of expectedDependencies) {
     const installed = await resolvePackageManifest(name, commandRequire)
@@ -606,13 +588,8 @@ async function verifyInstalledGraph(commandDirectory, credentialManagerTarball) 
       .find(([key, candidate]) => (key === `node_modules/${name}` || key.endsWith(`/node_modules/${name}`)) && candidate.version === installed.manifest.version)?.[1]
     check(entry, `${name} resolved package has no matching consumer lockfile entry`)
     assert.equal(entry.version, artifact.version, `${name} lockfile version mismatch`)
-    assert.equal(entry.integrity, artifact.integrity, `${name} artifact integrity mismatch`)
-    if (name === '@heroku/heroku-credential-manager') {
-      check(entry.resolved?.startsWith('file:'), `${name} consumer lockfile did not use the verified local artifact`)
-      assert.equal(resolve(workspace.consumerDirectory, entry.resolved.slice('file:'.length)), credentialManagerTarball, `${name} consumer lockfile local artifact mismatch`)
-    } else {
-      assert.equal(entry.resolved, artifact.tarball, `${name} registry tarball mismatch`)
-    }
+    assert.equal(entry.integrity, artifact.integrity, `${name} registry integrity mismatch`)
+    assert.equal(entry.resolved, artifact.tarball, `${name} registry tarball mismatch`)
   }
 
   const proxyPath = commandRequire.resolve('@heroku/http-call/lib/proxy.js')
@@ -712,13 +689,11 @@ async function listenLoopback() {
 
 async function verifyConsumer(tarball, deepPaths) {
   const isolated = await createIsolatedEnvironment('consumer')
-  await cp(join(workspace.seedCache, '_cacache'), join(isolated.paths.cache, '_cacache'), {recursive: true})
   workspace.consumerPaths = isolated.paths
   workspace.consumerDirectory = join(workspace.root, 'consumer-project')
   await mkdir(workspace.consumerDirectory)
   await writeFile(join(workspace.consumerDirectory, 'package.json'), JSON.stringify({name: 'packed-command-consumer', private: true, type: 'module'}, null, 2))
-  const credentialManagerTarball = await materializeCachedArtifact('@heroku/heroku-credential-manager')
-  await run('npm', ['install', '--ignore-scripts', '--offline', '--no-audit', '--no-fund', tarball, credentialManagerTarball], {
+  await run('npm', ['install', '--ignore-scripts', '--no-audit', '--no-fund', tarball], {
     cwd: workspace.consumerDirectory,
     env: isolated.environment,
     label: 'fresh consumer npm install --ignore-scripts',
@@ -726,7 +701,7 @@ async function verifyConsumer(tarball, deepPaths) {
   const commandManifestPath = createRequire(join(workspace.consumerDirectory, 'package.json')).resolve('@heroku-cli/command/package.json')
   const resolvedCommandDirectory = dirname(commandManifestPath)
   check(resolvedCommandDirectory.endsWith(join('@heroku-cli', 'command')), 'installed command package path did not resolve')
-  await verifyInstalledGraph(resolvedCommandDirectory, credentialManagerTarball)
+  await verifyInstalledGraph(resolvedCommandDirectory)
   const before = await snapshotOutsideWorkspace()
   const loopback = await listenLoopback()
   try {
@@ -750,19 +725,12 @@ async function initializeWorkspace() {
   }
   workspace.npmUserConfig = join(workspace.root, 'npmrc')
   workspace.npmEnvironment = await createMinimalNpmConfig(workspace.npmUserConfig)
-  workspace.seedCache = join(workspace.root, 'seed-cache')
-  const sourceCache = process.env.npm_config_cache || process.env.NPM_CONFIG_CACHE || (process.env.HOME && join(process.env.HOME, '.npm'))
-  check(sourceCache, 'an npm cache is required for offline consumer verification')
-  workspace.redactions.add(sourceCache)
-  workspace.redactions.add(normalizePath(sourceCache))
-  await cp(join(sourceCache, '_cacache'), join(workspace.seedCache, '_cacache'), {recursive: true})
   const control = await createIsolatedEnvironment('control')
   workspace.controlPaths = control.paths
   workspace.baseEnvironment = control.environment
   const npmPackagePath = npmCliPath ? resolve(dirname(npmCliPath), '..', 'package.json') : undefined
   const resolvedNpmPackagePath = npmPackagePath ?? join((await run('npm', ['root', '--global'], {env: workspace.baseEnvironment})).stdout.trim(), 'npm', 'package.json')
   const npmRequire = createRequire(resolvedNpmPackagePath)
-  npmCache = npmRequire('cacache')
   pacote = npmRequire('pacote')
   npmTarContents = npmRequire(resolve(dirname(resolvedNpmPackagePath), 'lib/utils/tar.js'))
   npmTar = npmRequire('tar')
