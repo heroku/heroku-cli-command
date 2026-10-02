@@ -247,6 +247,9 @@ const scan = repositoryRoot => {
   if (!/process\.env\.npm_config_cache \|\| process\.env\.NPM_CONFIG_CACHE \|\|/.test(packedVerifier)) {
     throw new Error('packed verifier does not prefer the explicit npm cache before the local HOME fallback')
   }
+  if (countExactLines(packedVerifier, 'NPM_CONFIG_CACHE: process.env.npm_config_cache || process.env.NPM_CONFIG_CACHE,') !== 1) {
+    throw new Error('packed verifier does not forward the explicit npm cache to mutation subprocesses')
+  }
   const rollbackVerifier = readFileSync(resolve(repositoryRoot, 'scripts/verify-credential-manager-rollback.mjs'), 'utf8')
   if (!rollbackVerifier.includes('NODE_AUTH_TOKEN: npmAuthToken') || !rollbackVerifier.includes('_authToken=\\${NODE_AUTH_TOKEN}')) {
     throw new Error('rollback verifier does not keep the token placeholder and confine the resolved token to npm ci')
@@ -400,6 +403,7 @@ const mutationCases = [
   ['release verifier cache retention removed', 'workflows/release.yml', text => text.replace('          retain-clean-cache: true\n', '')],
   ['lint unexpectedly retains npm cache', 'workflows/ci.yml', text => text.replace('          node-version: 22.x\n', '          node-version: 22.x\n          retain-clean-cache: true\n')],
   ['packed verifier explicit cache ignored', '../scripts/verify-packed-consumer.mjs', text => text.replace('process.env.npm_config_cache || process.env.NPM_CONFIG_CACHE ||', '')],
+  ['packed verifier mutation cache forwarding removed', '../scripts/verify-packed-consumer.mjs', text => text.replace('          NPM_CONFIG_CACHE: process.env.npm_config_cache || process.env.NPM_CONFIG_CACHE,\n', '')],
   [
     'read token mask removed',
     'actions/private-npm-install/action.yml',

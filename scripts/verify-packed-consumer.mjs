@@ -337,6 +337,7 @@ async function runMutationChecks() {
         encoding: 'utf8',
         env: sanitizedEnvironment({
           HOME: process.env.HOME,
+          NPM_CONFIG_CACHE: process.env.npm_config_cache || process.env.NPM_CONFIG_CACHE,
           PACKED_VERIFY_NPM_CLI: npmCliPath,
           PACKED_CONSUMER_BASELINE_SHA: baselineSha,
           PACKED_VERIFY_SKIP_MUTATIONS: '1',
