@@ -272,8 +272,18 @@ const scan = repositoryRoot => {
   if (!packedVerifier.includes('const tarOptions = {...pacote.DirFetcher.tarCreateOptions(manifest), cwd: directory}')) {
     throw new Error('packed verifier does not bind tar creation to the package directory')
   }
-  if (!packedVerifier.includes("['install', '--ignore-scripts', '--offline', '--no-audit', '--no-fund', tarball]")) {
-    throw new Error('packed verifier consumer install is not limited to the packed runtime artifact')
+  if (!packedVerifier.includes("['install', '--ignore-scripts', '--offline', '--no-audit', '--no-fund', tarball, credentialManagerTarball]")) {
+    throw new Error('packed verifier consumer install does not use the packed command and verified local credential-manager artifact')
+  }
+  if (!packedVerifier.includes("npmCache.get.byDigest(join(workspace.seedCache, '_cacache'), artifact.integrity)")) {
+    throw new Error('packed verifier does not recover the private artifact by its reviewed integrity')
+  }
+  for (const requirement of [
+    "check(createHash(algorithm).update(contents).digest('base64') === expectedDigest, `${name} retained tarball integrity mismatch`)",
+    'assert.equal(manifest.name, name, `${name} retained tarball package name mismatch`)',
+    'assert.equal(manifest.version, artifact.version, `${name} retained tarball package version mismatch`)',
+  ]) {
+    if (!packedVerifier.includes(requirement)) throw new Error(`packed verifier private artifact validation missing: ${requirement}`)
   }
   if (!packedVerifier.includes("[join(repositoryRoot, 'node_modules/typescript/bin/tsc'), '--project', 'tsconfig.json']")) {
     throw new Error('packed verifier does not keep its compiler tooling outside the offline consumer install')
@@ -441,6 +451,9 @@ const mutationCases = [
   ['packed verifier mutation cache forwarding removed', '../scripts/verify-packed-consumer.mjs', text => text.replace('          NPM_CONFIG_CACHE: process.env.npm_config_cache || process.env.NPM_CONFIG_CACHE,\n', '')],
   ['packed verifier mutation diagnostics removed', '../scripts/verify-packed-consumer.mjs', text => text.replace('\\nActual mutation output:\\n${redact(output)}', '')],
   ['packed verifier tar cwd removed', '../scripts/verify-packed-consumer.mjs', text => text.replace(', cwd: directory}', '}')],
+  ['packed verifier private artifact digest removed', '../scripts/verify-packed-consumer.mjs', text => text.replace("  check(createHash(algorithm).update(contents).digest('base64') === expectedDigest, `${name} retained tarball integrity mismatch`)\n", '')],
+  ['packed verifier private artifact name check removed', '../scripts/verify-packed-consumer.mjs', text => text.replace('  assert.equal(manifest.name, name, `${name} retained tarball package name mismatch`)\n', '')],
+  ['packed verifier private artifact version check removed', '../scripts/verify-packed-consumer.mjs', text => text.replace('  assert.equal(manifest.version, artifact.version, `${name} retained tarball package version mismatch`)\n', '')],
   [
     'read token mask removed',
     'actions/private-npm-install/action.yml',
