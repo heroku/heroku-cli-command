@@ -37,7 +37,7 @@
     "chai": "^6.2.2",
     "chai-as-promised": "^8.0.1",
     "eslint": "^9",
-    "eslint-config-oclif": "^6.0.152",
+    "eslint-config-oclif": "^7.1.8",
     "fancy-test": "^3.0.16",
     "fs-extra": "^11.3.0",
     "mocha": "^11",
