@@ -288,7 +288,9 @@ const scan = repositoryRoot => {
   }
 
   const releaseOnPush = readFileSync(resolve(workflowDirectory, 'release-on-push.yml'), 'utf8')
-  if (!releaseOnPush.includes('skip-github-pull-request: true') || /pull-requests:\s*write/.test(releaseOnPush)) {
+  if (!releaseOnPush.includes('skip-github-pull-request: true') ||
+      /^      pull-requests:\s*write\s*$/m.test(releaseOnPush) ||
+      !/^          permission-pull-requests: write\s*$/m.test(releaseOnPush)) {
     throw new Error('release-on-push.yml: release completion can mutate release PRs')
   }
   if (/v14\.0\.0/.test(releaseOnPush) || !releaseOnPush.includes('branches: [main, beta]')) {
@@ -537,6 +539,11 @@ const mutationCases = [
     'release completion PR mutation enabled',
     'workflows/release-on-push.yml',
     text => text.replace('skip-github-pull-request: true', 'skip-github-pull-request: false'),
+  ],
+  [
+    'release completion grants PR write to the default token',
+    'workflows/release-on-push.yml',
+    text => text.replace('      contents: write\n    steps:', '      contents: write\n      pull-requests: write\n    steps:'),
   ],
   [
     'setup-node cache control removed',
