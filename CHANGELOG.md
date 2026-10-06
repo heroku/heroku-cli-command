@@ -10,6 +10,13 @@ With this major version release we will be improving the security by storing aut
 
 * remove dual write for credential storage ([#389](https://github.com/heroku/heroku-cli-command/issues/389)) ([e50b5be](https://github.com/heroku/heroku-cli-command/commit/e50b5be106f7997d85f7a5a53ff06ff1eadecb9c))
 
+## [13.2.4](https://github.com/heroku/heroku-cli-command/compare/command-v13.2.3...command-v13.2.4) (2026-10-06)
+
+
+### Dependencies
+
+* bump @oclif/core from 4.11.4 to 4.14.0 ([#424](https://github.com/heroku/heroku-cli-command/issues/424)) ([3724939](https://github.com/heroku/heroku-cli-command/commit/372493989720ea636d9c02000ec241681990268f))
+
 ## [13.2.3](https://github.com/heroku/heroku-cli-command/compare/command-v13.2.2...command-v13.2.3) (2026-10-01)
 
 
