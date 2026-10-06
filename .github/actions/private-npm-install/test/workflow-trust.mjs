@@ -1,4 +1,5 @@
 import {cpSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync} from 'node:fs'
+import {spawnSync} from 'node:child_process'
 import {tmpdir} from 'node:os'
 import {join, resolve} from 'node:path'
 import {fileURLToPath} from 'node:url'
@@ -9,6 +10,27 @@ const root = process.argv[2]
 const oldReadTokenReference = ['NPM', 'TOKEN_HEROKU_CREDENTIAL_MANAGER'].join('_')
 const countExactLines = (text, expected) => text.split('\n').filter(line => line.trim() === expected).length
 const namedStep = (workflow, name) => workflow.match(new RegExp(`      - name: ${name.replaceAll(/[.*+?^${}()|[\]\\]/g, '\\$&')}[\\s\\S]*?(?=\\n      - name:|\\n  [A-Za-z0-9_-]+:|$)`))?.[0] || ''
+const parseReleaseWorkflow = text => {
+  // Ruby is already required by the structural gate; reject duplicate keys before loading YAML.
+  const ruby = `
+require 'yaml'
+require 'json'
+source = STDIN.read
+document = YAML.parse(source)
+check = lambda do |node|
+  if node.is_a?(Psych::Nodes::Mapping)
+    keys = node.children.each_slice(2).map { |key, _| key.value }
+    abort 'duplicate YAML key' unless keys.uniq == keys
+  end
+  Array(node.children).each { |child| check.call(child) } if node.respond_to?(:children)
+end
+check.call(document)
+puts JSON.generate(YAML.safe_load(source, aliases: false))
+`
+  const result = spawnSync('ruby', ['-e', ruby], {input: text, encoding: 'utf8'})
+  if (result.status !== 0) throw new Error(`release-on-push.yml: invalid or ambiguous YAML: ${result.stderr.trim()}`)
+  return JSON.parse(result.stdout)
+}
 
 const scan = repositoryRoot => {
   const workflowDirectory = resolve(repositoryRoot, '.github/workflows')
@@ -288,9 +310,33 @@ const scan = repositoryRoot => {
   }
 
   const releaseOnPush = readFileSync(resolve(workflowDirectory, 'release-on-push.yml'), 'utf8')
-  if (!releaseOnPush.includes('skip-github-pull-request: true') ||
-      /^      pull-requests:\s*write\s*$/m.test(releaseOnPush) ||
-      !/^          permission-pull-requests: write\s*$/m.test(releaseOnPush)) {
+  const releaseWorkflow = parseReleaseWorkflow(releaseOnPush)
+  const jobs = releaseWorkflow.jobs
+  const releaseJob = jobs?.['create-release']
+  const steps = releaseJob?.steps
+  const appSteps = steps?.filter(step => step.name === 'Generate release GitHub App token') || []
+  const completionSteps = steps?.filter(step => step.name === 'Create GitHub release metadata') || []
+  const appStep = appSteps[0]
+  const completionStep = completionSteps[0]
+  const releaseActions = Object.entries(jobs || {}).flatMap(([name, job]) =>
+    (job.steps || []).filter(step => /^googleapis\/release-please-action@/i.test(step.uses || '')).map(step => [name, step]))
+  const onlyPermission = (permissions, level) => permissions && !Array.isArray(permissions) &&
+    Object.keys(permissions).length === 1 && permissions.contents === level
+  if (!onlyPermission(releaseWorkflow.permissions, 'read') ||
+      !jobs?.['trust-configuration-notice'] ||
+      Object.entries(jobs).some(([name, job]) => job.permissions &&
+        !onlyPermission(job.permissions, name === 'create-release' ? 'write' : 'read')) ||
+      !onlyPermission(releaseJob?.permissions, 'write') ||
+      !Array.isArray(steps) || appSteps.length !== 1 || completionSteps.length !== 1 ||
+      appStep.id !== 'app-token' ||
+      !/^actions\/create-github-app-token@[0-9a-f]{40}$/.test(appStep.uses || '') ||
+      appStep.with?.repositories !== 'heroku-cli-command' ||
+      appStep.with?.['permission-contents'] !== 'write' ||
+      appStep.with?.['permission-pull-requests'] !== 'write' ||
+      releaseActions.length !== 1 || releaseActions[0][0] !== 'create-release' || releaseActions[0][1] !== completionStep ||
+      !/^googleapis\/release-please-action@[0-9a-f]{40}$/.test(completionStep.uses || '') ||
+      completionStep.with?.token !== '${{ steps.app-token.outputs.token }}' ||
+      completionStep.with?.['skip-github-pull-request'] !== true) {
     throw new Error('release-on-push.yml: release completion can mutate release PRs')
   }
   if (/v14\.0\.0/.test(releaseOnPush) || !releaseOnPush.includes('branches: [main, beta]')) {
@@ -546,6 +592,93 @@ const mutationCases = [
     text => text.replace('      contents: write\n    steps:', '      contents: write\n      pull-requests: write\n    steps:'),
   ],
   [
+    'release completion grants PR write with a trailing comment',
+    'workflows/release-on-push.yml',
+    text => text.replace('      contents: write\n    steps:', '      contents: write\n      pull-requests: write # default token\n    steps:'),
+  ],
+  [
+    'release completion grants PR write in a flow mapping',
+    'workflows/release-on-push.yml',
+    text => text.replace('    permissions:\n      contents: write', '    permissions: {contents: write, pull-requests: write}'),
+  ],
+  [
+    'release completion grants write-all to the default token',
+    'workflows/release-on-push.yml',
+    text => text.replace('    permissions:\n      contents: write', '    permissions: write-all'),
+  ],
+  [
+    'release completion duplicates the permissions mapping',
+    'workflows/release-on-push.yml',
+    text => text.replace('    permissions:\n      contents: write', '    permissions: write-all\n    permissions:\n      contents: write'),
+  ],
+  [
+    'release completion duplicates the permission key',
+    'workflows/release-on-push.yml',
+    text => text.replace('      contents: write\n    steps:', '      contents: write\n      contents: write\n    steps:'),
+  ],
+  [
+    'release workflow grants PR write to the default token',
+    'workflows/release-on-push.yml',
+    text => text.replace('permissions:\n  contents: read', 'permissions:\n  contents: read\n  pull-requests: write'),
+  ],
+  [
+    'release notice job grants PR write to the default token',
+    'workflows/release-on-push.yml',
+    text => text.replace('  trust-configuration-notice:\n', '  trust-configuration-notice:\n    permissions:\n      pull-requests: write\n'),
+  ],
+  [
+    'release notice job grants PR write with spaced YAML key',
+    'workflows/release-on-push.yml',
+    text => text.replace('  trust-configuration-notice:\n', '  trust-configuration-notice:\n    permissions : {contents: read, pull-requests: write}\n'),
+  ],
+  [
+    'another release job grants PR write',
+    'workflows/release-on-push.yml',
+    text => `${text}\n  other-release:\n    runs-on: ubuntu-latest\n    permissions: {contents: write, pull-requests: write}\n    steps:\n      - uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071\n        with:\n          token: \${{ github.token }}\n`,
+  ],
+  [
+    'release completion adds a default-token release action',
+    'workflows/release-on-push.yml',
+    text => `${text}      - name: Another release action\n        uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071\n`,
+  ],
+  [
+    'release completion adds a spaced-key release action',
+    'workflows/release-on-push.yml',
+    text => `${text}      - name: Another release action\n        uses : googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071\n        with:\n          skip-github-release: true\n`,
+  ],
+  [
+    'release completion adds a mixed-case release action',
+    'workflows/release-on-push.yml',
+    text => `${text}      - name: Another release action\n        uses: Googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071\n        with:\n          skip-github-pull-request: false\n`,
+  ],
+  [
+    'release App permission moved to another step',
+    'workflows/release-on-push.yml',
+    text => text.replace('          permission-pull-requests: write\n', '')
+      .replace('          persist-credentials: false', '          persist-credentials: false\n          permission-pull-requests: write'),
+  ],
+  [
+    'release App permission downgraded',
+    'workflows/release-on-push.yml',
+    text => text.replace('          permission-pull-requests: write', '          permission-pull-requests: read'),
+  ],
+  [
+    'release App permission duplicated',
+    'workflows/release-on-push.yml',
+    text => text.replace('          permission-pull-requests: write', '          permission-pull-requests: read\n          permission-pull-requests: write'),
+  ],
+  [
+    'release skip flag moved to another step',
+    'workflows/release-on-push.yml',
+    text => text.replace('          skip-github-pull-request: true\n', '')
+      .replace('          persist-credentials: false', '          persist-credentials: false\n          skip-github-pull-request: true'),
+  ],
+  [
+    'release completion uses default token',
+    'workflows/release-on-push.yml',
+    text => text.replace('token: ${{ steps.app-token.outputs.token }}', 'token: ${{ github.token }}'),
+  ],
+  [
     'setup-node cache control removed',
     'workflows/release.yml',
     text => text.replace('package-manager-cache: false', 'check-latest: false'),
@@ -554,6 +687,11 @@ const mutationCases = [
     'App token repository scope removed',
     'workflows/release-on-push.yml',
     text => text.replace('repositories: heroku-cli-command', 'skip-token-revoke: false'),
+  ],
+  [
+    'App token repository scope commented out',
+    'workflows/release-on-push.yml',
+    text => text.replace('          repositories: heroku-cli-command', '          # repositories: heroku-cli-command'),
   ],
   [
     'dry-run reaches real publish',
@@ -636,6 +774,28 @@ const mutationCases = [
 ]
 
 const count = scan(root)
+const validCases = [
+  ['job permission with trailing comment', text => text.replace('      contents: write\n    steps:', '      contents: write # release metadata\n    steps:')],
+  ['job permission with alternate indentation', text => text.replace('      contents: write\n    steps:', '       contents: write\n    steps:')],
+  ['App permission with trailing comment', text => text.replace('          permission-pull-requests: write', '          permission-pull-requests: write # PR completion')],
+  ['skip flag with trailing comment', text => text.replace('          skip-github-pull-request: true', '          skip-github-pull-request: true # completion only')],
+]
+for (const [description, mutate] of validCases) {
+  const fixture = mkdtempSync(join(tmpdir(), 'workflow-trust-valid-'))
+  try {
+    cpSync(resolve(root, '.github'), resolve(fixture, '.github'), {recursive: true})
+    cpSync(resolve(root, 'scripts'), resolve(fixture, 'scripts'), {recursive: true})
+    cpSync(resolve(root, 'package.json'), resolve(fixture, 'package.json'))
+    const target = resolve(fixture, '.github/workflows/release-on-push.yml')
+    const original = readFileSync(target, 'utf8')
+    const mutated = mutate(original)
+    if (mutated === original) throw new Error(`valid fixture did not change text: ${description}`)
+    writeFileSync(target, mutated)
+    scan(fixture)
+  } finally {
+    rmSync(fixture, {force: true, recursive: true})
+  }
+}
 for (const [description, file, mutate] of mutationCases) {
   const fixture = mkdtempSync(join(tmpdir(), 'workflow-trust-mutation-'))
   try {
@@ -659,4 +819,4 @@ for (const [description, file, mutate] of mutationCases) {
   }
 }
 
-console.log(`workflow trust scan passed (${count} workflows; ${mutationCases.length} rejected mutations)`)
+console.log(`workflow trust scan passed (${count} workflows; ${validCases.length} valid variants; ${mutationCases.length} rejected mutations)`)
