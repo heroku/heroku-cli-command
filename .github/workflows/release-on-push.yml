@@ -27,7 +27,6 @@ jobs:
     runs-on: pub-hk-ubuntu-24.04-ip
     permissions:
       contents: write
-      issues: write
     steps:
       - name: Generate release GitHub App token
         id: app-token
@@ -38,7 +37,7 @@ jobs:
           owner: ${{ github.repository_owner }}
           repositories: heroku-cli-command
           permission-contents: write
-          permission-issues: write
+          permission-pull-requests: write
       - name: Check out release metadata only
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
