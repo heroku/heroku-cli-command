@@ -10,6 +10,14 @@ With this major version release we will be improving the security by storing aut
 
 * remove dual write for credential storage ([#389](https://github.com/heroku/heroku-cli-command/issues/389)) ([e50b5be](https://github.com/heroku/heroku-cli-command/commit/e50b5be106f7997d85f7a5a53ff06ff1eadecb9c))
 
+## [14.0.0-beta.1](https://github.com/heroku/heroku-cli-command/compare/command-v14.0.0-beta.0...command-v14.0.0-beta.1) (2026-10-06)
+
+
+### Bug Fixes
+
+* allow Release Please to comment on merged release PRs ([#422](https://github.com/heroku/heroku-cli-command/issues/422)) ([718f5c2](https://github.com/heroku/heroku-cli-command/commit/718f5c29d9d8f34224b25906fba366cf871399f4))
+* use pull requests permission for release comments ([#429](https://github.com/heroku/heroku-cli-command/issues/429)) ([d5195a1](https://github.com/heroku/heroku-cli-command/commit/d5195a1280e7f5fd6af84e8dc4c0bf3a8263c343))
+
 ## [14.0.0-beta.0](https://github.com/heroku/heroku-cli-command/compare/command-v12.1.2-beta.0...command-v14.0.0-beta.0) (2026-10-02)
 
 
