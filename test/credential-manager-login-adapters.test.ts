@@ -824,8 +824,8 @@ describe('credential manager login adapters', () => {
     it('cancels retry backoff so no request callback runs after abort', async () => {
       let requests = 0
       const scheduled = new Set<ReturnType<typeof setTimeout>>()
-      const originalSetTimeout = globalThis.setTimeout
-      const originalClearTimeout = globalThis.clearTimeout
+      const originalSetTimeout = setTimeout
+      const originalClearTimeout = clearTimeout
       sinon.stub(globalThis, 'setTimeout').callsFake(((handler: (...arguments_: unknown[]) => void, timeout?: number, ...arguments_: unknown[]) => {
         const timer = originalSetTimeout(handler, timeout, ...arguments_)
         scheduled.add(timer)

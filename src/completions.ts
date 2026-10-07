@@ -100,7 +100,7 @@ export const ProcessTypeCompletion = {
         .split('\n')
         .map((s: string) => {
           if (!s) return false
-          const m = s.match(/^([\w-]+)/)
+          const m = /^([\w-]+)/.exec(s)
           return m ? m[0] : false
         })
         // eslint-disable-next-line unicorn/prefer-native-coercion-functions

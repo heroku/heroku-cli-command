@@ -14,8 +14,8 @@ export class Git {
       .split('\n')
       .filter(l => l.endsWith('(fetch)'))
       .map(l => {
-        const [name, url] = l.split('\t')
-        return {name, url: url.split(' ')[0]}
+        const [name, url] = l.split('\t', 2)
+        return {name, url: url.split(' ', 1)[0]}
       })
   }
 

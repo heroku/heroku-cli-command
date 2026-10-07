@@ -119,11 +119,10 @@ export abstract class Command extends Base {
 
         for (let index = 0; index < result.nonExistentFlags.length; index++) {
           const positionalValue = result.nonExistentFlags[index]
-          const doubleHyphenRegex = /^--/
-          const positionalValueIsFlag = doubleHyphenRegex.test(positionalValue)
+          const positionalValueIsFlag = positionalValue.startsWith('--')
           if (positionalValueIsFlag) {
             const nextElement = result.nonExistentFlags[index + 1] ?? ''
-            const nextElementIsFlag = doubleHyphenRegex.test(nextElement)
+            const nextElementIsFlag = nextElement.startsWith('--')
             // eslint-disable-next-line max-depth
             if (nextElement && !nextElementIsFlag) {
               result.argv.push(`${positionalValue}=${nextElement}`)

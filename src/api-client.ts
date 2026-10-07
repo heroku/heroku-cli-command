@@ -129,7 +129,7 @@ export class APIClient {
           return
         }
 
-        const match = url.match(/^\/teams\/([^#/?]+)/i)
+        const match = /^\/teams\/([^#/?]+)/i.exec(url)
         if (match) {
           delinquencyConfig.fetch_url = `/teams/${match[1]}`
           delinquencyConfig.fetch_delinquency = true
@@ -184,7 +184,7 @@ export class APIClient {
         }
 
         let auth: string | undefined
-        if (!Object.keys(opts.headers).some(h => h.toLowerCase() === 'authorization')) {
+        if (Object.keys(opts.headers).every(h => h.toLowerCase() !== 'authorization')) {
           // Handle both relative and absolute URLs for validation
           let targetUrl: URL
           try {

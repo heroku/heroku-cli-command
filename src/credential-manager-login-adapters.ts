@@ -203,10 +203,6 @@ export function createCredentialManagerFetchAdapter(transport: CommandLoginTrans
       this.options.agent = agent
     }
 
-    static async request<T>(url: string, options?: HTTPRequestOptions): Promise<HTTP<T>> {
-      return super.request<T>(url, options)
-    }
-
     async _redirect(): Promise<void> {
       throw redirectError(this)
     }

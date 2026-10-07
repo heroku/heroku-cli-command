@@ -144,7 +144,7 @@ export class Login {
           const open = (await import('open')).default
           const child = await open(url, {
             wait: false,
-            ...(options?.browser ? {app: {name: options.browser}} : {}),
+            ...(options?.browser && {app: {name: options.browser}}),
           })
           observeBrowserChild(child)
         },
@@ -210,7 +210,7 @@ export class Login {
   }
 
   private getLoginMethodFromPromptKey(key: string): LoginPromptSelection {
-    if (key === '\u0003') return {cancelled: 'interrupt'}
+    if (key === '\u{3}') return {cancelled: 'interrupt'}
     if (key.toLowerCase() === 'q') return {cancelled: 'quit'}
     return {method: 'browser'}
   }
@@ -273,9 +273,9 @@ export class Login {
     if (!(error instanceof LoginRequestError)) return error
 
     const body: IHerokuAPIErrorOptions = {
-      ...(error.id ? {id: error.id} : {}),
+      ...(error.id && {id: error.id}),
       message: error.body?.message || error.message || 'Login request failed',
-      ...(error.body?.resource ? {resource: error.body.resource} : {}),
+      ...(error.body?.resource && {resource: error.body.resource}),
     }
     const response = {
       body,
@@ -308,7 +308,7 @@ export class Login {
   ): Promise<string> {
     const controller = new AbortController()
     const pending = prompter.prompt<Record<typeof name, string>>([{
-      ...(defaultValue ? {default: defaultValue} : {}),
+      ...(defaultValue && {default: defaultValue}),
       message,
       name,
       type,

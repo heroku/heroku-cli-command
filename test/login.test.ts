@@ -481,7 +481,7 @@ describe('Login facade', () => {
     }
   })
 
-  for (const [key, exit] of [['q', 2], ['\u0003', 130]] as const) {
+  for (const [key, exit] of [['q', 2], ['\u{3}', 130]] as const) {
     test.it(`maps ${key === 'q' ? 'q' : 'Ctrl-C'} cancellation to command exit ${exit} and restores raw mode`, async ctx => {
       const originalIsTTY = Object.getOwnPropertyDescriptor(process.stdin, 'isTTY')
       const originalSetRawMode = process.stdin.setRawMode

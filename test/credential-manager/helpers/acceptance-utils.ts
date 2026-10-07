@@ -54,10 +54,12 @@ export async function cleanupDefaultNetrc(): Promise<void> {
   const netrc = new Netrc()
   await netrc.load()
   for (const host of hosts) {
-    if (netrc.machines[host]) {
-      delete netrc.machines[host]
-      changed = true
+    if (!netrc.machines[host]) {
+      continue;
     }
+
+    delete netrc.machines[host]
+    changed = true
   }
 
   if (changed) {

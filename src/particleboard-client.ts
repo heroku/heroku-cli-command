@@ -42,7 +42,7 @@ export class ParticleboardClient {
         opts.headers = opts.headers || {}
         opts.headers[requestIdHeader] = RequestId.create() && RequestId.headerValue
 
-        if (!Object.keys(opts.headers).some(h => h.toLowerCase() === 'authorization')) {
+        if (Object.keys(opts.headers).every(h => h.toLowerCase() !== 'authorization')) {
           opts.headers.authorization = `Bearer ${self.auth}`
         }
 
