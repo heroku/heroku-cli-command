@@ -12,19 +12,19 @@ import {createRequire} from 'node:module'
 import {Readable} from 'node:stream'
 
 type CommandResponse<T> = {
-  body: T
-  headers: IncomingHttpHeaders
-  statusCode: number
+  body: T;
+  headers: IncomingHttpHeaders;
+  statusCode: number;
 }
 
 type CommandRequestOptions = HTTPRequestOptions & {
-  retryAuth?: boolean
+  retryAuth?: boolean;
 }
 
 /** Command transport surface required by the operation-token Platform adapter. */
 export interface CommandPlatformClient {
-  delete<T>(path: string, options?: CommandRequestOptions): Promise<CommandResponse<T>>
-  get<T>(path: string, options?: CommandRequestOptions): Promise<CommandResponse<T>>
+  delete<T>(path: string, options?: CommandRequestOptions): Promise<CommandResponse<T>>;
+  get<T>(path: string, options?: CommandRequestOptions): Promise<CommandResponse<T>>;
 }
 
 /** Declared command transport contract used by the FetchLike adapter. */
@@ -33,17 +33,17 @@ export type CommandLoginTransport = typeof HTTP
 // eslint-disable-next-line no-undef
 type FetchBody = RequestInit['body']
 type ReplayableBody = {
-  stream(): Readable
+  stream(): Readable;
 }
 const bodyFactory = Symbol('credential-manager-body-factory')
 type ReplayableRequestOptions = HTTPRequestOptions & {
-  [bodyFactory]?: () => Readable
+  [bodyFactory]?: () => Readable;
 }
 const require = createRequire(import.meta.url)
 type CommandProxyPolicy = {
-  agent(https: boolean, host?: string): unknown
-  certs: Buffer[]
-  env: NodeJS.ProcessEnv
+  agent(https: boolean, host?: string): unknown;
+  certs: Buffer[];
+  env: NodeJS.ProcessEnv;
 }
 const commandProxyPolicy = (require('@heroku/http-call/lib/proxy.js') as {default: CommandProxyPolicy}).default
 

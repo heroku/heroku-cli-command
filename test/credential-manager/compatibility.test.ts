@@ -56,11 +56,11 @@ const packageJsonLookup = "join(dir, '../../../package.json')"
 const relocatedPackageJsonLookup = "join(dir, '../../../../package.json')"
 
 type StorageBaseline = {
-  allowedRelocations: Array<{archived: string; baseline: string; path: string}>
-  files: Array<{bytes: number; path: string; sha256: string}>
-  packageVersion: string
-  provenance: {commit: string; derivation: string; ref: string; sourceRoot: string}
-  schemaVersion: number
+  allowedRelocations: Array<{archived: string; baseline: string; path: string}>;
+  files: Array<{bytes: number; path: string; sha256: string}>;
+  packageVersion: string;
+  provenance: {commit: string; derivation: string; ref: string; sourceRoot: string};
+  schemaVersion: number;
 }
 
 function listFiles(root: string, relativeRoot = ''): string[] {

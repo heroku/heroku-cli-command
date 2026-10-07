@@ -36,17 +36,17 @@ let previousEnvironment: Record<(typeof environmentNames)[number], string | unde
 
 const test = fancy.add('config', () => new Config({root: resolve(__dirname, '../package.json')}))
 type Delegate = {
-  apiClientForToken(token: string): Record<string, unknown>
-  browser: Record<string, unknown>
-  config: Record<string, unknown>
-  environment: {get(name: string): string | undefined}
-  fetch: unknown
-  login(options: Record<string, unknown>): Promise<{account: string; token: string}>
-  output: Record<string, unknown>
-  progress: Record<string, unknown>
-  prompt: Record<string, unknown>
-  storage: Record<string, unknown>
-  timers: Record<string, unknown>
+  apiClientForToken(token: string): Record<string, unknown>;
+  browser: Record<string, unknown>;
+  config: Record<string, unknown>;
+  environment: {get(name: string): string | undefined};
+  fetch: unknown;
+  login(options: Record<string, unknown>): Promise<{account: string; token: string}>;
+  output: Record<string, unknown>;
+  progress: Record<string, unknown>;
+  prompt: Record<string, unknown>;
+  storage: Record<string, unknown>;
+  timers: Record<string, unknown>;
 }
 
 function stubBrowserSpawn(): sinon.SinonStub {

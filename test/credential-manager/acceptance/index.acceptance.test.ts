@@ -2,7 +2,11 @@ import {expect, use} from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 
 import {
-  getAuth, listKeychainAccounts, Netrc, removeAuth, saveAuth,
+  getAuth,
+  listKeychainAccounts,
+  Netrc,
+  removeAuth,
+  saveAuth,
 } from '../../../src/credential-manager-core/index.js'
 import {
   cleanupCredentialStore,

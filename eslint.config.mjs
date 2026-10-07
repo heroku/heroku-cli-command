@@ -49,9 +49,6 @@ export default [
       // rewrites http:// test fixtures), so leaving them enabled corrupts code.
       // Re-enable these one at a time in a dedicated lint-cleanup pass.
       '@eslint-community/eslint-comments/require-description': 'off',
-      '@stylistic/lines-between-class-members': 'off',
-      '@stylistic/member-delimiter-style': 'off',
-      '@stylistic/operator-linebreak': 'off',
       '@typescript-eslint/array-type': 'off',
       '@typescript-eslint/consistent-indexed-object-style': 'off',
       '@typescript-eslint/consistent-type-assertions': 'off',
@@ -85,11 +82,9 @@ export default [
       '@typescript-eslint/strict-void-return': 'off',
       '@typescript-eslint/switch-exhaustiveness-check': 'off',
       '@typescript-eslint/use-unknown-in-catch-callback-variable': 'off',
-      'import-x/first': 'off',
       'import-x/no-anonymous-default-export': 'off',
       'import-x/no-cycle': 'off',
       'import-x/no-duplicates': 'off',
-      'mocha/consistent-spacing-between-blocks': 'off',
       'n/prefer-global/buffer': 'off',
       'n/prefer-global/url': 'off',
       'no-useless-assignment': 'off',
@@ -120,7 +115,6 @@ export default [
       'unicorn/prefer-split-limit': 'off',
       'unicorn/prefer-then-catch': 'off',
       'unicorn/prefer-unicode-code-point-escapes': 'off',
-      'xo/import-specifier-newline': 'off',
     },
   },
 ]

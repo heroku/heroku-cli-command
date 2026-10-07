@@ -10,13 +10,13 @@ import {
 type LoginState = Awaited<ReturnType<typeof readLoginState>>
 
 type Queue = {
-  pending: number
-  tail: Promise<void>
+  pending: number;
+  tail: Promise<void>;
 }
 
 export type LoginStateRevision = {
-  dataDir: string
-  revision: number
+  dataDir: string;
+  revision: number;
 }
 
 const queues = new Map<string, Queue>()

@@ -12,18 +12,18 @@ const httpCallVersion = '5.5.2'
 const httpCallPackagePath = resolve('node_modules', httpCallPackageName)
 
 type PackageManifest = {
-  dependencies: Record<string, string>
-  exports: Record<string, unknown>
-  version: string
+  dependencies: Record<string, string>;
+  exports: Record<string, unknown>;
+  version: string;
 }
 
 type Lockfile = {
   packages: Record<string, {
-    dependencies?: Record<string, string>
-    integrity?: string
-    resolved?: string
-    version?: string
-  }>
+    dependencies?: Record<string, string>;
+    integrity?: string;
+    resolved?: string;
+    version?: string;
+  }>;
 }
 
 function readJson<T>(path: string): T {
@@ -130,9 +130,9 @@ describe('package contracts', () => {
     for (const hook of requiredHooks) expect(runtimePrototype[hook]).to.be.a('function')
 
     const request = new HTTP('https://example.test') as unknown as {
-      _maybeRetry(error: Error): Promise<void>
-      _request(): Promise<void>
-      _wait(delay: number): Promise<void>
+      _maybeRetry(error: Error): Promise<void>;
+      _request(): Promise<void>;
+      _wait(delay: number): Promise<void>;
     }
     const calls: string[] = []
     request._wait = async () => {

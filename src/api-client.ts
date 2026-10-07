@@ -35,23 +35,23 @@ function credentialService(): string {
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace APIClient {
   export interface Options extends HTTPRequestOptions {
-    retryAuth?: boolean
+    retryAuth?: boolean;
   }
 }
 
 export interface IOptions {
-  debug?: boolean
-  debugHeaders?: boolean
-  preauth?: boolean
-  required?: boolean
+  debug?: boolean;
+  debugHeaders?: boolean;
+  preauth?: boolean;
+  required?: boolean;
 }
 
 export interface IHerokuAPIErrorOptions {
-  app?: {id: string; name: string}
-  id?: string
-  message?: string
-  resource?: string
-  url?: string
+  app?: {id: string; name: string};
+  id?: string;
+  message?: string;
+  resource?: string;
+  url?: string;
 }
 
 export class HerokuAPIError extends CLIError {

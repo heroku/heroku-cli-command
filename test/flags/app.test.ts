@@ -14,6 +14,7 @@ const withRemotes = (remotes: any) => {
 beforeEach(() => {
   api = nock('https://api.heroku.com')
 })
+
 afterEach(() => {
   Object.defineProperty(Git.prototype, 'remotes', origRemotes as any)
   api.done()

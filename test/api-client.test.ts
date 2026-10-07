@@ -12,9 +12,6 @@ import {fileURLToPath} from 'node:url'
 import * as sinon from 'sinon'
 import {stderr} from 'stdout-stderr'
 
-const SYSTEM_TMPDIR = os.tmpdir()
-const TEST_PLATFORM = process.platform === 'win32' ? 'win32' : 'darwin'
-
 import {Command as CommandBase} from '../src/command.js'
 import {readLoginState, writeLoginState} from '../src/credential-manager-core/lib/login-state.js'
 import {setCredentialManagerProvider} from '../src/credential-manager.js'
@@ -22,6 +19,9 @@ import {writeLoginStateCoordinated} from '../src/login-state-coordinator.js'
 import {prompter} from '../src/prompter.js'
 import {RequestId, requestIdHeader} from '../src/request-id.js'
 import {restoreCredentialManagerStub, stubCredentialManager} from './helpers/credential-manager-stub.js'
+
+const SYSTEM_TMPDIR = os.tmpdir()
+const TEST_PLATFORM = process.platform === 'win32' ? 'win32' : 'darwin'
 
 use(chaiAsPromised)
 
@@ -504,7 +504,7 @@ describe('api_client', () => {
         const cmd = new Command([], ctx.config)
         cmd.config = {...ctx.config, dataDir: tmpDir} as Config
         const facade = (cmd.heroku as unknown as {
-          _login: {login(): Promise<void>}
+          _login: {login(): Promise<void>};
         })._login
         const login = sinon.stub(facade, 'login').callsFake(async () => {
           await writeLoginStateCoordinated(tmpDir, 'new@example.com')
@@ -549,7 +549,7 @@ describe('api_client', () => {
         const cmd = new Command([], ctx.config)
         cmd.config = {...ctx.config, dataDir: tmpDir} as Config
         const {_login} = cmd.heroku as unknown as {
-          _login: {createDelegate(): {storage: {writeLoginState(dataDir: string, account: string): Promise<void>}}}
+          _login: {createDelegate(): {storage: {writeLoginState(dataDir: string, account: string): Promise<void>}}};
         }
         const {storage} = _login.createDelegate()
 
@@ -600,7 +600,7 @@ describe('api_client', () => {
           const newerCommand = new Command([], ctx.config)
           newerCommand.config = {...ctx.config, dataDir: tmpDir} as Config
           const {_login} = newerCommand.heroku as unknown as {
-            _login: {createDelegate(): {storage: {writeLoginState(dataDir: string, account: string): Promise<void>}}}
+            _login: {createDelegate(): {storage: {writeLoginState(dataDir: string, account: string): Promise<void>}}};
           }
           const {storage} = _login.createDelegate()
 
@@ -686,7 +686,7 @@ describe('api_client', () => {
         const cmd = new Command([], ctx.config)
         cmd.config = {...ctx.config, dataDir: tmpDir} as Config
         const facade = (cmd.heroku as unknown as {
-          _login: {login(): Promise<void>}
+          _login: {login(): Promise<void>};
         })._login
         const login = sinon.stub(facade, 'login')
         login.onFirstCall().callsFake(async () => {
@@ -807,8 +807,8 @@ describe('api_client', () => {
 
   describe('auth lifecycle serialization', () => {
     type LoginFacade = {
-      login(options?: unknown): Promise<void>
-      logoutEntry(entry: {account: string; token: string}): Promise<void>
+      login(options?: unknown): Promise<void>;
+      logoutEntry(entry: {account: string; token: string}): Promise<void>;
     }
 
     function facade(cmd: Command): LoginFacade {
@@ -892,10 +892,10 @@ describe('api_client', () => {
 
   describe('logout', () => {
     const removeAuthCalls: {
-      account: string | undefined
-      expectedToken: string | undefined
-      hosts: string[]
-      service: string | undefined
+      account: string | undefined;
+      expectedToken: string | undefined;
+      hosts: string[];
+      service: string | undefined;
     }[] = []
 
     beforeEach(() => {

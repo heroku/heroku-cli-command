@@ -49,22 +49,22 @@ export namespace Login {
   export type Method = 'b' | 'browser' | 'i' | 'interactive' | 's' | 'sso'
 
   export interface Options {
-    browser?: string
-    expiresIn?: number
-    method?: Method
+    browser?: string;
+    expiresIn?: number;
+    method?: Method;
   }
 }
 
 type PromptOperation = {
-  cancel?: (reason: unknown) => void
-  completion?: Promise<void>
+  cancel?: (reason: unknown) => void;
+  completion?: Promise<void>;
 }
 
 type PromptValueOptions = {
-  defaultValue?: string
-  message: string
-  name: 'email' | 'orgName' | 'password' | 'secondFactor'
-  type: 'input' | 'password'
+  defaultValue?: string;
+  message: string;
+  name: 'email' | 'orgName' | 'password' | 'secondFactor';
+  type: 'input' | 'password';
 }
 
 export class Login {

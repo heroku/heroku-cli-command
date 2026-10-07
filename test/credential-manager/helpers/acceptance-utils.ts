@@ -7,15 +7,15 @@ import {listKeychainAccounts, removeAuth} from '../../../src/credential-manager-
 import {Netrc} from '../../../src/credential-manager-core/lib/netrc-parser.js'
 
 export type AcceptanceFixture = {
-  account: string,
-  hosts: string[],
-  service: string,
-  token: string,
+  account: string;
+  hosts: string[];
+  service: string;
+  token: string;
 }
 
 export type NetrcSnapshot = {
-  netrcPath: string
-  restore: () => void
+  netrcPath: string;
+  restore: () => void;
 }
 
 export const HOST_NAME = 'acceptance.test.heroku.com'
@@ -139,9 +139,9 @@ export function snapshotDefaultNetrc(): NetrcSnapshot {
 }
 
 export type FakeCredentialStoreSetup = {
-  cleanup: () => void
-  originalPath: string
-  tmpDir: string
+  cleanup: () => void;
+  originalPath: string;
+  tmpDir: string;
 }
 
 /**

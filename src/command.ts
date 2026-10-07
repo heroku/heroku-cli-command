@@ -15,6 +15,7 @@ export abstract class Command extends Base {
       helpGroup: 'GLOBAL',
     }),
   }
+
   /**
    * Set this to false in a command class to disable the --prompt flag for that command
    */

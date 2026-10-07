@@ -5,8 +5,8 @@ import type {AuthEntry as RootAuthEntry} from '../../../src/index.js'
 
 type Assert<T extends true> = T
 type HistoricalAuthEntry = {
-  account: string | undefined
-  token: string | undefined
+  account: string | undefined;
+  token: string | undefined;
 }
 type IsEqual<Left, Right> = (
   <T>() => T extends Left ? 1 : 2

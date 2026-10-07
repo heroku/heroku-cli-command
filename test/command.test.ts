@@ -5,13 +5,13 @@ import {dirname, resolve} from 'node:path'
 import {fileURLToPath} from 'node:url'
 import * as sinon from 'sinon'
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
-
 import {Command} from '../src/command.js'
 import {setCredentialManagerProvider} from '../src/credential-manager.js'
 import * as flags from '../src/flags/index.js'
 import {restoreCredentialManagerStub, stubCredentialManager, stubCredentialManagerWithNoCredentials} from './helpers/credential-manager-stub.js'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
 const {env: processEnv} = process
 

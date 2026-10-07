@@ -7,15 +7,15 @@ import {RequestId, requestIdHeader} from './request-id.js'
 import {vars} from './vars.js'
 
 export interface IDelinquencyInfo {
-  scheduled_deletion_time?: null | string
-  scheduled_suspension_time?: null | string
+  scheduled_deletion_time?: null | string;
+  scheduled_suspension_time?: null | string;
 }
 
 export interface IDelinquencyConfig {
-  fetch_delinquency: boolean
-  fetch_url?: string
-  resource_type?: 'account' | 'team'
-  warning_shown: boolean
+  fetch_delinquency: boolean;
+  fetch_url?: string;
+  resource_type?: 'account' | 'team';
+  warning_shown: boolean;
 }
 
 export class ParticleboardClient {

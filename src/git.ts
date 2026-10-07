@@ -4,8 +4,8 @@ import childProcess from 'node:child_process'
 import {vars} from './vars.js'
 
 export interface IGitRemote {
-  name: string
-  url: string
+  name: string;
+  url: string;
 }
 
 export class Git {
@@ -43,8 +43,8 @@ export function configRemote() {
 }
 
 export interface IGitRemotes {
-  app: string
-  remote: string
+  app: string;
+  remote: string;
 }
 
 export function getGitRemotes(onlyRemote: string | undefined): IGitRemotes[] {
