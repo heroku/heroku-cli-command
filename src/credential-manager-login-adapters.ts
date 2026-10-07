@@ -22,7 +22,7 @@ type CommandRequestOptions = HTTPRequestOptions & {
 }
 
 /** Command transport surface required by the operation-token Platform adapter. */
-export interface CommandPlatformClient {
+export type CommandPlatformClient = {
   delete<T>(path: string, options?: CommandRequestOptions): Promise<CommandResponse<T>>;
   get<T>(path: string, options?: CommandRequestOptions): Promise<CommandResponse<T>>;
 }

@@ -4,7 +4,7 @@ import {run} from '@oclif/core/run'
 
 import {prompter} from './prompter.js'
 
-interface PromptOptions {
+type PromptOptions = {
   argv: string[];
   commandId: string;
   config: Config;

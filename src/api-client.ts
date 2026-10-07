@@ -1,7 +1,7 @@
 import type {Config} from '@oclif/core/interfaces'
 
 import {NativeCredentialNotFoundError} from '@heroku/heroku-credential-manager'
-import {HTTP, HTTPError, HTTPRequestOptions} from '@heroku/http-call'
+import {HTTP, HTTPError, type HTTPRequestOptions} from '@heroku/http-call'
 import {CLIError, warn} from '@oclif/core/errors'
 import {ux} from '@oclif/core/ux'
 import debug from 'debug'
@@ -19,7 +19,7 @@ import {
 } from './login-state-coordinator.js'
 import {Login} from './login.js'
 import {Mutex} from './mutex.js'
-import {IDelinquencyConfig, IDelinquencyInfo, ParticleboardClient} from './particleboard-client.js'
+import {type IDelinquencyConfig, type IDelinquencyInfo, ParticleboardClient} from './particleboard-client.js'
 import {prompter} from './prompter.js'
 import {RequestId, requestIdHeader} from './request-id.js'
 import {vars} from './vars.js'
@@ -34,19 +34,19 @@ function credentialService(): string {
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace APIClient {
-  export interface Options extends HTTPRequestOptions {
+  export type Options = HTTPRequestOptions & {
     retryAuth?: boolean;
   }
 }
 
-export interface IOptions {
+export type IOptions = {
   debug?: boolean;
   debugHeaders?: boolean;
   preauth?: boolean;
   required?: boolean;
 }
 
-export interface IHerokuAPIErrorOptions {
+export type IHerokuAPIErrorOptions = {
   app?: {id: string; name: string};
   id?: string;
   message?: string;
@@ -76,7 +76,7 @@ export class HerokuAPIError extends CLIError {
 export class APIClient {
   authPromise?: Promise<HTTP<any>>
   http: typeof HTTP
-  preauthPromises: {[k: string]: Promise<HTTP<any>>}
+  preauthPromises: Record<string, Promise<HTTP<any>>>
   private _account?: string
   private _auth?: string
   /** Orders explicit login/logout transactions without blocking unrelated API requests. */
@@ -196,7 +196,7 @@ export class APIClient {
           }
 
           const isHerokuApi = ALLOWED_HEROKU_DOMAINS.some(domain => targetUrl.hostname.endsWith(`.${domain}`) || targetUrl.hostname === domain)
-          const isLocalhost = LOCALHOST_DOMAINS.includes(targetUrl.hostname as (typeof LOCALHOST_DOMAINS)[number])
+          const isLocalhost = LOCALHOST_DOMAINS.includes(targetUrl.hostname)
 
           if (isHerokuApi || isLocalhost) {
             auth = await self.getAuth()

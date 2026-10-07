@@ -1,17 +1,17 @@
 import type {Config} from '@oclif/core/interfaces'
 
-import {HTTP, HTTPRequestOptions} from '@heroku/http-call'
+import {HTTP, type HTTPRequestOptions} from '@heroku/http-call'
 import {URL} from 'node:url'
 
 import {RequestId, requestIdHeader} from './request-id.js'
 import {vars} from './vars.js'
 
-export interface IDelinquencyInfo {
+export type IDelinquencyInfo = {
   scheduled_deletion_time?: null | string;
   scheduled_suspension_time?: null | string;
 }
 
-export interface IDelinquencyConfig {
+export type IDelinquencyConfig = {
   fetch_delinquency: boolean;
   fetch_url?: string;
   resource_type?: 'account' | 'team';

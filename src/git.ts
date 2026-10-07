@@ -3,7 +3,7 @@ import childProcess from 'node:child_process'
 
 import {vars} from './vars.js'
 
-export interface IGitRemote {
+export type IGitRemote = {
   name: string;
   url: string;
 }
@@ -42,7 +42,7 @@ export function configRemote() {
   } catch {}
 }
 
-export interface IGitRemotes {
+export type IGitRemotes = {
   app: string;
   remote: string;
 }

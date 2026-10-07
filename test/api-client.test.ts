@@ -360,7 +360,7 @@ describe('api_client', () => {
         cmd.config = ctx.config
         sinon.stub(cmd.heroku, 'login').callsFake(async () => {
           cmd.heroku.setAuthEntry({account: undefined, token: 'fresh-token'})
-          return undefined as any
+          return undefined
         })
 
         const {body} = await cmd.heroku.get('/account')
@@ -891,12 +891,12 @@ describe('api_client', () => {
   })
 
   describe('logout', () => {
-    const removeAuthCalls: {
+    const removeAuthCalls: Array<{
       account: string | undefined;
       expectedToken: string | undefined;
       hosts: string[];
       service: string | undefined;
-    }[] = []
+    }> = []
 
     beforeEach(() => {
       removeAuthCalls.length = 0

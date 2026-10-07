@@ -73,7 +73,7 @@ const storage: LoginDependencies['storage'] = {
   hasNativeStorage() {
     return false
   },
-  readLoginState: async () => undefined as undefined,
+  readLoginState: async () => undefined,
   async removeAuth() {},
   async saveAuth() {},
   async writeLoginState() {},
@@ -834,7 +834,7 @@ describe('credential manager login adapters', () => {
       sinon.stub(globalThis, 'clearTimeout').callsFake((timer => {
         scheduled.delete(timer as ReturnType<typeof setTimeout>)
         return originalClearTimeout(timer)
-      }) as typeof clearTimeout)
+      }))
       class BackoffTransport<T> extends HTTP<T> {
         async _request(): Promise<void> {
           requests++

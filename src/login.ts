@@ -19,7 +19,7 @@ import {greenBright, yellow} from 'ansis'
 import os from 'node:os'
 import * as readline from 'node:readline'
 
-import {APIClient, HerokuAPIError, type IHerokuAPIErrorOptions} from './api-client.js'
+import {type APIClient, HerokuAPIError, type IHerokuAPIErrorOptions} from './api-client.js'
 import {getStorageConfig} from './credential-manager-core/lib/credential-storage-selector.js'
 import {
   readLoginState,
@@ -48,7 +48,7 @@ export const NONINTERACTIVE_LOGIN_ERROR_CODE = 'HEROKU_NONINTERACTIVE_LOGIN'
 export namespace Login {
   export type Method = 'b' | 'browser' | 'i' | 'interactive' | 's' | 'sso'
 
-  export interface Options {
+  export type Options = {
     browser?: string;
     expiresIn?: number;
     method?: Method;

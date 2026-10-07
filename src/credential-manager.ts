@@ -15,7 +15,7 @@ export type AuthEntry = {
   token: string | undefined;
 }
 
-export interface CredentialManagerProvider {
+export type CredentialManagerProvider = {
   getAuth: (account: string | undefined, host: string, service?: string) => Promise<AuthEntry>;
   removeAuth: (account: string | undefined, hosts: string[], service?: string, expectedToken?: string) => Promise<void>;
   saveAuth: (account: string, token: string, hosts: string[], service?: string) => Promise<void>;

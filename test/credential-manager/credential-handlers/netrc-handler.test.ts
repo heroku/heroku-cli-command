@@ -4,7 +4,7 @@ import fs from 'fs-extra'
 import {resolve} from 'node:path'
 
 import {NetrcHandler} from '../../../src/deprecated/credential-manager-core/credential-handlers/netrc-handler.js'
-import {MachineToken} from '../../../src/deprecated/credential-manager-core/lib/netrc-parser.js'
+import {type MachineToken} from '../../../src/deprecated/credential-manager-core/lib/netrc-parser.js'
 import {restoreNetrcStub, stubNetrc} from '../helpers/netrc-stub.js'
 
 use(chaiAsPromised)

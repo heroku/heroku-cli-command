@@ -1,8 +1,8 @@
 import {Command as Base} from '@oclif/core/command'
-import {CLIError} from '@oclif/core/errors'
+import {type CLIError} from '@oclif/core/errors'
 import * as Flags from '@oclif/core/flags'
 
-import {APIClient, IOptions} from './api-client.js'
+import {APIClient, type IOptions} from './api-client.js'
 
 export abstract class Command extends Base {
   /**
@@ -21,7 +21,7 @@ export abstract class Command extends Base {
    */
   static promptFlagActive = true
   _heroku!: APIClient
-  allowArbitraryFlags: boolean = false
+  allowArbitraryFlags = false
 
   /**
    * Helper function to get baseFlags without the prompt flag
@@ -128,7 +128,7 @@ export abstract class Command extends Base {
             if (nextElement && !nextElementIsFlag) {
               result.argv.push(`${positionalValue}=${nextElement}`)
             } else if (!nextElement || nextElementIsFlag) {
-              result.argv.push(`${positionalValue}=${true}`)
+              result.argv.push(`${positionalValue}=true`)
             }
           }
         }
