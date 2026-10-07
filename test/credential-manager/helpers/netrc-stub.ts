@@ -35,9 +35,8 @@ export function stubNetrc() {
   }
 
   if (!loadStub) {
-    loadStub = stub(Netrc.prototype, 'load').callsFake(function (this: Netrc) {
+    loadStub = stub(Netrc.prototype, 'load').callsFake(async function (this: Netrc) {
       Object.assign(this, mockNetrc)
-      return Promise.resolve()
     }) as SinonStub
   }
 

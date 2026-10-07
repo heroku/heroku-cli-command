@@ -89,8 +89,8 @@ async function platformRequest<T>(request: () => Promise<CommandResponse<T>>): P
 /** Binds one operation token to the exact get/delete Platform API surface expected by credential-manager login. */
 export function createCredentialManagerPlatformAdapter(client: CommandPlatformClient, token: string): HerokuApiClientLike {
   return {
-    delete: <T>(path: string, options?: HerokuApiRequestOptions) => platformRequest(() => client.delete<T>(path, platformOptions(options, token))),
-    get: <T>(path: string, options?: HerokuApiRequestOptions) => platformRequest(() => client.get<T>(path, platformOptions(options, token))),
+    delete: async <T>(path: string, options?: HerokuApiRequestOptions) => platformRequest(async () => client.delete<T>(path, platformOptions(options, token))),
+    get: async <T>(path: string, options?: HerokuApiRequestOptions) => platformRequest(async () => client.get<T>(path, platformOptions(options, token))),
   }
 }
 
@@ -217,7 +217,7 @@ export function createCredentialManagerFetchAdapter(transport: CommandLoginTrans
       return super._request()
     }
 
-    abortableRetryWait(delay: number): Promise<void> {
+    async abortableRetryWait(delay: number): Promise<void> {
       const {signal} = this.options
       return new Promise((resolve, reject) => {
         const timer = setTimeout(() => {
@@ -239,11 +239,11 @@ export function createCredentialManagerFetchAdapter(transport: CommandLoginTrans
   // Preserve http-call 5.5.2's complete _maybeRetry policy while replacing only its private timer primitive.
   // There is no public wait/retry policy hook; runtime dispatch still routes the parent method through this override.
   Object.defineProperty(RedirectRejectingTransport.prototype, '_wait', {
-    value(this: RedirectRejectingTransport<unknown>, delay: number) {
+    async value(this: RedirectRejectingTransport<unknown>, delay: number) {
       return this.abortableRetryWait(delay)
     },
   })
 
-  return (input, init) => commandFetch(RedirectRejectingTransport, input, init)
+  return async (input, init) => commandFetch(RedirectRejectingTransport, input, init)
 }
 /* eslint-enable n/no-unsupported-features/node-builtins, no-undef */

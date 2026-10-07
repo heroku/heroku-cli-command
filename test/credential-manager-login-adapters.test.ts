@@ -181,8 +181,8 @@ describe('credential manager login adapters', () => {
         }
       }
       const client: CommandPlatformClient = {
-        delete: <T>(path: string, options?: HTTPRequestOptions) => NoRetryHTTP.delete<T>(`https://api.heroku.com${path}`, options),
-        get: <T>(path: string, options?: HTTPRequestOptions) => NoRetryHTTP.get<T>(`https://api.heroku.com${path}`, options),
+        delete: async <T>(path: string, options?: HTTPRequestOptions) => NoRetryHTTP.delete<T>(`https://api.heroku.com${path}`, options),
+        get: async <T>(path: string, options?: HTTPRequestOptions) => NoRetryHTTP.get<T>(`https://api.heroku.com${path}`, options),
       }
       const adapter = createCredentialManagerPlatformAdapter(client, 'token-b')
 

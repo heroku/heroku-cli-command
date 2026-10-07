@@ -7,7 +7,7 @@ export class Mutex<T> {
   private busy = false
   private readonly queue: Array<Record<T>> = []
 
-  dequeue() {
+  async dequeue() {
     this.busy = true
     const next = this.queue.shift()
 
@@ -18,7 +18,7 @@ export class Mutex<T> {
     this.busy = false
   }
 
-  execute(record: Record<T>) {
+  async execute(record: Record<T>) {
     const [task, resolve, reject] = record
 
     return task()
@@ -28,7 +28,7 @@ export class Mutex<T> {
       })
   }
 
-  synchronize(task: Task<T>): Promise<T> {
+  async synchronize(task: Task<T>): Promise<T> {
     return new Promise((resolve, reject) => {
       this.queue.push([task, resolve, reject])
       if (!this.busy) {

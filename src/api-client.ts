@@ -339,11 +339,11 @@ export class APIClient {
     return this._twoFactorMutex
   }
 
-  delete<T>(url: string, options: APIClient.Options = {}) {
+  async delete<T>(url: string, options: APIClient.Options = {}) {
     return this.http.delete<T>(url, options)
   }
 
-  get<T>(url: string, options: APIClient.Options = {}) {
+  async get<T>(url: string, options: APIClient.Options = {}) {
     return this.http.get<T>(url, options)
   }
 
@@ -406,11 +406,11 @@ export class APIClient {
     return this._storedAuthPromise
   }
 
-  login(opts: Login.Options = {}): Promise<void> {
-    return this.serializeAuthLifecycle(() => this._login.login(opts))
+  async login(opts: Login.Options = {}): Promise<void> {
+    return this.serializeAuthLifecycle(async () => this._login.login(opts))
   }
 
-  logout(): Promise<void> {
+  async logout(): Promise<void> {
     return this.serializeAuthLifecycle(async () => {
       const entry = await this.getAuthEntry()
       const generation = this._authResolutionGeneration
@@ -444,25 +444,25 @@ export class APIClient {
     })
   }
 
-  patch<T>(url: string, options: APIClient.Options = {}) {
+  async patch<T>(url: string, options: APIClient.Options = {}) {
     return this.http.patch<T>(url, options)
   }
 
-  post<T>(url: string, options: APIClient.Options = {}) {
+  async post<T>(url: string, options: APIClient.Options = {}) {
     return this.http.post<T>(url, options)
   }
 
-  preauth(app: string, factor: string) {
+  async preauth(app: string, factor: string) {
     return this.put(`/apps/${app}/pre-authorizations`, {
       headers: {'Heroku-Two-Factor-Code': factor},
     })
   }
 
-  put<T>(url: string, options: APIClient.Options = {}) {
+  async put<T>(url: string, options: APIClient.Options = {}) {
     return this.http.put<T>(url, options)
   }
 
-  request<T>(url: string, options: APIClient.Options = {}) {
+  async request<T>(url: string, options: APIClient.Options = {}) {
     return this.http.request<T>(url, options)
   }
 
@@ -473,13 +473,13 @@ export class APIClient {
     this.resetStoredAuthResolution()
   }
 
-  stream(url: string, options: APIClient.Options = {}) {
+  async stream(url: string, options: APIClient.Options = {}) {
     return this.http.stream(url, options)
   }
 
-  twoFactorPrompt() {
+  async twoFactorPrompt() {
     if (!process.stdin.isTTY) {
-      return Promise.reject(new Error('Two-factor authentication requires an interactive terminal.'))
+      throw new Error('Two-factor authentication requires an interactive terminal.')
     }
 
     yubikey.enable()
@@ -554,7 +554,7 @@ export class APIClient {
     this.serializeAuthLifecycle(cleanup).catch(() => {})
   }
 
-  private serializeAuthLifecycle<T>(operation: () => Promise<T>): Promise<T> {
+  private async serializeAuthLifecycle<T>(operation: () => Promise<T>): Promise<T> {
     const result = this._authLifecycle.then(operation, operation)
     this._authLifecycle = result.then(() => {}, () => {})
     return result

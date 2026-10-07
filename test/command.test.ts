@@ -131,7 +131,7 @@ describe('command', () => {
       })
   })
 
-  it('sets app', () => class AppCommand extends Command {
+  it('sets app', async () => class AppCommand extends Command {
     static flags = {
       app: flags.app(),
     }

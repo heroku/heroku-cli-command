@@ -68,7 +68,6 @@ export default [
       '@typescript-eslint/only-throw-error': 'off',
       '@typescript-eslint/prefer-nullish-coalescing': 'off',
       '@typescript-eslint/prefer-optional-chain': 'off',
-      '@typescript-eslint/promise-function-async': 'off',
       '@typescript-eslint/restrict-template-expressions': 'off',
       '@typescript-eslint/strict-void-return': 'off',
       '@typescript-eslint/switch-exhaustiveness-check': 'off',

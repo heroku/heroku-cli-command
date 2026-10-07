@@ -48,13 +48,13 @@ async function deleteWithRevision(dataDir: string, revision: number): Promise<bo
   return true
 }
 
-function coordinate<T>(dataDir: string, operation: (normalizedDataDir: string) => Promise<T>): Promise<T> {
+async function coordinate<T>(dataDir: string, operation: (normalizedDataDir: string) => Promise<T>): Promise<T> {
   const key = normalizedDataDir(dataDir)
   const queue = queues.get(key) ?? {pending: 0, tail: Promise.resolve()}
   queues.set(key, queue)
   queue.pending++
 
-  const result = queue.tail.then(() => operation(key), () => operation(key))
+  const result = queue.tail.then(async () => operation(key), async () => operation(key))
   queue.tail = result.then(() => {}, () => {})
   return result.finally(() => {
     queue.pending--
@@ -65,34 +65,34 @@ function coordinate<T>(dataDir: string, operation: (normalizedDataDir: string) =
 // This coordinator guarantees FIFO ordering only among cooperating operations
 // in this process that use the same normalized configured dataDir. It does not
 // provide cross-process locking or defend against hostile filesystem mutation.
-export function withLoginStateCoordination<T>(
+export async function withLoginStateCoordination<T>(
   dataDir: string,
   operation: () => Promise<T>,
 ): Promise<T> {
   return coordinate(dataDir, operation)
 }
 
-export function writeLoginStateCoordinated(dataDir: string, account: string): Promise<void> {
+export async function writeLoginStateCoordinated(dataDir: string, account: string): Promise<void> {
   return coordinate(dataDir, async normalized => {
     await writeLoginState(normalized, account)
     revisions.set(normalized, (revisions.get(normalized) ?? 0) + 1)
   })
 }
 
-export function deleteLoginStateCoordinated(dataDir: string): Promise<void> {
+export async function deleteLoginStateCoordinated(dataDir: string): Promise<void> {
   return coordinate(dataDir, async normalized => {
     await deleteWithRevision(normalized, revisions.get(normalized) ?? 0)
   })
 }
 
-export function getLoginStateRevision(dataDir: string): Promise<LoginStateRevision> {
+export async function getLoginStateRevision(dataDir: string): Promise<LoginStateRevision> {
   return coordinate(dataDir, async normalized => ({
     dataDir: normalized,
     revision: revisions.get(normalized) ?? 0,
   }))
 }
 
-export function deleteLoginStateIf(
+export async function deleteLoginStateIf(
   dataDir: string,
   expectedRevision: LoginStateRevision,
   predicate: (state: LoginState) => boolean,

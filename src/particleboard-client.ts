@@ -74,7 +74,7 @@ export class ParticleboardClient {
     return this.http.defaults
   }
 
-  get<T>(url: string, options: HTTPRequestOptions = {}) {
+  async get<T>(url: string, options: HTTPRequestOptions = {}) {
     return this.http.get<T>(url, options)
   }
 }

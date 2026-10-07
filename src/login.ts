@@ -74,7 +74,7 @@ export class Login {
   constructor(private readonly config: Config, private readonly heroku: APIClient) {}
 
   async login(opts: Login.Options = {}): Promise<void> {
-    return this.serialize(() => this.loginUnlocked(opts))
+    return this.serialize(async () => this.loginUnlocked(opts))
   }
 
   /**
@@ -171,7 +171,7 @@ export class Login {
         stop: () => ux.action.stop(),
       },
       prompt: {
-        accessToken: () => this.promptValue(promptOperation, {
+        accessToken: async () => this.promptValue(promptOperation, {
           message: 'Access token',
           name: 'password',
           type: 'password',
@@ -185,15 +185,15 @@ export class Login {
             type: 'input',
           })
         },
-        loginMethod: () => this.loginMethod(promptOperation),
-        organization: defaultOrganization => this.promptValue(promptOperation, {
+        loginMethod: async () => this.loginMethod(promptOperation),
+        organization: async defaultOrganization => this.promptValue(promptOperation, {
           defaultValue: defaultOrganization,
           message: 'Organization name',
           name: 'orgName',
           type: 'input',
         }),
-        password: () => this.promptValue(promptOperation, {message: 'Password', name: 'password', type: 'password'}),
-        secondFactor: () => this.promptValue(promptOperation, {message: 'Two-factor code', name: 'secondFactor', type: 'password'}),
+        password: async () => this.promptValue(promptOperation, {message: 'Password', name: 'password', type: 'password'}),
+        secondFactor: async () => this.promptValue(promptOperation, {message: 'Two-factor code', name: 'secondFactor', type: 'password'}),
       },
       storage,
       timers: {
@@ -331,7 +331,7 @@ export class Login {
     }
   }
 
-  private serialize<T>(operation: () => Promise<T>): Promise<T> {
+  private async serialize<T>(operation: () => Promise<T>): Promise<T> {
     const result = this.lifecycle.then(operation, operation)
     this.lifecycle = result.then(() => {}, () => {})
     return result
