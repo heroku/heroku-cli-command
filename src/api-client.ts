@@ -61,10 +61,10 @@ export class HerokuAPIError extends CLIError {
   constructor(httpError: HTTPError) {
     if (!httpError) throw new Error('invalid error')
     const options: IHerokuAPIErrorOptions = httpError.body
-    if (!options || !options.message) throw httpError
+    if (!options?.message) throw httpError
     const info = []
     if (options.id) info.push(`Error ID: ${options.id}`)
-    if (options.app && options.app.name) info.push(`App: ${options.app.name}`)
+    if (options.app?.name) info.push(`App: ${options.app.name}`)
     if (options.url) info.push(`See ${options.url} for more information.`)
     if (info.length > 0) super([options.message, '', ...info].join('\n'))
     else super(options.message)
@@ -216,7 +216,7 @@ export class APIClient {
             particleboardClient.auth = auth ?? await self.getAuth()
             const settledResponses = await Promise.allSettled([
               super.request<T>(url, opts),
-              particleboardClient.get<IDelinquencyInfo>(delinquencyConfig.fetch_url as string),
+              particleboardClient.get<IDelinquencyInfo>(delinquencyConfig.fetch_url!),
             ])
 
             // Platform API request

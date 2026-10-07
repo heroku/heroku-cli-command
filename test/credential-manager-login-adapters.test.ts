@@ -191,7 +191,9 @@ describe('credential manager login adapters', () => {
         nock('https://api.heroku.com').intercept(abortPath, method.toUpperCase()).delay(100).reply(200, {})
         const controller = new AbortController()
         const pending = adapter[method](abortPath, {signal: controller.signal, timeoutMs: 1000})
-        setTimeout(() => controller.abort(new Error(`${method} caller cancelled`)), 10)
+        setTimeout(() => {
+          controller.abort(new Error(`${method} caller cancelled`))
+        }, 10)
         // eslint-disable-next-line no-await-in-loop
         await expect(pending).to.be.rejectedWith('The operation was aborted')
 
@@ -412,7 +414,9 @@ describe('credential manager login adapters', () => {
         expect(bodies).to.deep.equal(['complete-post-body', 'complete-post-body'])
       } finally {
         await new Promise<void>((resolve, reject) => {
-          server.close(error => error ? reject(error) : resolve())
+          server.close(error => {
+            error ? reject(error) : resolve()
+          })
         })
         nock.disableNetConnect()
       }
@@ -792,7 +796,9 @@ describe('credential manager login adapters', () => {
         redirect: 'error',
         signal: controller.signal,
       })
-      setTimeout(() => controller.abort(new Error('abort during backoff')), 10)
+      setTimeout(() => {
+        controller.abort(new Error('abort during backoff'))
+      }, 10)
       await expect(pending).to.be.rejectedWith('abort during backoff')
       expect(Date.now() - started).to.be.lessThan(100)
     })
@@ -833,7 +839,7 @@ describe('credential manager login adapters', () => {
       }) as typeof setTimeout)
       sinon.stub(globalThis, 'clearTimeout').callsFake((timer => {
         scheduled.delete(timer as ReturnType<typeof setTimeout>)
-        return originalClearTimeout(timer)
+        originalClearTimeout(timer)
       }))
       class BackoffTransport<T> extends HTTP<T> {
         async _request(): Promise<void> {

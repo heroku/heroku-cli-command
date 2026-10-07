@@ -1,19 +1,16 @@
-import type {
-  LoginOptions as CredentialManagerLoginOptions,
-  LoginPromptSelection,
-  LoginResult,
-  LoginStorage,
-} from '@heroku/heroku-credential-manager/login'
-import type {HTTP} from '@heroku/http-call'
 import type {Config} from '@oclif/core/interfaces'
 import type {ChildProcess} from 'node:child_process'
 
 import {
   Login as CredentialManagerLogin,
+  type LoginOptions as CredentialManagerLoginOptions,
   LoginCancelledError,
+  type LoginPromptSelection,
   LoginRequestError,
+  type LoginResult,
+  type LoginStorage,
 } from '@heroku/heroku-credential-manager/login'
-import {HTTPError} from '@heroku/http-call'
+import {type HTTP, HTTPError} from '@heroku/http-call'
 import {ux} from '@oclif/core/ux'
 import {greenBright, yellow} from 'ansis'
 import os from 'node:os'
@@ -163,12 +160,20 @@ export class Login {
       environment: {get: name => process.env[name]},
       fetch: createCredentialManagerFetchAdapter(),
       output: {
-        warn: message => ux.warn(message),
-        write: message => ux.stderr(/^https?:\/\//.test(message) ? greenBright(message) : message),
+        warn(message) {
+          ux.warn(message)
+        },
+        write(message) {
+          ux.stderr(/^https?:\/\//.test(message) ? greenBright(message) : message)
+        },
       },
       progress: {
-        start: message => ux.action.start(message),
-        stop: () => ux.action.stop(),
+        start(message) {
+          ux.action.start(message)
+        },
+        stop() {
+          ux.action.stop()
+        },
       },
       prompt: {
         accessToken: async () => this.promptValue(promptOperation, {
@@ -197,7 +202,9 @@ export class Login {
       },
       storage,
       timers: {
-        clearTimeout: timer => clearTimeout(timer as ReturnType<typeof setTimeout>),
+        clearTimeout(timer) {
+          clearTimeout(timer as ReturnType<typeof setTimeout>)
+        },
         setTimeout: (handler, timeoutMs) => {
           const timer = setTimeout(() => {
             this.cancelActivePrompt(promptOperation, new Error('Login timed out')).then(handler, handler)
@@ -227,7 +234,10 @@ export class Login {
     let onData: ((data: Buffer) => void) | undefined
     const pending = new Promise<string>((resolve, reject) => {
       cancelPrompt = reject
-      onData = data => resolve(data.toString())
+      onData = data => {
+        resolve(data.toString())
+      }
+
       process.stdin.once('data', onData)
     })
     operation.cancel = cancelPrompt
@@ -296,7 +306,9 @@ export class Login {
   }
 
   private observeBrowserChild(child: ChildProcess): void {
-    child.once('error', cause => ux.warn(cause))
+    child.once('error', cause => {
+      ux.warn(cause)
+    })
     child.once('close', code => {
       if (code !== 0) ux.warn('Cannot open browser. Continue with the manual URL above.')
     })
@@ -313,7 +325,10 @@ export class Login {
       name,
       type,
     }], {signal: controller.signal})
-    const cancelPrompt = (reason: unknown) => controller.abort(reason)
+    const cancelPrompt = (reason: unknown) => {
+      controller.abort(reason)
+    }
+
     operation.cancel = cancelPrompt
     operation.completion = pending.then(() => {}, () => {})
 

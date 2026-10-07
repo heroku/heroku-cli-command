@@ -654,7 +654,9 @@ describe('api_client', () => {
         const reachedOAuth = await Promise.race([
           oauthStarted.promise.then(() => true),
           new Promise<false>(resolve => {
-            setTimeout(() => resolve(false), 250)
+            setTimeout(() => {
+              resolve(false)
+            }, 250)
           }),
         ])
 
@@ -1090,10 +1092,9 @@ describe('api_client', () => {
         cmd.config = ctx.config
 
         stderr.start()
-        const result = await cmd.heroku.logout()
+        await cmd.heroku.logout()
         stderr.stop()
 
-        expect(result).to.be.undefined
         expect(stderr.output).to.equal('')
         expect(cmd.heroku.auth).to.be.undefined
       })
@@ -1121,9 +1122,8 @@ describe('api_client', () => {
         const cmd = new Command([], ctx.config)
         cmd.config = ctx.config
 
-        const result = await cmd.heroku.logout()
+        await cmd.heroku.logout()
 
-        expect(result).to.be.undefined
         expect(cmd.heroku.auth).to.be.undefined
       })
 

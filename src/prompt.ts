@@ -43,7 +43,7 @@ export async function promptAndRun(options: PromptOptions): Promise<void> {
       },
     }])
 
-    if (input && input.trim()) {
+    if (input?.trim()) {
       userInputByArg.set(argKey, input)
     }
   }
@@ -92,7 +92,7 @@ export async function promptAndRun(options: PromptOptions): Promise<void> {
         type: 'input',
       }])
 
-      if (value && value.trim()) {
+      if (value?.trim()) {
         userInputByFlag.set(name, value)
       }
     }

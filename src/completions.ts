@@ -27,10 +27,10 @@ export const AppCompletion = {
 export const AppAddonCompletion = {
   cacheDuration: oneDay,
   async cacheKey(ctx: {flags: {app: any}}) {
-    return ctx.flags && ctx.flags.app ? `${ctx.flags.app}_addons` : ''
+    return ctx.flags?.app ? `${ctx.flags.app}_addons` : ''
   },
   async options(ctx: {config: Config; flags?: any}) {
-    const addons = ctx.flags && ctx.flags.app ? await herokuGet(`apps/${ctx.flags.app}/addons`, ctx) : []
+    const addons = ctx.flags?.app ? await herokuGet(`apps/${ctx.flags.app}/addons`, ctx) : []
     return addons
   },
 }
@@ -38,10 +38,10 @@ export const AppAddonCompletion = {
 export const AppDynoCompletion = {
   cacheDuration: oneDay,
   async cacheKey(ctx: {flags: {app: any}}) {
-    return ctx.flags && ctx.flags.app ? `${ctx.flags.app}_dynos` : ''
+    return ctx.flags?.app ? `${ctx.flags.app}_dynos` : ''
   },
   async options(ctx: {config: Config; flags?: any}) {
-    const dynos = ctx.flags && ctx.flags.app ? await herokuGet(`apps/${ctx.flags.app}/dynos`, ctx) : []
+    const dynos = ctx.flags?.app ? await herokuGet(`apps/${ctx.flags.app}/dynos`, ctx) : []
     return dynos
   },
 }
