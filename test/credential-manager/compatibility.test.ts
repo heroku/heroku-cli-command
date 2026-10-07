@@ -210,16 +210,12 @@ describe('credential-manager compatibility', function () {
 
   it('preserves external runtime identities except command-owned storage adapters', async function () {
     for (const name of externalRuntimeExports) {
-      // eslint-disable-next-line import/namespace
       expect(credentialManagerCore[name], `credential-manager-core ${name}`).to.equal(externalCredentialManager[name])
-      // eslint-disable-next-line import/namespace
       expect(commandRoot[name], `command root ${name}`).to.equal(externalCredentialManager[name])
     }
 
     for (const name of ['getAuth', 'listKeychainAccounts', 'removeAuth', 'saveAuth'] as const) {
-      // eslint-disable-next-line import/namespace
       expect(commandRoot[name], `command root ${name}`).to.equal(credentialManagerCore[name])
-      // eslint-disable-next-line import/namespace
       expect(commandRoot[name], `${name} is command-owned`).to.not.equal(externalCredentialManager[name])
     }
 
@@ -246,6 +242,10 @@ describe('credential-manager compatibility', function () {
     const compiler = path.resolve('node_modules/typescript/bin/tsc')
     execFileSync(process.execPath, [
       compiler,
+      // TypeScript 6 errors (TS5112) when files are passed on the command line
+      // while a tsconfig.json is present; this fixture is compiled in isolation
+      // with explicit flags, so ignore the repo config.
+      '--ignoreConfig',
       '--noEmit',
       '--strict',
       '--skipLibCheck',
