@@ -243,7 +243,8 @@ export class APIClient {
           if (retries > 0) {
             if (opts.retryAuth !== false && error.http.statusCode === 401) {
               if (process.env.HEROKU_API_KEY) {
-                throw new Error('The token provided to HEROKU_API_KEY is invalid. Please double-check that you have the correct token, or run `heroku login` without HEROKU_API_KEY set.', {cause: error})
+                // eslint-disable-next-line preserve-caught-error -- deliberately omit the cause: `error` is an HTTPError whose request retains the Authorization header (the bearer token), and this error surfaces to logs/telemetry where it must not leak
+                throw new Error('The token provided to HEROKU_API_KEY is invalid. Please double-check that you have the correct token, or run `heroku login` without HEROKU_API_KEY set.')
               }
 
               self.authPromise ||= self.login()

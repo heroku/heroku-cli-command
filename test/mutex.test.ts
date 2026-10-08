@@ -81,4 +81,27 @@ describe('mutex', () => {
       })
       .catch(done)
   })
+
+  it('rejects the caller and keeps draining when a task throws synchronously', async () => {
+    const mutex = new Mutex<string>()
+
+    let caught: unknown
+    await mutex
+      .synchronize(() => {
+        throw new Error('sync boom')
+      })
+      .catch((error: unknown) => {
+        caught = error
+      })
+
+    expect((caught as Error).message).to.equal('sync boom')
+
+    // The queue must not stall: a task queued after the throwing one still runs.
+    const result = await mutex.synchronize(async () => {
+      output.push('after-throw')
+      return 'ok'
+    })
+    expect(result).to.equal('ok')
+    expect(output).to.deep.equal(['after-throw'])
+  })
 })

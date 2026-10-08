@@ -21,11 +21,20 @@ export class Mutex<T> {
   async execute(record: Record<T>) {
     const [task, resolve, reject] = record
 
-    return task()
-      .then(resolve, reject)
-      .then(() => {
-        void this.dequeue()
-      })
+    // Use try/finally rather than task().then(resolve, reject).then(dequeue):
+    // because dequeue/execute are async, a task that throws *synchronously*
+    // would otherwise become a rejected promise that is discarded by the
+    // `void this.dequeue()` callers, leaving the caller's promise forever
+    // pending and the queue stalled (busy never resets). Awaiting the task
+    // inside try funnels both synchronous throws and rejections to reject(),
+    // and finally guarantees the queue keeps draining.
+    try {
+      resolve(await task())
+    } catch (error) {
+      reject(error)
+    } finally {
+      void this.dequeue()
+    }
   }
 
   async synchronize(task: Task<T>): Promise<T> {
