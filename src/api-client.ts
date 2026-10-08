@@ -151,15 +151,15 @@ export class APIClient {
           const now = Date.now()
 
           if (suspension > now) {
-            warn(`This ${resource} is delinquent with payment and we'll suspend it on ${new Date(suspension)}.`)
+            warn(`This ${resource} is delinquent with payment and we'll suspend it on ${new Date(suspension).toString()}.`)
             delinquencyConfig.warning_shown = true
             return
           }
 
           if (deletion)
-            warn(`This ${resource} is delinquent with payment and we suspended it on ${new Date(suspension)}. If the ${resource} is still delinquent, we'll delete it on ${new Date(deletion)}.`)
+            warn(`This ${resource} is delinquent with payment and we suspended it on ${new Date(suspension).toString()}. If the ${resource} is still delinquent, we'll delete it on ${new Date(deletion).toString()}.`)
         } else if (deletion)
-          warn(`This ${resource} is delinquent with payment and we'll delete it on ${new Date(deletion)}.`)
+          warn(`This ${resource} is delinquent with payment and we'll delete it on ${new Date(deletion).toString()}.`)
 
         delinquencyConfig.warning_shown = true
       }

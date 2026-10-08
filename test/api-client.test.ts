@@ -1460,7 +1460,7 @@ describe('api_client', () => {
         await cmd.heroku.get('/account')
 
         const stderrOutput = stderr.output.replaceAll(/ *[»›] */g, '').replaceAll(/ *\n */g, ' ')
-        expect(stderrOutput).to.include(`Warning: This account is delinquent with payment and we'll suspend it on ${suspensionTime}`)
+        expect(stderrOutput).to.include(`Warning: This account is delinquent with payment and we'll suspend it on ${suspensionTime.toString()}`)
         stderr.stop()
         particleboard.done()
       })
@@ -1487,7 +1487,7 @@ describe('api_client', () => {
         await cmd.heroku.get('/account')
 
         const stderrOutput = stderr.output.replaceAll(/ *[»›] */g, '').replaceAll(/ *\n */g, ' ')
-        expect(stderrOutput).to.include(`Warning: This account is delinquent with payment and we suspended it on ${suspensionTime}. If the account is still delinquent, we'll delete it on ${deletionTime}`)
+        expect(stderrOutput).to.include(`Warning: This account is delinquent with payment and we suspended it on ${suspensionTime.toString()}. If the account is still delinquent, we'll delete it on ${deletionTime.toString()}`)
         stderr.stop()
         particleboard.done()
       })
@@ -1516,7 +1516,7 @@ describe('api_client', () => {
         await cmd.heroku.get('/account')
 
         const stderrOutput = stderr.output.replaceAll(/ *[»›] */g, '').replaceAll(/ *\n */g, ' ')
-        expect(stderrOutput).to.include(`Warning: This account is delinquent with payment and we'll suspend it on ${suspensionTime}`)
+        expect(stderrOutput).to.include(`Warning: This account is delinquent with payment and we'll suspend it on ${suspensionTime.toString()}`)
         stderr.stop()
 
         stderr.start()
@@ -1612,7 +1612,7 @@ describe('api_client', () => {
         await cmd.heroku.get('/teams/my_team/members')
 
         const stderrOutput = stderr.output.replaceAll(/ *[»›] */g, '').replaceAll(/ *\n */g, ' ')
-        expect(stderrOutput).to.include(`Warning: This team is delinquent with payment and we'll suspend it on ${suspensionTime}`)
+        expect(stderrOutput).to.include(`Warning: This team is delinquent with payment and we'll suspend it on ${suspensionTime.toString()}`)
         stderr.stop()
         particleboard.done()
       })
@@ -1639,7 +1639,7 @@ describe('api_client', () => {
         await cmd.heroku.get('/teams/my_team/members')
 
         const stderrOutput = stderr.output.replaceAll(/ *[»›] */g, '').replaceAll(/ *\n */g, ' ')
-        expect(stderrOutput).to.include(`Warning: This team is delinquent with payment and we suspended it on ${suspensionTime}. If the team is still delinquent, we'll delete it on ${deletionTime}`)
+        expect(stderrOutput).to.include(`Warning: This team is delinquent with payment and we suspended it on ${suspensionTime.toString()}. If the team is still delinquent, we'll delete it on ${deletionTime.toString()}`)
         stderr.stop()
         particleboard.done()
       })
@@ -1668,7 +1668,7 @@ describe('api_client', () => {
         await cmd.heroku.get('/teams/my_team/members')
 
         const stderrOutput = stderr.output.replaceAll(/ *[»›] */g, '').replaceAll(/ *\n */g, ' ')
-        expect(stderrOutput).to.include(`Warning: This team is delinquent with payment and we'll suspend it on ${suspensionTime}`)
+        expect(stderrOutput).to.include(`Warning: This team is delinquent with payment and we'll suspend it on ${suspensionTime.toString()}`)
         stderr.stop()
 
         stderr.start()
