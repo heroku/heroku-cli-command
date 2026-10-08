@@ -55,7 +55,9 @@ function stubBrowserSpawn(): sinon.SinonStub {
     const child = Object.assign(new EventEmitter(), {pid: 12_345, unref: sinon.stub()})
     setImmediate(() => {
       child.emit('spawn')
-      if (process.platform === 'win32') setImmediate(() => child.emit('close', 0))
+      if (process.platform === 'win32') setImmediate(() => {
+        child.emit('close', 0)
+      })
     })
     return child
   }) as unknown as typeof childProcess.spawn)
@@ -423,7 +425,9 @@ describe('Login facade', () => {
     sinon.stub(childProcess, 'spawn').callsFake((() => {
       setImmediate(() => {
         child.emit('spawn')
-        if (process.platform === 'win32') setImmediate(() => child.emit('close', 0))
+        if (process.platform === 'win32') setImmediate(() => {
+          child.emit('close', 0)
+        })
       })
       return child
     }) as unknown as typeof childProcess.spawn)
@@ -493,7 +497,9 @@ describe('Login facade', () => {
       sinon.stub(ux, 'stdout')
       const exitError = Object.assign(new Error('cancelled'), {oclif: {exit}})
       const uxError = sinon.stub(ux, 'error').throws(exitError)
-      setTimeout(() => process.stdin.emit('data', Buffer.from(key)), 0)
+      setTimeout(() => {
+        process.stdin.emit('data', Buffer.from(key))
+      }, 0)
       try {
         const error = await new Login(ctx.config, new Command([], ctx.config).heroku).login().catch((error: unknown) => error)
         expect(error).to.equal(exitError)

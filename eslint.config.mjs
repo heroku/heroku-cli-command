@@ -59,7 +59,6 @@ export default [
       '@typescript-eslint/no-unsafe-return': 'off',
       '@typescript-eslint/prefer-nullish-coalescing': 'off',
       '@typescript-eslint/restrict-template-expressions': 'off',
-      '@typescript-eslint/strict-void-return': 'off',
       'import-x/no-cycle': 'off',
       'n/prefer-global/buffer': 'off',
       'require-unicode-regexp': 'off',

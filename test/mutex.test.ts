@@ -63,11 +63,11 @@ describe('mutex', () => {
         resolve('foo')
       }))
       .then(results => {
-        setImmediate(async () => {
+        setImmediate(() => {
           expect('foo').to.deep.equal(results)
           expect(output).to.deep.equal(['foo'])
 
-          return mutex
+          void mutex
             .synchronize(async () => new Promise(resolve => {
               output.push('bar')
               resolve('bar')

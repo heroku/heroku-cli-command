@@ -687,10 +687,12 @@ describe('api_client', () => {
         })._login
         const login = sinon.stub(facade, 'login')
         login.onFirstCall().callsFake(async () => {
-          setImmediate(async () => {
-            await triggerDetachedRead.promise
-            await cmd.heroku.getAuthEntry()
-            detachedReadFinished.resolve()
+          setImmediate(() => {
+            void (async () => {
+              await triggerDetachedRead.promise
+              await cmd.heroku.getAuthEntry()
+              detachedReadFinished.resolve()
+            })()
           })
         })
         login.onSecondCall().callsFake(async () => {

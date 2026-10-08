@@ -388,16 +388,18 @@ describe('credential manager login adapters', () => {
     it('replays identical complete POST bytes after a real socket reset', async () => {
       const bodies: string[] = []
       nock.enableNetConnect('127.0.0.1')
-      const server = createServer(async (request, response) => {
-        const chunks: Buffer[] = []
-        for await (const chunk of request) chunks.push(Buffer.from(chunk))
-        bodies.push(Buffer.concat(chunks).toString())
-        if (bodies.length === 1) {
-          request.socket.destroy()
-        } else {
-          response.setHeader('content-type', 'application/json')
-          response.end('{"ok":true}')
-        }
+      const server = createServer((request, response) => {
+        void (async () => {
+          const chunks: Buffer[] = []
+          for await (const chunk of request) chunks.push(Buffer.from(chunk))
+          bodies.push(Buffer.concat(chunks).toString())
+          if (bodies.length === 1) {
+            request.socket.destroy()
+          } else {
+            response.setHeader('content-type', 'application/json')
+            response.end('{"ok":true}')
+          }
+        })()
       })
       await new Promise<void>(resolve => {
         server.listen(0, '127.0.0.1', resolve)
