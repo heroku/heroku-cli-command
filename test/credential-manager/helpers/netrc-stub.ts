@@ -28,25 +28,17 @@ let saveSyncStub: SinonStub | undefined
  */
 export function stubNetrc() {
   // Only stub if not already stubbed
-  if (!loadSyncStub) {
-    loadSyncStub = stub(Netrc.prototype, 'loadSync').callsFake(function (this: Netrc) {
-      Object.assign(this, mockNetrc)
-    })
-  }
+  loadSyncStub ||= stub(Netrc.prototype, 'loadSync').callsFake(function (this: Netrc) {
+    Object.assign(this, mockNetrc)
+  })
 
-  if (!loadStub) {
-    loadStub = stub(Netrc.prototype, 'load').callsFake(async function (this: Netrc) {
-      Object.assign(this, mockNetrc)
-    }) as SinonStub
-  }
+  loadStub ||= stub(Netrc.prototype, 'load').callsFake(async function (this: Netrc) {
+    Object.assign(this, mockNetrc)
+  }) as SinonStub
 
-  if (!saveStub) {
-    saveStub = stub(Netrc.prototype, 'save').resolves()
-  }
+  saveStub ||= stub(Netrc.prototype, 'save').resolves()
 
-  if (!saveSyncStub) {
-    saveSyncStub = stub(Netrc.prototype, 'saveSync')
-  }
+  saveSyncStub ||= stub(Netrc.prototype, 'saveSync')
 }
 
 /**

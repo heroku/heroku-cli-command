@@ -54,7 +54,7 @@ export async function cleanupDefaultNetrc(): Promise<void> {
   const netrc = new Netrc()
   await netrc.load()
   for (const host of hosts) {
-    if (!netrc.machines[host]) {
+    if (!Object.hasOwn(netrc.machines, host)) {
       continue;
     }
 

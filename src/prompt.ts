@@ -49,7 +49,7 @@ export async function promptAndRun(options: PromptOptions): Promise<void> {
   }
 
   // Prompt for flags
-  for (const [, flagDef] of Object.entries(commandMeta.flags)) {
+  for (const flagDef of Object.values(commandMeta.flags)) {
     const {char, description, hidden, name, options, type} = flagDef as any
 
     // Skip hidden flags, the prompt flag itself, and flags without descriptions

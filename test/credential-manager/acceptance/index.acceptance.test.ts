@@ -173,7 +173,7 @@ describe('credential-manager acceptance', function () {
       const netrc = new Netrc()
       await netrc.load()
       for (const host of CREDENTIAL.hosts) {
-        if (netrc.machines[host]) {
+        if (Object.hasOwn(netrc.machines, host)) {
           netrcHasCredentials = true
         }
       }

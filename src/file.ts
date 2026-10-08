@@ -4,7 +4,7 @@ import {promisify} from 'node:util'
 
 let _debug: any
 function debug(...args: any[]) {
-  if (!_debug) _debug = debugModule('@heroku-cli/command:file')
+  _debug ||= debugModule('@heroku-cli/command:file')
   _debug(...args)
 }
 

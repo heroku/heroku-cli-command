@@ -585,8 +585,10 @@ machine foo password uu
   it('extra code coverage checks', function () {
     const netrc = new Netrc()
     netrc.loadSync()
+    // eslint-disable-next-line unicorn/no-computed-property-existence-check -- intentionally exercises the `in` operator against the machines object for coverage
     expect(Symbol('test') in netrc.machines).to.equal(false)
     netrc.machines.a = {login: 'foo'}
+    // eslint-disable-next-line unicorn/no-computed-property-existence-check -- intentionally exercises the `in` operator against a machine entry for coverage
     expect(Symbol('test') in netrc.machines.a).to.equal(false)
     expect(netrc.machines.a.lwljlkwejf).to.equal(undefined)
     expect(netrc.machines.a[Symbol('test') as any]).to.equal(undefined)

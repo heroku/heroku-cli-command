@@ -10,24 +10,24 @@ export class RequestId {
   }
 
   static create(): string[] {
-    const tracked = RequestId.ids
-    const generatedId = RequestId._generate()
-    RequestId.ids = [generatedId, ...tracked]
-    return RequestId.ids
+    const tracked = this.ids
+    const generatedId = this._generate()
+    this.ids = [generatedId, ...tracked]
+    return this.ids
   }
 
   static empty(): void {
-    RequestId.ids = []
+    this.ids = []
   }
 
   static track(...ids: string[]) {
-    const tracked = RequestId.ids
+    const tracked = this.ids
     ids = ids.filter(id => !(tracked.includes(id)))
-    RequestId.ids = [...ids, ...tracked]
-    return RequestId.ids
+    this.ids = [...ids, ...tracked]
+    return this.ids
   }
 
   static get headerValue() {
-    return RequestId.ids.join(',')
+    return this.ids.join(',')
   }
 }

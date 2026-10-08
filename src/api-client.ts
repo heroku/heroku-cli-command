@@ -167,7 +167,7 @@ export class APIClient {
 
       // eslint-disable-next-line complexity
       static async request<T>(url: string, opts: APIClient.Options = {}, retries = 3): Promise<APIHTTPClient<T>> {
-        opts.headers = opts.headers || {}
+        opts.headers ||= {}
         const currentRequestId = RequestId.create() && RequestId.headerValue
 
         // Accumulation of requestIds in the header
@@ -247,7 +247,7 @@ export class APIClient {
                 throw new Error('The token provided to HEROKU_API_KEY is invalid. Please double-check that you have the correct token, or run `heroku login` without HEROKU_API_KEY set.')
               }
 
-              if (!self.authPromise) self.authPromise = self.login()
+              self.authPromise ||= self.login()
               await self.authPromise
               const retryAuth = await self.getAuth()
               opts.headers.authorization = `Bearer ${retryAuth}`
@@ -294,16 +294,14 @@ export class APIClient {
       ): Promise<APIHTTPClient<any>> {
         const app = err.body.app ? err.body.app.name : null
         if (!app || !options.preauth) {
-          opts.headers = opts.headers || {}
+          opts.headers ||= {}
           opts.headers['Heroku-Two-Factor-Code'] = await self.twoFactorPrompt()
           return this.request(url, opts, retries)
         }
 
         // if multiple requests are run in parallel for the same app, we should
         // only preauth for the first so save the fact we already preauthed
-        if (!self.preauthPromises[app]) {
-          self.preauthPromises[app] = self.twoFactorPrompt().then((factor: any) => self.preauth(app, factor))
-        }
+        self.preauthPromises[app] ||= self.twoFactorPrompt().then((factor: any) => self.preauth(app, factor))
 
         await self.preauthPromises[app]
         return this.request(url, opts, retries)
@@ -332,9 +330,7 @@ export class APIClient {
   }
 
   get twoFactorMutex(): Mutex<string> {
-    if (!this._twoFactorMutex) {
-      this._twoFactorMutex = new Mutex()
-    }
+    this._twoFactorMutex ||= new Mutex()
 
     return this._twoFactorMutex
   }
@@ -509,9 +505,7 @@ export class APIClient {
   private isMissingCredentialError(error: unknown): boolean {
     if (error instanceof NativeCredentialNotFoundError) return true
     if (!(error instanceof Error)) return false
-    return error.message === 'No auth found'
-      || error.message === `No auth found for ${vars.apiHost}`
-      || error.message === 'Netrc credential does not match the requested account for host'
+    return [`No auth found for ${vars.apiHost}`, 'Netrc credential does not match the requested account for host', 'No auth found'].includes(error.message)
   }
 
   private async loginStateExists(): Promise<boolean> {
@@ -541,7 +535,7 @@ export class APIClient {
     loginStatePresent: boolean,
     loginStateRevision: LoginStateRevision | undefined,
   ): void {
-    if (!this.config.dataDir || !loginStatePresent || !loginStateRevision) return
+    if (!loginStatePresent || !loginStateRevision || !this.config.dataDir) return
     const cleanup = async () => {
       await deleteLoginStateIf(this.config.dataDir, loginStateRevision, current => {
         const stateMatches = account === undefined ? current === undefined : current?.account === account

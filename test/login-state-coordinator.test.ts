@@ -14,11 +14,7 @@ import {
 } from '../src/login-state-coordinator.js'
 
 function deferred<T = void>() {
-  let resolve!: (value: PromiseLike<T> | T) => void
-  const promise = new Promise<T>(resolvePromise => {
-    resolve = resolvePromise
-  })
-  return {promise, resolve}
+  return Promise.withResolvers<T>()
 }
 
 describe('login-state coordinator', () => {

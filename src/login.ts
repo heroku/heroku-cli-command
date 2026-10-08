@@ -226,6 +226,7 @@ export class Login {
     ux.stderr(`heroku: Press any key to open up the browser to login or ${yellow('q')} to exit`)
     const rl = readline.createInterface({input: process.stdin, output: process.stdout})
     const canSetRawMode = typeof process.stdin.setRawMode === 'function'
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-conversion -- process.stdin.isRaw is typed `boolean` but is `undefined` for non-TTY streams; Boolean() normalizes it so setRawMode() restores false, not undefined
     const previousRawMode = Boolean(process.stdin.isRaw)
     if (canSetRawMode) process.stdin.setRawMode(true)
     process.stdin.resume()
@@ -299,7 +300,7 @@ export class Login {
 
   private normalizeOptions(opts: Login.Options): CredentialManagerLoginOptions {
     const aliases = {b: 'browser', i: 'interactive', s: 'sso'} as const
-    const method = opts.method && opts.method in aliases
+    const method = opts.method && Object.hasOwn(aliases, opts.method)
       ? aliases[opts.method as keyof typeof aliases]
       : opts.method
     return {...opts, method: method as CredentialManagerLoginOptions['method']}

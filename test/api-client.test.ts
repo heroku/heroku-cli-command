@@ -34,13 +34,7 @@ let api: nock.Scope
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 function deferred<T = void>() {
-  let reject!: (reason?: unknown) => void
-  let resolve!: (value: PromiseLike<T> | T) => void
-  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
-    reject = rejectPromise
-    resolve = resolvePromise
-  })
-  return {promise, reject, resolve}
+  return Promise.withResolvers<T>()
 }
 
 const test = fancy

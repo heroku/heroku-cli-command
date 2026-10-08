@@ -39,7 +39,7 @@ export class ParticleboardClient {
     }
     this.http = class ParticleboardHTTPClient<T> extends HTTP.create(particleboardOpts)<T> {
       static async request<T>(url: string, opts: HTTPRequestOptions = {}): Promise<ParticleboardHTTPClient<T>> {
-        opts.headers = opts.headers || {}
+        opts.headers ||= {}
         opts.headers[requestIdHeader] = RequestId.create() && RequestId.headerValue
 
         if (Object.keys(opts.headers).every(h => h.toLowerCase() !== 'authorization')) {
