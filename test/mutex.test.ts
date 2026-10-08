@@ -49,8 +49,8 @@ describe('mutex', () => {
       .then(() => {
         throw new Error('x')
       })
-      .catch(error => {
-        expect(error.message).to.deep.equal('bar')
+      .catch((error: unknown) => {
+        expect((error as Error).message).to.deep.equal('bar')
         expect(output).to.deep.equal(['foo', 'bar', 'biz'])
       })
   })

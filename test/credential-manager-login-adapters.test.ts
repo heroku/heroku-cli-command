@@ -331,7 +331,7 @@ describe('credential manager login adapters', () => {
           return {}
         })
       const fetch = createCredentialManagerFetchAdapter()
-      /* eslint-disable n/no-unsupported-features/node-builtins, no-undef */
+      /* eslint-disable n/no-unsupported-features/node-builtins, no-undef -- Node 20+ provides these fetch globals (FormData/Blob) at runtime; the lint engine's compatibility table predates that support */
       const formData = new FormData()
       formData.append('field', 'form-body')
       const bodies: Array<[BodyInit, string]> = [

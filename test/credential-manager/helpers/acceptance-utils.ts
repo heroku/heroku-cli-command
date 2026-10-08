@@ -73,7 +73,7 @@ export async function cleanupDefaultNetrc(): Promise<void> {
 export async function cleanupCredentialStore(): Promise<void> {
   const services = getAllAcceptanceServices()
   for (const service of services) {
-    /* eslint-disable no-await-in-loop */
+    /* eslint-disable no-await-in-loop -- keychain cleanup must run sequentially; each account delete has to complete before listing/removing the next */
     const accounts = await listKeychainAccounts(service)
     if (accounts.length === 0) continue
 

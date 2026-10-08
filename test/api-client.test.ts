@@ -1344,7 +1344,7 @@ describe('api_client', () => {
           if (error instanceof Error) {
             expect(error.message).to.equal('The token provided to HEROKU_API_KEY is invalid. Please double-check that you have the correct token, or run `heroku login` without HEROKU_API_KEY set.')
           } else {
-            throw new TypeError('Unexpected error')
+            throw new TypeError('Unexpected error', {cause: error})
           }
         }
       })

@@ -161,7 +161,7 @@ pQgBLBordnqQajWt1ao+8AZiAsOooF0wJqm/mH1Og5/ADuhvZEQ=
 -----END PGP MESSAGE-----`
 
   skipOnWindows('synchronously decrypts gpg-encrypted netrc file', async function () {
-    await configureGpgMock().catch(error => {
+    await configureGpgMock().catch((error: unknown) => {
       if (error instanceof ExecaError && error.code === 'ENOENT') {
         console.log('GPG not found, skipping test')
         return this.skip()
@@ -183,7 +183,7 @@ pQgBLBordnqQajWt1ao+8AZiAsOooF0wJqm/mH1Og5/ADuhvZEQ=
   })
 
   skipOnWindows('asynchronously decrypts gpg-encrypted netrc file', async function () {
-    await configureGpgMock().catch(error => {
+    await configureGpgMock().catch((error: unknown) => {
       if (error instanceof ExecaError && error.code === 'ENOENT') {
         console.log('GPG not found, skipping test')
         return this.skip()

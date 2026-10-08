@@ -337,7 +337,7 @@ export class Login {
       const answer = await pending
       return answer[name]
     } catch (error) {
-      if (controller.signal.aborted) throw controller.signal.reason
+      if (controller.signal.aborted) throw controller.signal.reason as Error
       throw error
     } finally {
       if (operation.cancel === cancelPrompt) {

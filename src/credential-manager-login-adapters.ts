@@ -94,8 +94,7 @@ export function createCredentialManagerPlatformAdapter(client: CommandPlatformCl
   }
 }
 
-// Node 20 provides these fetch globals at runtime; the lint engine's compatibility table predates that support.
-/* eslint-disable n/no-unsupported-features/node-builtins, no-undef */
+/* eslint-disable n/no-unsupported-features/node-builtins, no-undef -- Node 20+ provides these fetch globals at runtime; the lint engine's compatibility table predates that support */
 async function replayableBody(request: Request): Promise<ReplayableBody | undefined> {
   if (request.body === null) return
   const bytes = new Uint8Array(await request.arrayBuffer())

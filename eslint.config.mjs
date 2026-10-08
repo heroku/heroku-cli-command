@@ -48,7 +48,6 @@ export default [
       // and several of these fixers are semantic (e.g. unicorn/prefer-https
       // rewrites http:// test fixtures), so leaving them enabled corrupts code.
       // Re-enable these one at a time in a dedicated lint-cleanup pass.
-      '@eslint-community/eslint-comments/require-description': 'off',
       '@typescript-eslint/consistent-type-assertions': 'off',
       '@typescript-eslint/no-empty-function': 'off',
       '@typescript-eslint/no-restricted-types': 'off',
@@ -58,14 +57,11 @@ export default [
       '@typescript-eslint/no-unsafe-call': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',
       '@typescript-eslint/no-unsafe-return': 'off',
-      '@typescript-eslint/only-throw-error': 'off',
       '@typescript-eslint/prefer-nullish-coalescing': 'off',
       '@typescript-eslint/restrict-template-expressions': 'off',
       '@typescript-eslint/strict-void-return': 'off',
-      '@typescript-eslint/use-unknown-in-catch-callback-variable': 'off',
       'import-x/no-cycle': 'off',
       'n/prefer-global/buffer': 'off',
-      'preserve-caught-error': 'off',
       'require-unicode-regexp': 'off',
       'unicorn/consistent-boolean-name': 'off',
       'unicorn/consistent-class-member-order': 'off',

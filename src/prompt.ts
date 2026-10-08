@@ -1,4 +1,4 @@
-/* eslint-disable complexity */
+/* eslint-disable complexity -- interactive prompt flows branch heavily on tty/env/default state; splitting them would obscure the control flow */
 import {type Config} from '@oclif/core/config'
 import {run} from '@oclif/core/run'
 

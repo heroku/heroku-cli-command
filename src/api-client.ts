@@ -222,7 +222,7 @@ export class APIClient {
             if (settledResponses[0].status === 'fulfilled')
               response = settledResponses[0].value
             else
-              throw settledResponses[0].reason
+              throw settledResponses[0].reason as Error
 
             // Particleboard request (ignore errors)
             if (settledResponses[1].status === 'fulfilled') {
@@ -243,7 +243,7 @@ export class APIClient {
           if (retries > 0) {
             if (opts.retryAuth !== false && error.http.statusCode === 401) {
               if (process.env.HEROKU_API_KEY) {
-                throw new Error('The token provided to HEROKU_API_KEY is invalid. Please double-check that you have the correct token, or run `heroku login` without HEROKU_API_KEY set.')
+                throw new Error('The token provided to HEROKU_API_KEY is invalid. Please double-check that you have the correct token, or run `heroku login` without HEROKU_API_KEY set.', {cause: error})
               }
 
               self.authPromise ||= self.login()
@@ -418,8 +418,8 @@ export class APIClient {
             removeAuth(undefined, [vars.apiHost, vars.httpGitHost], credentialService(), entry.token),
           ])
           const localFailure = results.slice(1).find(result => result.status === 'rejected')
-          if (localFailure?.status === 'rejected') throw localFailure.reason
-          if (results[0].status === 'rejected') throw results[0].reason
+          if (localFailure?.status === 'rejected') throw localFailure.reason as Error
+          if (results[0].status === 'rejected') throw results[0].reason as Error
         }
       } catch (error) {
         if (error instanceof CLIError) warn(error)
