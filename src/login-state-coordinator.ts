@@ -1,5 +1,5 @@
 import {access} from 'node:fs/promises'
-import {join, resolve} from 'node:path'
+import path from 'node:path'
 
 import {
   deleteLoginState,
@@ -26,12 +26,12 @@ const queues = new Map<string, Queue>()
 const revisions = new Map<string, number>()
 
 function normalizedDataDir(dataDir: string): string {
-  return resolve(dataDir)
+  return path.resolve(dataDir)
 }
 
 async function loginStateExists(dataDir: string): Promise<boolean | undefined> {
   try {
-    await access(join(dataDir, 'login.json'))
+    await access(path.join(dataDir, 'login.json'))
     return true
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false

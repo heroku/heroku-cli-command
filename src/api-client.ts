@@ -6,7 +6,7 @@ import {CLIError, warn} from '@oclif/core/errors'
 import {ux} from '@oclif/core/ux'
 import debug from 'debug'
 import {access} from 'node:fs/promises'
-import {join} from 'node:path'
+import path from 'node:path'
 
 import {getStorageConfig} from './credential-manager-core/lib/credential-storage-selector.js'
 import {readLoginState} from './credential-manager-core/lib/login-state.js'
@@ -510,7 +510,7 @@ export class APIClient {
   private async loginStateExists(): Promise<boolean> {
     if (!this.config.dataDir) return false
     try {
-      await access(join(this.config.dataDir, 'login.json'))
+      await access(path.join(this.config.dataDir, 'login.json'))
       return true
     } catch {
       return false

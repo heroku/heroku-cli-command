@@ -1,7 +1,7 @@
 import {Config} from '@oclif/core/config'
 import {expect, fancy} from 'fancy-test'
 import nock from 'nock'
-import {dirname, resolve} from 'node:path'
+import path from 'node:path'
 import {fileURLToPath} from 'node:url'
 import * as sinon from 'sinon'
 
@@ -11,13 +11,13 @@ import * as flags from '../src/flags/index.js'
 import {restoreCredentialManagerStub, stubCredentialManager, stubCredentialManagerWithNoCredentials} from './helpers/credential-manager-stub.js'
 
 const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
+const __dirname = path.dirname(__filename)
 
 const {env: processEnv} = process
 
 const test = fancy
   .add('config', () => {
-    const config = new Config({root: resolve(__dirname, '../package.json')})
+    const config = new Config({root: path.resolve(__dirname, '../package.json')})
     return config
   })
 

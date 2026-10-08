@@ -7,7 +7,7 @@ import {expect, fancy} from 'fancy-test'
 import nock from 'nock'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
-import {dirname, join, resolve} from 'node:path'
+import path from 'node:path'
 import {fileURLToPath} from 'node:url'
 import * as sinon from 'sinon'
 import {stderr} from 'stdout-stderr'
@@ -32,17 +32,17 @@ class Command extends CommandBase {
 const {env} = process
 let api: nock.Scope
 const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
+const __dirname = path.dirname(__filename)
 function deferred<T = void>() {
   return Promise.withResolvers<T>()
 }
 
 const test = fancy
   .add('config', () => {
-    const config = new Config({root: resolve(__dirname, '../package.json')})
+    const config = new Config({root: path.resolve(__dirname, '../package.json')})
     return config
   })
-// const test = base.add('config', new Config({root: resolve(__dirname, '../package.json')}))
+// const test = base.add('config', new Config({root: path.resolve(__dirname, '../package.json')}))
 
 describe('api_client', () => {
   beforeEach(function () {
@@ -369,7 +369,7 @@ describe('api_client', () => {
     let platformStub: sinon.SinonStub
 
     beforeEach(() => {
-      tmpDir = fs.mkdtempSync(join(SYSTEM_TMPDIR, 'heroku-api-client-'))
+      tmpDir = fs.mkdtempSync(path.join(SYSTEM_TMPDIR, 'heroku-api-client-'))
       platformStub = sinon.stub(process, 'platform').value(TEST_PLATFORM)
     })
 
@@ -412,7 +412,7 @@ describe('api_client', () => {
         const cmd = new Command([], ctx.config)
         cmd.config = {...ctx.config, dataDir: tmpDir} as Config
         await cmd.heroku.logout()
-        expect(fs.existsSync(join(tmpDir, 'login.json'))).to.be.false
+        expect(fs.existsSync(path.join(tmpDir, 'login.json'))).to.be.false
       })
 
     test
@@ -429,7 +429,7 @@ describe('api_client', () => {
         cmd.config = {...ctx.config, dataDir: tmpDir} as Config
         await cmd.heroku.getAuthEntry()
         await (cmd.heroku as unknown as {_authLifecycle: Promise<void>})._authLifecycle
-        expect(fs.existsSync(join(tmpDir, 'login.json'))).to.be.false
+        expect(fs.existsSync(path.join(tmpDir, 'login.json'))).to.be.false
       })
 
     test
@@ -466,14 +466,14 @@ describe('api_client', () => {
           async removeAuth() {},
           async saveAuth() {},
         })
-        fs.writeFileSync(join(tmpDir, 'login.json'), '{malformed')
+        fs.writeFileSync(path.join(tmpDir, 'login.json'), '{malformed')
         const cmd = new Command([], ctx.config)
         cmd.config = {...ctx.config, dataDir: tmpDir} as Config
 
         await cmd.heroku.getAuthEntry()
         await (cmd.heroku as unknown as {_authLifecycle: Promise<void>})._authLifecycle
 
-        expect(fs.existsSync(join(tmpDir, 'login.json'))).to.be.false
+        expect(fs.existsSync(path.join(tmpDir, 'login.json'))).to.be.false
       })
 
     test
@@ -983,7 +983,7 @@ describe('api_client', () => {
           id: 'not_found',
           resource: 'authorization',
         })
-        const tmpDir = fs.mkdtempSync(join(SYSTEM_TMPDIR, 'heroku-api-client-token-logout-'))
+        const tmpDir = fs.mkdtempSync(path.join(SYSTEM_TMPDIR, 'heroku-api-client-token-logout-'))
         const cmd = new Command([], ctx.config)
         cmd.config = {...ctx.config, dataDir: tmpDir} as Config
         cmd.heroku.setAuthEntry({account: undefined, token: 'legacy-token'})
@@ -1158,7 +1158,7 @@ describe('api_client', () => {
       .it('lets no-token logout preserve queued cleanup for stale login.json', async ctx => {
         nock.cleanAll()
         api = nock('https://api.heroku.com')
-        const tmpDir = fs.mkdtempSync(join(SYSTEM_TMPDIR, 'heroku-api-client-no-token-'))
+        const tmpDir = fs.mkdtempSync(path.join(SYSTEM_TMPDIR, 'heroku-api-client-no-token-'))
         const platformStub = sinon.stub(process, 'platform').value(TEST_PLATFORM)
         setCredentialManagerProvider({
           async getAuth() {
@@ -1175,7 +1175,7 @@ describe('api_client', () => {
           await cmd.heroku.logout()
           await (cmd.heroku as unknown as {_authLifecycle: Promise<void>})._authLifecycle
 
-          expect(fs.existsSync(join(tmpDir, 'login.json'))).to.be.false
+          expect(fs.existsSync(path.join(tmpDir, 'login.json'))).to.be.false
           expect(cmd.heroku.auth).to.be.undefined
         } finally {
           platformStub.restore()
@@ -1187,7 +1187,7 @@ describe('api_client', () => {
       .it('lets no-token logout preserve queued cleanup for malformed login.json', async ctx => {
         nock.cleanAll()
         api = nock('https://api.heroku.com')
-        const tmpDir = fs.mkdtempSync(join(SYSTEM_TMPDIR, 'heroku-api-client-no-token-'))
+        const tmpDir = fs.mkdtempSync(path.join(SYSTEM_TMPDIR, 'heroku-api-client-no-token-'))
         const platformStub = sinon.stub(process, 'platform').value(TEST_PLATFORM)
         setCredentialManagerProvider({
           async getAuth() {
@@ -1196,7 +1196,7 @@ describe('api_client', () => {
           async removeAuth() {},
           async saveAuth() {},
         })
-        fs.writeFileSync(join(tmpDir, 'login.json'), '{malformed')
+        fs.writeFileSync(path.join(tmpDir, 'login.json'), '{malformed')
         const cmd = new Command([], ctx.config)
         cmd.config = {...ctx.config, dataDir: tmpDir} as Config
 
@@ -1204,7 +1204,7 @@ describe('api_client', () => {
           await cmd.heroku.logout()
           await (cmd.heroku as unknown as {_authLifecycle: Promise<void>})._authLifecycle
 
-          expect(fs.existsSync(join(tmpDir, 'login.json'))).to.be.false
+          expect(fs.existsSync(path.join(tmpDir, 'login.json'))).to.be.false
         } finally {
           platformStub.restore()
           fs.rmSync(tmpDir, {force: true, recursive: true})
@@ -1215,7 +1215,7 @@ describe('api_client', () => {
       .it('keeps no-token logout with no login state a clean no-op', async ctx => {
         nock.cleanAll()
         api = nock('https://api.heroku.com')
-        const tmpDir = fs.mkdtempSync(join(SYSTEM_TMPDIR, 'heroku-api-client-no-token-'))
+        const tmpDir = fs.mkdtempSync(path.join(SYSTEM_TMPDIR, 'heroku-api-client-no-token-'))
         const platformStub = sinon.stub(process, 'platform').value(TEST_PLATFORM)
         const unlink = sinon.spy(fs.promises, 'unlink')
         setCredentialManagerProvider({
@@ -1245,7 +1245,7 @@ describe('api_client', () => {
       .it('keeps newer auth and login state when no-token logout cleanup becomes stale', async ctx => {
         nock.cleanAll()
         api = nock('https://api.heroku.com')
-        const tmpDir = fs.mkdtempSync(join(SYSTEM_TMPDIR, 'heroku-api-client-no-token-'))
+        const tmpDir = fs.mkdtempSync(path.join(SYSTEM_TMPDIR, 'heroku-api-client-no-token-'))
         const platformStub = sinon.stub(process, 'platform').value(TEST_PLATFORM)
         const lookupStarted = deferred()
         const releaseLookup = deferred()

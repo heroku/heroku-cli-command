@@ -6,7 +6,7 @@ import {expect, fancy} from 'fancy-test'
 import nock from 'nock'
 import childProcess from 'node:child_process'
 import {EventEmitter} from 'node:events'
-import {dirname, resolve} from 'node:path'
+import path from 'node:path'
 import {fileURLToPath} from 'node:url'
 import * as sinon from 'sinon'
 
@@ -22,7 +22,7 @@ class Command extends CommandBase {
 }
 
 const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
+const __dirname = path.dirname(__filename)
 const environmentNames = [
   'HEROKU_API_KEY',
   'HEROKU_GIT_HOST',
@@ -34,7 +34,7 @@ const environmentNames = [
 ] as const
 let previousEnvironment: Record<(typeof environmentNames)[number], string | undefined>
 
-const test = fancy.add('config', () => new Config({root: resolve(__dirname, '../package.json')}))
+const test = fancy.add('config', () => new Config({root: path.resolve(__dirname, '../package.json')}))
 type Delegate = {
   apiClientForToken(token: string): Record<string, unknown>;
   browser: Record<string, unknown>;

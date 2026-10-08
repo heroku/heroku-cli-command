@@ -9,7 +9,7 @@ import {
 } from '@heroku/js-blanket'
 import * as Sentry from '@sentry/node'
 import {readFileSync} from 'node:fs'
-import {dirname, join} from 'node:path'
+import path from 'node:path'
 import {fileURLToPath} from 'node:url'
 
 import type {CredentialStore} from './credential-storage-selector.js'
@@ -38,8 +38,8 @@ function readPackageVersion(): string {
     return releaseCache
   }
 
-  const dir = dirname(fileURLToPath(import.meta.url))
-  const pkgPath = join(dir, '../../../package.json')
+  const dir = path.dirname(fileURLToPath(import.meta.url))
+  const pkgPath = path.join(dir, '../../../package.json')
   const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as {version?: string}
   releaseCache = pkg.version ?? 'unknown'
   return releaseCache

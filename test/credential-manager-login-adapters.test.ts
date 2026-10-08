@@ -13,7 +13,7 @@ import {mkdtempSync, rmSync, writeFileSync} from 'node:fs'
 import {createServer} from 'node:http'
 import {createRequire} from 'node:module'
 import {tmpdir} from 'node:os'
-import {dirname, resolve} from 'node:path'
+import path from 'node:path'
 import {fileURLToPath} from 'node:url'
 import * as sinon from 'sinon'
 
@@ -26,7 +26,7 @@ import {
 
 chai.use(chaiAsPromised)
 const {expect} = chai
-const __dirname = dirname(fileURLToPath(import.meta.url))
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const require = createRequire(import.meta.url)
 type ProxyPolicy = {env: NodeJS.ProcessEnv}
 const proxyPolicy = (require('@heroku/http-call/lib/proxy.js') as {default: ProxyPolicy}).default
@@ -224,7 +224,7 @@ describe('credential manager login adapters', () => {
     })
 
     it('turns the first 401 into LoginRequestError without command auth/login hooks or token replacement', async () => {
-      const config = new Config({root: resolve(__dirname, '../package.json')})
+      const config = new Config({root: path.resolve(__dirname, '../package.json')})
       const command = new Command([], config)
       command.heroku.setAuthEntry({account: 'old@example.com', token: 'token-a'})
       const loginHook = sinon.spy(command.heroku, 'login')
@@ -612,7 +612,7 @@ describe('credential manager login adapters', () => {
       process.env.HTTPS_PROXY = 'http://proxy.example.test:8080'
       process.env.NO_PROXY = 'direct.example.test'
       const directory = mkdtempSync(`${tmpdir()}/login-adapter-ca-`)
-      const certificate = resolve(directory, 'custom-ca.pem')
+      const certificate = path.resolve(directory, 'custom-ca.pem')
       writeFileSync(certificate, 'custom-ca')
       process.env.SSL_CERT_FILE = certificate
       class InspectingTransport<T> extends HTTP<T> {
@@ -647,7 +647,7 @@ describe('credential manager login adapters', () => {
     it('reevaluates proxy, NO_PROXY, and CA settings after process.env object replacement', async () => {
       const originalEnvironment = process.env
       const directory = mkdtempSync(`${tmpdir()}/login-adapter-replaced-env-`)
-      const certificate = resolve(directory, 'custom-ca.pem')
+      const certificate = path.resolve(directory, 'custom-ca.pem')
       writeFileSync(certificate, 'replacement-ca')
       process.env = {
         ...originalEnvironment,

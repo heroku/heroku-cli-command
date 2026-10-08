@@ -63,8 +63,7 @@ export default [
       //     import-x/no-cycle (real module cycles; breaking them is a refactor),
       //     consistent-type-assertions ('never' mode conflicts with the mock
       //       Config / HTTP<T> structural casts in tests), n/prefer-global/buffer,
-      //     unicorn/import-style (node:path named -> default rewrites ~112 call
-      //       sites), unicorn/consistent-class-member-order,
+      //     unicorn/consistent-class-member-order,
       //     unicorn/prefer-private-class-fields (_x -> #x changes visibility and
       //       breaks the reflective _-member access used in tests).
       //
@@ -89,7 +88,6 @@ export default [
       'require-unicode-regexp': 'off',
       'unicorn/consistent-boolean-name': 'off',
       'unicorn/consistent-class-member-order': 'off',
-      'unicorn/import-style': 'off',
       'unicorn/no-non-function-verb-prefix': 'off',
       'unicorn/prefer-https': 'off',
       'unicorn/prefer-private-class-fields': 'off',
