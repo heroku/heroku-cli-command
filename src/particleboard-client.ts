@@ -1,7 +1,6 @@
 import type {Config} from '@oclif/core/interfaces'
 
 import {HTTP, type HTTPRequestOptions} from '@heroku/http-call'
-import {URL} from 'node:url'
 
 import {RequestId, requestIdHeader} from './request-id.js'
 import {vars} from './vars.js'

@@ -576,6 +576,7 @@ describe('api_client', () => {
       ['different-account', 'different@example.com'],
     ] as const) {
       test
+        // eslint-disable-next-line @typescript-eslint/no-loop-func -- mocha registers these loop-generated tests to run later; the callback must read the beforeEach-assigned `tmpDir` at run time, so it cannot be snapshotted per iteration
         .it(`keeps a newer ${description} write from another APIClient when stale cleanup enters later`, async ctx => {
           const lookupStarted = deferred()
           const releaseLookup = deferred()

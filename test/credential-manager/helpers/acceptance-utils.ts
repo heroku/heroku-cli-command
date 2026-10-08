@@ -58,7 +58,7 @@ export async function cleanupDefaultNetrc(): Promise<void> {
       continue;
     }
 
-    delete netrc.machines[host]
+    Reflect.deleteProperty(netrc.machines, host)
     changed = true
   }
 
@@ -241,6 +241,7 @@ export function setupFakePowerShell(): FakeCredentialStoreSetup {
  * @returns An object with the original PATH and a cleanup function to restore state, or undefined if platform is not supported
  */
 export function setupFakeCredentialStore(): FakeCredentialStoreSetup | undefined {
+  // eslint-disable-next-line @typescript-eslint/switch-exhaustiveness-check -- process.platform has ~11 members; only darwin/linux/win32 are supported and the default returns undefined for the rest
   switch (process.platform) {
     case 'darwin': {
       if (!isSecurityAvailable()) return undefined

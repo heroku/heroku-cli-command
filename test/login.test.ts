@@ -97,13 +97,13 @@ function stubPrompts() {
 describe('Login facade', () => {
   beforeEach(() => {
     previousEnvironment = Object.fromEntries(environmentNames.map(name => [name, process.env[name]])) as typeof previousEnvironment
-    for (const name of environmentNames) delete process.env[name]
+    for (const name of environmentNames) Reflect.deleteProperty(process.env, name)
     provider()
   })
 
   afterEach(() => {
     for (const name of environmentNames) {
-      if (previousEnvironment[name] === undefined) delete process.env[name]
+      if (previousEnvironment[name] === undefined) Reflect.deleteProperty(process.env, name)
       else process.env[name] = previousEnvironment[name]
     }
 

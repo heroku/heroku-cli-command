@@ -7,7 +7,6 @@ import {ux} from '@oclif/core/ux'
 import debug from 'debug'
 import {access} from 'node:fs/promises'
 import {join} from 'node:path'
-import * as url from 'node:url'
 
 import {getStorageConfig} from './credential-manager-core/lib/credential-storage-selector.js'
 import {readLoginState} from './credential-manager-core/lib/login-state.js'
@@ -99,7 +98,7 @@ export class APIClient {
     if (options.debug) debug.enable('http')
     if (options.debug && options.debugHeaders) debug.enable('http,http:headers')
     this.options = options
-    const apiUrl = new url.URL(vars.apiUrl)
+    const apiUrl = new URL(vars.apiUrl)
     const envHeaders = JSON.parse(process.env.HEROKU_HEADERS || '{}')
     this.preauthPromises = {}
     const self = this as any

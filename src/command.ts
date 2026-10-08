@@ -103,13 +103,13 @@ export abstract class Command extends Base {
           this.warn(`You're using a deprecated syntax with the [${nonExistentFlags}] flag.\nAdd a '--' (end of options) separator before the flags you're passing through.`)
           for (const flag of nonExistentFlags) {
             const key = flag.replace('--', '')
-            delete parsed[key]
+            Reflect.deleteProperty(parsed, key)
           }
         }
 
         for (const key in parsed) {
           if (Reflect.has(parsed, key)) {
-            delete nonExistentFlagsWithValues[key]
+            Reflect.deleteProperty(nonExistentFlagsWithValues, key)
           }
         }
 

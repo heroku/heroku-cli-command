@@ -62,11 +62,12 @@ export function getGitRemotes(onlyRemote: string | undefined): IGitRemotes[] {
     for (const prefix of vars.gitPrefixes) {
       const suffix = '.git'
       const match = remote.url.match(`${prefix}(.*)${suffix}`)
-      if (!match) continue
-      appRemotes.push({
-        app: match[1],
-        remote: remote.name,
-      })
+      if (match) {
+        appRemotes.push({
+          app: match[1],
+          remote: remote.name,
+        })
+      }
     }
   }
 

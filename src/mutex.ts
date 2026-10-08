@@ -24,7 +24,7 @@ export class Mutex<T> {
     return task()
       .then(resolve, reject)
       .then(() => {
-        this.dequeue()
+        void this.dequeue()
       })
   }
 
@@ -32,7 +32,7 @@ export class Mutex<T> {
     return new Promise((resolve, reject) => {
       this.queue.push([task, resolve, reject])
       if (!this.busy) {
-        this.dequeue()
+        void this.dequeue()
       }
     })
   }

@@ -344,8 +344,9 @@ describe('credential-manager compatibility', function () {
 
       for (const relativePath of [...compatibilityModules, 'lib/cli-command-telemetry.ts']) {
         const emittedPath = relativePath.replace(/\.ts$/, '.js')
+        const declarationPath = emittedPath.replace(/\.js$/, '.d.ts')
         expect(fs.existsSync(path.join(outputRoot, 'credential-manager-core', emittedPath)), emittedPath).to.equal(true)
-        expect(fs.existsSync(path.join(outputRoot, 'credential-manager-core', emittedPath.replace(/\.js$/, '.d.ts'))), emittedPath).to.equal(true)
+        expect(fs.existsSync(path.join(outputRoot, 'credential-manager-core', declarationPath)), emittedPath).to.equal(true)
       }
 
       expect(fs.existsSync(path.join(outputRoot, 'deprecated'))).to.equal(false)

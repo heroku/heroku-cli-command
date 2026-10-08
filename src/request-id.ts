@@ -2,6 +2,7 @@ import {randomUUID} from 'node:crypto'
 
 export const requestIdHeader = 'Request-Id'
 
+// eslint-disable-next-line @typescript-eslint/no-extraneous-class -- RequestId is an exported static-class public API (RequestId.create()/track()/etc.); converting to free functions would be a breaking change
 export class RequestId {
   static ids: string[] = []
 
