@@ -73,6 +73,9 @@ const intentionalAdditions = new Set([
   'lib/login-state-coordinator.js',
 ])
 const intentionalPackageAdditions = new Set(['@heroku/heroku-credential-manager'])
+// Dependencies intentionally dropped versus the authoritative baseline. yargs-parser
+// and yargs-unparser were only used by the removed allowArbitraryFlags parse override.
+const intentionalPackageRemovals = new Set(['yargs-parser', 'yargs-unparser'])
 const sensitivePathPattern = /(^|\/)(?:\.npmrc|npmrc|npm-cache|\.npm|cache|logs?|_logs?)(?:\/|$)|(?:^|\/)(?:[^/]*(?:token|userconfig)[^/]*)$|heroku-credential-manager[^/]*\.tgz$/i
 const safeEnvironmentNames = new Set([
   'ALL_PROXY',
@@ -560,7 +563,7 @@ async function verifyPackManifest(packMetadata, baseline) {
   const removedDependencies = Object.keys(baselineDependencies).filter(name => !(name in currentDependencies))
   const changedDependencies = Object.keys(currentDependencies).filter(name => name in baselineDependencies && currentDependencies[name] !== baselineDependencies[name])
   check(addedDependencies.every(name => intentionalPackageAdditions.has(name)), `unexpected dependencies added versus baseline: ${addedDependencies.join(', ')}`)
-  check(removedDependencies.length === 0, `dependencies removed versus baseline: ${removedDependencies.join(', ')}`)
+  check(removedDependencies.every(name => intentionalPackageRemovals.has(name)), `unexpected dependencies removed versus baseline: ${removedDependencies.filter(name => !intentionalPackageRemovals.has(name)).join(', ')}`)
   check(changedDependencies.every(name => intentionalDependencyChanges.has(name)), `unexpected dependency ranges changed versus baseline: ${changedDependencies.join(', ')}`)
   check(currentDependencies['@heroku/http-call'] === expectedDependencies.get('@heroku/http-call').version, '@heroku/http-call baseline range did not change to the required exact version')
   return {added, paths}

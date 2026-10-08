@@ -1,5 +1,4 @@
 import {Command as Base} from '@oclif/core/command'
-import {type CLIError} from '@oclif/core/errors'
 import * as Flags from '@oclif/core/flags'
 
 import {APIClient, type IOptions} from './api-client.js'
@@ -21,7 +20,6 @@ export abstract class Command extends Base {
    */
   static promptFlagActive = true
   _heroku!: APIClient
-  allowArbitraryFlags = false
 
   /**
    * Helper function to get baseFlags without the prompt flag
@@ -86,56 +84,5 @@ export abstract class Command extends Base {
   protected isPromptModeActive(): boolean {
     const Ctor = this.constructor as typeof Command
     return Ctor.promptFlagActive && ('prompt' in Ctor.baseFlags)
-  }
-
-  protected async parse(options?: any, argv?: string[]): Promise<any> {
-    if (this.allowArbitraryFlags) {
-      try {
-        return await super.parse(options, argv)
-      } catch (error) {
-        const parser = (await import('yargs-parser')).default
-        const unparser = (await import('yargs-unparser')).default
-        const {flags: nonExistentFlags} = error as CLIError & {flags: string[]}
-        const parsed = parser(this.argv)
-        const nonExistentFlagsWithValues = {...parsed}
-
-        if (nonExistentFlags && nonExistentFlags.length > 0) {
-          this.warn(`You're using a deprecated syntax with the [${nonExistentFlags.join(',')}] flag.\nAdd a '--' (end of options) separator before the flags you're passing through.`)
-          for (const flag of nonExistentFlags) {
-            const key = flag.replace('--', '')
-            Reflect.deleteProperty(parsed, key)
-          }
-        }
-
-        for (const key in parsed) {
-          if (Reflect.has(parsed, key)) {
-            Reflect.deleteProperty(nonExistentFlagsWithValues, key)
-          }
-        }
-
-        this.argv = unparser(parsed as any)
-        const result = await super.parse(options, argv)
-        result.nonExistentFlags = unparser(nonExistentFlagsWithValues as any)
-
-        for (let index = 0; index < result.nonExistentFlags.length; index++) {
-          const positionalValue = result.nonExistentFlags[index]
-          const positionalValueIsFlag = positionalValue.startsWith('--')
-          if (positionalValueIsFlag) {
-            const nextElement = result.nonExistentFlags[index + 1] ?? ''
-            const nextElementIsFlag = nextElement.startsWith('--')
-            // eslint-disable-next-line max-depth
-            if (nextElement && !nextElementIsFlag) {
-              result.argv.push(`${positionalValue}=${nextElement}`)
-            } else if (!nextElement || nextElementIsFlag) {
-              result.argv.push(`${positionalValue}=true`)
-            }
-          }
-        }
-
-        return result
-      }
-    }
-
-    return super.parse(options, argv)
   }
 }
