@@ -4,21 +4,21 @@ import {promisify} from 'node:util'
 
 let _debug: any
 function debug(...args: any[]) {
-  if (!_debug) _debug = debugModule('@heroku-cli/command:file')
+  _debug ||= debugModule('@heroku-cli/command:file')
   _debug(...args)
 }
 
-export function exists(f: string): Promise<boolean> {
+export async function exists(f: string): Promise<boolean> {
   // eslint-disable-next-line n/no-deprecated-api
   return promisify(fs.exists)(f)
 }
 
-export function readdir(f: string): Promise<string[]> {
+export async function readdir(f: string): Promise<string[]> {
   debug('readdir', f)
   return promisify(fs.readdir)(f)
 }
 
-export function readFile(f: string) {
+export async function readFile(f: string) {
   debug('readFile', f)
   return promisify(fs.readFile)(f)
 }

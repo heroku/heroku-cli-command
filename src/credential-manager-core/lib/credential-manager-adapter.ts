@@ -51,7 +51,7 @@ export async function getAuth(
   const config = getStorageConfig()
   const netrcHandler = new NetrcHandler()
 
-  if (config.credentialStore && account) {
+  if (account && config.credentialStore) {
     try {
       const handler = getCredentialHandler(config.credentialStore)
       return {account, token: handler.getAuth(account, service)}

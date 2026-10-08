@@ -7,13 +7,10 @@ import {expect, fancy} from 'fancy-test'
 import nock from 'nock'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
-import {dirname, join, resolve} from 'node:path'
+import path from 'node:path'
 import {fileURLToPath} from 'node:url'
 import * as sinon from 'sinon'
 import {stderr} from 'stdout-stderr'
-
-const SYSTEM_TMPDIR = os.tmpdir()
-const TEST_PLATFORM = process.platform === 'win32' ? 'win32' : 'darwin'
 
 import {Command as CommandBase} from '../src/command.js'
 import {readLoginState, writeLoginState} from '../src/credential-manager-core/lib/login-state.js'
@@ -22,6 +19,9 @@ import {writeLoginStateCoordinated} from '../src/login-state-coordinator.js'
 import {prompter} from '../src/prompter.js'
 import {RequestId, requestIdHeader} from '../src/request-id.js'
 import {restoreCredentialManagerStub, stubCredentialManager} from './helpers/credential-manager-stub.js'
+
+const SYSTEM_TMPDIR = os.tmpdir()
+const TEST_PLATFORM = process.platform === 'win32' ? 'win32' : 'darwin'
 
 use(chaiAsPromised)
 
@@ -32,23 +32,17 @@ class Command extends CommandBase {
 const {env} = process
 let api: nock.Scope
 const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
+const __dirname = path.dirname(__filename)
 function deferred<T = void>() {
-  let reject!: (reason?: unknown) => void
-  let resolve!: (value: PromiseLike<T> | T) => void
-  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
-    reject = rejectPromise
-    resolve = resolvePromise
-  })
-  return {promise, reject, resolve}
+  return Promise.withResolvers<T>()
 }
 
 const test = fancy
   .add('config', () => {
-    const config = new Config({root: resolve(__dirname, '../package.json')})
+    const config = new Config({root: path.resolve(__dirname, '../package.json')})
     return config
   })
-// const test = base.add('config', new Config({root: resolve(__dirname, '../package.json')}))
+// const test = base.add('config', new Config({root: path.resolve(__dirname, '../package.json')}))
 
 describe('api_client', () => {
   beforeEach(function () {
@@ -360,7 +354,7 @@ describe('api_client', () => {
         cmd.config = ctx.config
         sinon.stub(cmd.heroku, 'login').callsFake(async () => {
           cmd.heroku.setAuthEntry({account: undefined, token: 'fresh-token'})
-          return undefined as any
+          return undefined
         })
 
         const {body} = await cmd.heroku.get('/account')
@@ -375,7 +369,7 @@ describe('api_client', () => {
     let platformStub: sinon.SinonStub
 
     beforeEach(() => {
-      tmpDir = fs.mkdtempSync(join(SYSTEM_TMPDIR, 'heroku-api-client-'))
+      tmpDir = fs.mkdtempSync(path.join(SYSTEM_TMPDIR, 'heroku-api-client-'))
       platformStub = sinon.stub(process, 'platform').value(TEST_PLATFORM)
     })
 
@@ -418,7 +412,7 @@ describe('api_client', () => {
         const cmd = new Command([], ctx.config)
         cmd.config = {...ctx.config, dataDir: tmpDir} as Config
         await cmd.heroku.logout()
-        expect(fs.existsSync(join(tmpDir, 'login.json'))).to.be.false
+        expect(fs.existsSync(path.join(tmpDir, 'login.json'))).to.be.false
       })
 
     test
@@ -435,7 +429,7 @@ describe('api_client', () => {
         cmd.config = {...ctx.config, dataDir: tmpDir} as Config
         await cmd.heroku.getAuthEntry()
         await (cmd.heroku as unknown as {_authLifecycle: Promise<void>})._authLifecycle
-        expect(fs.existsSync(join(tmpDir, 'login.json'))).to.be.false
+        expect(fs.existsSync(path.join(tmpDir, 'login.json'))).to.be.false
       })
 
     test
@@ -472,14 +466,14 @@ describe('api_client', () => {
           async removeAuth() {},
           async saveAuth() {},
         })
-        fs.writeFileSync(join(tmpDir, 'login.json'), '{malformed')
+        fs.writeFileSync(path.join(tmpDir, 'login.json'), '{malformed')
         const cmd = new Command([], ctx.config)
         cmd.config = {...ctx.config, dataDir: tmpDir} as Config
 
         await cmd.heroku.getAuthEntry()
         await (cmd.heroku as unknown as {_authLifecycle: Promise<void>})._authLifecycle
 
-        expect(fs.existsSync(join(tmpDir, 'login.json'))).to.be.false
+        expect(fs.existsSync(path.join(tmpDir, 'login.json'))).to.be.false
       })
 
     test
@@ -504,7 +498,7 @@ describe('api_client', () => {
         const cmd = new Command([], ctx.config)
         cmd.config = {...ctx.config, dataDir: tmpDir} as Config
         const facade = (cmd.heroku as unknown as {
-          _login: {login(): Promise<void>}
+          _login: {login(): Promise<void>};
         })._login
         const login = sinon.stub(facade, 'login').callsFake(async () => {
           await writeLoginStateCoordinated(tmpDir, 'new@example.com')
@@ -549,7 +543,7 @@ describe('api_client', () => {
         const cmd = new Command([], ctx.config)
         cmd.config = {...ctx.config, dataDir: tmpDir} as Config
         const {_login} = cmd.heroku as unknown as {
-          _login: {createDelegate(): {storage: {writeLoginState(dataDir: string, account: string): Promise<void>}}}
+          _login: {createDelegate(): {storage: {writeLoginState(dataDir: string, account: string): Promise<void>}}};
         }
         const {storage} = _login.createDelegate()
 
@@ -582,6 +576,7 @@ describe('api_client', () => {
       ['different-account', 'different@example.com'],
     ] as const) {
       test
+        // eslint-disable-next-line @typescript-eslint/no-loop-func -- mocha registers these loop-generated tests to run later; the callback must read the beforeEach-assigned `tmpDir` at run time, so it cannot be snapshotted per iteration
         .it(`keeps a newer ${description} write from another APIClient when stale cleanup enters later`, async ctx => {
           const lookupStarted = deferred()
           const releaseLookup = deferred()
@@ -600,7 +595,7 @@ describe('api_client', () => {
           const newerCommand = new Command([], ctx.config)
           newerCommand.config = {...ctx.config, dataDir: tmpDir} as Config
           const {_login} = newerCommand.heroku as unknown as {
-            _login: {createDelegate(): {storage: {writeLoginState(dataDir: string, account: string): Promise<void>}}}
+            _login: {createDelegate(): {storage: {writeLoginState(dataDir: string, account: string): Promise<void>}}};
           }
           const {storage} = _login.createDelegate()
 
@@ -654,7 +649,9 @@ describe('api_client', () => {
         const reachedOAuth = await Promise.race([
           oauthStarted.promise.then(() => true),
           new Promise<false>(resolve => {
-            setTimeout(() => resolve(false), 250)
+            setTimeout(() => {
+              resolve(false)
+            }, 250)
           }),
         ])
 
@@ -686,14 +683,16 @@ describe('api_client', () => {
         const cmd = new Command([], ctx.config)
         cmd.config = {...ctx.config, dataDir: tmpDir} as Config
         const facade = (cmd.heroku as unknown as {
-          _login: {login(): Promise<void>}
+          _login: {login(): Promise<void>};
         })._login
         const login = sinon.stub(facade, 'login')
         login.onFirstCall().callsFake(async () => {
-          setImmediate(async () => {
-            await triggerDetachedRead.promise
-            await cmd.heroku.getAuthEntry()
-            detachedReadFinished.resolve()
+          setImmediate(() => {
+            void (async () => {
+              await triggerDetachedRead.promise
+              await cmd.heroku.getAuthEntry()
+              detachedReadFinished.resolve()
+            })()
           })
         })
         login.onSecondCall().callsFake(async () => {
@@ -807,8 +806,8 @@ describe('api_client', () => {
 
   describe('auth lifecycle serialization', () => {
     type LoginFacade = {
-      login(options?: unknown): Promise<void>
-      logoutEntry(entry: {account: string; token: string}): Promise<void>
+      login(options?: unknown): Promise<void>;
+      logoutEntry(entry: {account: string; token: string}): Promise<void>;
     }
 
     function facade(cmd: Command): LoginFacade {
@@ -891,12 +890,12 @@ describe('api_client', () => {
   })
 
   describe('logout', () => {
-    const removeAuthCalls: {
-      account: string | undefined
-      expectedToken: string | undefined
-      hosts: string[]
-      service: string | undefined
-    }[] = []
+    const removeAuthCalls: Array<{
+      account: string | undefined;
+      expectedToken: string | undefined;
+      hosts: string[];
+      service: string | undefined;
+    }> = []
 
     beforeEach(() => {
       removeAuthCalls.length = 0
@@ -984,7 +983,7 @@ describe('api_client', () => {
           id: 'not_found',
           resource: 'authorization',
         })
-        const tmpDir = fs.mkdtempSync(join(SYSTEM_TMPDIR, 'heroku-api-client-token-logout-'))
+        const tmpDir = fs.mkdtempSync(path.join(SYSTEM_TMPDIR, 'heroku-api-client-token-logout-'))
         const cmd = new Command([], ctx.config)
         cmd.config = {...ctx.config, dataDir: tmpDir} as Config
         cmd.heroku.setAuthEntry({account: undefined, token: 'legacy-token'})
@@ -1090,10 +1089,9 @@ describe('api_client', () => {
         cmd.config = ctx.config
 
         stderr.start()
-        const result = await cmd.heroku.logout()
+        await cmd.heroku.logout()
         stderr.stop()
 
-        expect(result).to.be.undefined
         expect(stderr.output).to.equal('')
         expect(cmd.heroku.auth).to.be.undefined
       })
@@ -1121,9 +1119,8 @@ describe('api_client', () => {
         const cmd = new Command([], ctx.config)
         cmd.config = ctx.config
 
-        const result = await cmd.heroku.logout()
+        await cmd.heroku.logout()
 
-        expect(result).to.be.undefined
         expect(cmd.heroku.auth).to.be.undefined
       })
 
@@ -1161,7 +1158,7 @@ describe('api_client', () => {
       .it('lets no-token logout preserve queued cleanup for stale login.json', async ctx => {
         nock.cleanAll()
         api = nock('https://api.heroku.com')
-        const tmpDir = fs.mkdtempSync(join(SYSTEM_TMPDIR, 'heroku-api-client-no-token-'))
+        const tmpDir = fs.mkdtempSync(path.join(SYSTEM_TMPDIR, 'heroku-api-client-no-token-'))
         const platformStub = sinon.stub(process, 'platform').value(TEST_PLATFORM)
         setCredentialManagerProvider({
           async getAuth() {
@@ -1178,7 +1175,7 @@ describe('api_client', () => {
           await cmd.heroku.logout()
           await (cmd.heroku as unknown as {_authLifecycle: Promise<void>})._authLifecycle
 
-          expect(fs.existsSync(join(tmpDir, 'login.json'))).to.be.false
+          expect(fs.existsSync(path.join(tmpDir, 'login.json'))).to.be.false
           expect(cmd.heroku.auth).to.be.undefined
         } finally {
           platformStub.restore()
@@ -1190,7 +1187,7 @@ describe('api_client', () => {
       .it('lets no-token logout preserve queued cleanup for malformed login.json', async ctx => {
         nock.cleanAll()
         api = nock('https://api.heroku.com')
-        const tmpDir = fs.mkdtempSync(join(SYSTEM_TMPDIR, 'heroku-api-client-no-token-'))
+        const tmpDir = fs.mkdtempSync(path.join(SYSTEM_TMPDIR, 'heroku-api-client-no-token-'))
         const platformStub = sinon.stub(process, 'platform').value(TEST_PLATFORM)
         setCredentialManagerProvider({
           async getAuth() {
@@ -1199,7 +1196,7 @@ describe('api_client', () => {
           async removeAuth() {},
           async saveAuth() {},
         })
-        fs.writeFileSync(join(tmpDir, 'login.json'), '{malformed')
+        fs.writeFileSync(path.join(tmpDir, 'login.json'), '{malformed')
         const cmd = new Command([], ctx.config)
         cmd.config = {...ctx.config, dataDir: tmpDir} as Config
 
@@ -1207,7 +1204,7 @@ describe('api_client', () => {
           await cmd.heroku.logout()
           await (cmd.heroku as unknown as {_authLifecycle: Promise<void>})._authLifecycle
 
-          expect(fs.existsSync(join(tmpDir, 'login.json'))).to.be.false
+          expect(fs.existsSync(path.join(tmpDir, 'login.json'))).to.be.false
         } finally {
           platformStub.restore()
           fs.rmSync(tmpDir, {force: true, recursive: true})
@@ -1218,7 +1215,7 @@ describe('api_client', () => {
       .it('keeps no-token logout with no login state a clean no-op', async ctx => {
         nock.cleanAll()
         api = nock('https://api.heroku.com')
-        const tmpDir = fs.mkdtempSync(join(SYSTEM_TMPDIR, 'heroku-api-client-no-token-'))
+        const tmpDir = fs.mkdtempSync(path.join(SYSTEM_TMPDIR, 'heroku-api-client-no-token-'))
         const platformStub = sinon.stub(process, 'platform').value(TEST_PLATFORM)
         const unlink = sinon.spy(fs.promises, 'unlink')
         setCredentialManagerProvider({
@@ -1248,7 +1245,7 @@ describe('api_client', () => {
       .it('keeps newer auth and login state when no-token logout cleanup becomes stale', async ctx => {
         nock.cleanAll()
         api = nock('https://api.heroku.com')
-        const tmpDir = fs.mkdtempSync(join(SYSTEM_TMPDIR, 'heroku-api-client-no-token-'))
+        const tmpDir = fs.mkdtempSync(path.join(SYSTEM_TMPDIR, 'heroku-api-client-no-token-'))
         const platformStub = sinon.stub(process, 'platform').value(TEST_PLATFORM)
         const lookupStarted = deferred()
         const releaseLookup = deferred()
@@ -1349,7 +1346,7 @@ describe('api_client', () => {
           if (error instanceof Error) {
             expect(error.message).to.equal('The token provided to HEROKU_API_KEY is invalid. Please double-check that you have the correct token, or run `heroku login` without HEROKU_API_KEY set.')
           } else {
-            throw new TypeError('Unexpected error')
+            throw new TypeError('Unexpected error', {cause: error})
           }
         }
       })
@@ -1463,7 +1460,7 @@ describe('api_client', () => {
         await cmd.heroku.get('/account')
 
         const stderrOutput = stderr.output.replaceAll(/ *[»›] */g, '').replaceAll(/ *\n */g, ' ')
-        expect(stderrOutput).to.include(`Warning: This account is delinquent with payment and we'll suspend it on ${suspensionTime}`)
+        expect(stderrOutput).to.include(`Warning: This account is delinquent with payment and we'll suspend it on ${suspensionTime.toString()}`)
         stderr.stop()
         particleboard.done()
       })
@@ -1490,7 +1487,7 @@ describe('api_client', () => {
         await cmd.heroku.get('/account')
 
         const stderrOutput = stderr.output.replaceAll(/ *[»›] */g, '').replaceAll(/ *\n */g, ' ')
-        expect(stderrOutput).to.include(`Warning: This account is delinquent with payment and we suspended it on ${suspensionTime}. If the account is still delinquent, we'll delete it on ${deletionTime}`)
+        expect(stderrOutput).to.include(`Warning: This account is delinquent with payment and we suspended it on ${suspensionTime.toString()}. If the account is still delinquent, we'll delete it on ${deletionTime.toString()}`)
         stderr.stop()
         particleboard.done()
       })
@@ -1519,7 +1516,7 @@ describe('api_client', () => {
         await cmd.heroku.get('/account')
 
         const stderrOutput = stderr.output.replaceAll(/ *[»›] */g, '').replaceAll(/ *\n */g, ' ')
-        expect(stderrOutput).to.include(`Warning: This account is delinquent with payment and we'll suspend it on ${suspensionTime}`)
+        expect(stderrOutput).to.include(`Warning: This account is delinquent with payment and we'll suspend it on ${suspensionTime.toString()}`)
         stderr.stop()
 
         stderr.start()
@@ -1615,7 +1612,7 @@ describe('api_client', () => {
         await cmd.heroku.get('/teams/my_team/members')
 
         const stderrOutput = stderr.output.replaceAll(/ *[»›] */g, '').replaceAll(/ *\n */g, ' ')
-        expect(stderrOutput).to.include(`Warning: This team is delinquent with payment and we'll suspend it on ${suspensionTime}`)
+        expect(stderrOutput).to.include(`Warning: This team is delinquent with payment and we'll suspend it on ${suspensionTime.toString()}`)
         stderr.stop()
         particleboard.done()
       })
@@ -1642,7 +1639,7 @@ describe('api_client', () => {
         await cmd.heroku.get('/teams/my_team/members')
 
         const stderrOutput = stderr.output.replaceAll(/ *[»›] */g, '').replaceAll(/ *\n */g, ' ')
-        expect(stderrOutput).to.include(`Warning: This team is delinquent with payment and we suspended it on ${suspensionTime}. If the team is still delinquent, we'll delete it on ${deletionTime}`)
+        expect(stderrOutput).to.include(`Warning: This team is delinquent with payment and we suspended it on ${suspensionTime.toString()}. If the team is still delinquent, we'll delete it on ${deletionTime.toString()}`)
         stderr.stop()
         particleboard.done()
       })
@@ -1671,7 +1668,7 @@ describe('api_client', () => {
         await cmd.heroku.get('/teams/my_team/members')
 
         const stderrOutput = stderr.output.replaceAll(/ *[»›] */g, '').replaceAll(/ *\n */g, ' ')
-        expect(stderrOutput).to.include(`Warning: This team is delinquent with payment and we'll suspend it on ${suspensionTime}`)
+        expect(stderrOutput).to.include(`Warning: This team is delinquent with payment and we'll suspend it on ${suspensionTime.toString()}`)
         stderr.stop()
 
         stderr.start()

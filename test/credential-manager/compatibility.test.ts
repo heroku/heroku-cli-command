@@ -56,11 +56,11 @@ const packageJsonLookup = "join(dir, '../../../package.json')"
 const relocatedPackageJsonLookup = "join(dir, '../../../../package.json')"
 
 type StorageBaseline = {
-  allowedRelocations: Array<{archived: string; baseline: string; path: string}>
-  files: Array<{bytes: number; path: string; sha256: string}>
-  packageVersion: string
-  provenance: {commit: string; derivation: string; ref: string; sourceRoot: string}
-  schemaVersion: number
+  allowedRelocations: Array<{archived: string; baseline: string; path: string}>;
+  files: Array<{bytes: number; path: string; sha256: string}>;
+  packageVersion: string;
+  provenance: {commit: string; derivation: string; ref: string; sourceRoot: string};
+  schemaVersion: number;
 }
 
 function listFiles(root: string, relativeRoot = ''): string[] {
@@ -210,16 +210,12 @@ describe('credential-manager compatibility', function () {
 
   it('preserves external runtime identities except command-owned storage adapters', async function () {
     for (const name of externalRuntimeExports) {
-      // eslint-disable-next-line import/namespace
       expect(credentialManagerCore[name], `credential-manager-core ${name}`).to.equal(externalCredentialManager[name])
-      // eslint-disable-next-line import/namespace
       expect(commandRoot[name], `command root ${name}`).to.equal(externalCredentialManager[name])
     }
 
     for (const name of ['getAuth', 'listKeychainAccounts', 'removeAuth', 'saveAuth'] as const) {
-      // eslint-disable-next-line import/namespace
       expect(commandRoot[name], `command root ${name}`).to.equal(credentialManagerCore[name])
-      // eslint-disable-next-line import/namespace
       expect(commandRoot[name], `${name} is command-owned`).to.not.equal(externalCredentialManager[name])
     }
 
@@ -246,6 +242,10 @@ describe('credential-manager compatibility', function () {
     const compiler = path.resolve('node_modules/typescript/bin/tsc')
     execFileSync(process.execPath, [
       compiler,
+      // TypeScript 6 errors (TS5112) when files are passed on the command line
+      // while a tsconfig.json is present; this fixture is compiled in isolation
+      // with explicit flags, so ignore the repo config.
+      '--ignoreConfig',
       '--noEmit',
       '--strict',
       '--skipLibCheck',
@@ -295,11 +295,11 @@ describe('credential-manager compatibility', function () {
       baseline: packageJsonLookup,
       path: 'lib/cli-command-telemetry.ts',
     }])
-    expect(listFiles(archivedRoot).sort()).to.deep.equal(baseline.files.map(file => file.path).sort())
+    expect(listFiles(archivedRoot).toSorted()).to.deep.equal(baseline.files.map(file => file.path).toSorted())
 
     for (const file of baseline.files) {
       const archivedSource = fs.readFileSync(path.join(archivedRoot, file.path), 'utf8')
-      const normalizedSource = archivedSource.replace(relocatedPackageJsonLookup, packageJsonLookup)
+      const normalizedSource = archivedSource.replace(relocatedPackageJsonLookup, () => packageJsonLookup)
       expect(Buffer.byteLength(normalizedSource), `${file.path} byte length`).to.equal(file.bytes)
       expect(sha256(normalizedSource), `${file.path} SHA-256`).to.equal(file.sha256)
 
@@ -344,8 +344,9 @@ describe('credential-manager compatibility', function () {
 
       for (const relativePath of [...compatibilityModules, 'lib/cli-command-telemetry.ts']) {
         const emittedPath = relativePath.replace(/\.ts$/, '.js')
+        const declarationPath = emittedPath.replace(/\.js$/, '.d.ts')
         expect(fs.existsSync(path.join(outputRoot, 'credential-manager-core', emittedPath)), emittedPath).to.equal(true)
-        expect(fs.existsSync(path.join(outputRoot, 'credential-manager-core', emittedPath.replace(/\.js$/, '.d.ts'))), emittedPath).to.equal(true)
+        expect(fs.existsSync(path.join(outputRoot, 'credential-manager-core', declarationPath)), emittedPath).to.equal(true)
       }
 
       expect(fs.existsSync(path.join(outputRoot, 'deprecated'))).to.equal(false)

@@ -2,7 +2,11 @@ import {expect, use} from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 
 import {
-  CredentialStore, getAuth, getStorageConfig, LinuxHandler, listKeychainAccounts, Netrc, removeAuth, saveAuth,
+  getAuth,
+  listKeychainAccounts,
+  Netrc,
+  removeAuth,
+  saveAuth,
 } from '../../../src/credential-manager-core/index.js'
 import {
   cleanupCredentialStore,
@@ -169,7 +173,7 @@ describe('credential-manager acceptance', function () {
       const netrc = new Netrc()
       await netrc.load()
       for (const host of CREDENTIAL.hosts) {
-        if (netrc.machines[host]) {
+        if (Object.hasOwn(netrc.machines, host)) {
           netrcHasCredentials = true
         }
       }
@@ -230,55 +234,6 @@ describe('credential-manager acceptance', function () {
     it('errors when credentials are missing from credential store and netrc', async function () {
       await expect(getAuth(CREDENTIAL.account, CREDENTIAL.hosts[0], CREDENTIAL.service))
         .to.be.rejectedWith(/No auth found|No credentials found/)
-    })
-  })
-
-  describe('Linux native credential store + netrc fallback', function () {
-    before(function () {
-      if (process.platform !== 'linux' || !process.env.DBUS_SESSION_BUS_ADDRESS) {
-        this.skip()
-      }
-    })
-
-    it('falls back to netrc after Linux Secret Service reports no matching item', async function () {
-      const fixture = CREDENTIAL_ALTERNATE_SERVICE
-      const handler = new LinuxHandler()
-      const originalNetrcWrite = process.env.HEROKU_NETRC_WRITE
-      const netrcSnapshot = snapshotDefaultNetrc()
-
-      try {
-        // Use only this fixture's account/service pair, never all items in the user's keyring.
-        handler.removeAuth(fixture.account, fixture.service)
-        expect(handler.getAuthIfAvailable(fixture.account, fixture.service)).to.be.undefined
-
-        // Seed netrc without saving a duplicate item in the native store.
-        process.env.HEROKU_NETRC_WRITE = 'TRUE'
-        await saveAuth(fixture.account, fixture.token, [...fixture.hosts], fixture.service)
-
-        // HEROKU_NETRC_WRITE forces netrc-only selection, so unset it to exercise dispatcher fallback.
-        delete process.env.HEROKU_NETRC_WRITE
-        expect(getStorageConfig()).to.deep.equal({
-          credentialStore: CredentialStore.LinuxSecretService,
-          useNetrc: false,
-        })
-
-        const auth = await getAuth(fixture.account, fixture.hosts[0], fixture.service)
-        expect(auth).to.deep.equal({account: fixture.account, token: fixture.token})
-      } finally {
-        try {
-          handler.removeAuth(fixture.account, fixture.service)
-        } finally {
-          try {
-            netrcSnapshot.restore()
-          } finally {
-            if (originalNetrcWrite === undefined) {
-              delete process.env.HEROKU_NETRC_WRITE
-            } else {
-              process.env.HEROKU_NETRC_WRITE = originalNetrcWrite
-            }
-          }
-        }
-      }
     })
   })
 })

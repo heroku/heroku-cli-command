@@ -8,9 +8,7 @@
     "moduleResolution": "NodeNext",
     "outDir": "./lib",
     "pretty": true,
-    "rootDirs": [
-      "./src"
-    ],
+    "rootDir": "./src",
     "skipLibCheck": true,
     "strict": true,
     "target": "es2022"

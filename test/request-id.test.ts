@@ -56,7 +56,7 @@ describe('getRequestId', () => {
     expect(ids).to.deep.equal(['tracked', 'random'])
 
     generateStub.returns('another-random')
-    ids = RequestId.create()
+    RequestId.create()
     expect(RequestId.ids).to.deep.equal(['another-random', 'tracked', 'random'])
     expect(RequestId.headerValue).to.deep.equal('another-random,tracked,random')
   })

@@ -7,7 +7,7 @@ export class Mutex<T> {
   private busy = false
   private readonly queue: Array<Record<T>> = []
 
-  dequeue() {
+  async dequeue() {
     this.busy = true
     const next = this.queue.shift()
 
@@ -18,21 +18,30 @@ export class Mutex<T> {
     this.busy = false
   }
 
-  execute(record: Record<T>) {
+  async execute(record: Record<T>) {
     const [task, resolve, reject] = record
 
-    return task()
-      .then(resolve, reject)
-      .then(() => {
-        this.dequeue()
-      })
+    // Use try/finally rather than task().then(resolve, reject).then(dequeue):
+    // because dequeue/execute are async, a task that throws *synchronously*
+    // would otherwise become a rejected promise that is discarded by the
+    // `void this.dequeue()` callers, leaving the caller's promise forever
+    // pending and the queue stalled (busy never resets). Awaiting the task
+    // inside try funnels both synchronous throws and rejections to reject(),
+    // and finally guarantees the queue keeps draining.
+    try {
+      resolve(await task())
+    } catch (error) {
+      reject(error)
+    } finally {
+      void this.dequeue()
+    }
   }
 
-  synchronize(task: Task<T>): Promise<T> {
+  async synchronize(task: Task<T>): Promise<T> {
     return new Promise((resolve, reject) => {
       this.queue.push([task, resolve, reject])
       if (!this.busy) {
-        this.dequeue()
+        void this.dequeue()
       }
     })
   }

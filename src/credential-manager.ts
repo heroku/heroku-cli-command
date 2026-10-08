@@ -11,14 +11,14 @@ import {
 
 /** Backward-compatible shape used by command consumers before storage extraction. */
 export type AuthEntry = {
-  account: string | undefined
-  token: string | undefined
+  account: string | undefined;
+  token: string | undefined;
 }
 
-export interface CredentialManagerProvider {
-  getAuth: (account: string | undefined, host: string, service?: string) => Promise<AuthEntry>
-  removeAuth: (account: string | undefined, hosts: string[], service?: string, expectedToken?: string) => Promise<void>
-  saveAuth: (account: string, token: string, hosts: string[], service?: string) => Promise<void>
+export type CredentialManagerProvider = {
+  getAuth: (account: string | undefined, host: string, service?: string) => Promise<AuthEntry>;
+  removeAuth: (account: string | undefined, hosts: string[], service?: string, expectedToken?: string) => Promise<void>;
+  saveAuth: (account: string, token: string, hosts: string[], service?: string) => Promise<void>;
 }
 
 let provider: CredentialManagerProvider = {

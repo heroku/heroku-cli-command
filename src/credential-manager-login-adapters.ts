@@ -12,19 +12,19 @@ import {createRequire} from 'node:module'
 import {Readable} from 'node:stream'
 
 type CommandResponse<T> = {
-  body: T
-  headers: IncomingHttpHeaders
-  statusCode: number
+  body: T;
+  headers: IncomingHttpHeaders;
+  statusCode: number;
 }
 
 type CommandRequestOptions = HTTPRequestOptions & {
-  retryAuth?: boolean
+  retryAuth?: boolean;
 }
 
 /** Command transport surface required by the operation-token Platform adapter. */
-export interface CommandPlatformClient {
-  delete<T>(path: string, options?: CommandRequestOptions): Promise<CommandResponse<T>>
-  get<T>(path: string, options?: CommandRequestOptions): Promise<CommandResponse<T>>
+export type CommandPlatformClient = {
+  delete<T>(path: string, options?: CommandRequestOptions): Promise<CommandResponse<T>>;
+  get<T>(path: string, options?: CommandRequestOptions): Promise<CommandResponse<T>>;
 }
 
 /** Declared command transport contract used by the FetchLike adapter. */
@@ -33,17 +33,17 @@ export type CommandLoginTransport = typeof HTTP
 // eslint-disable-next-line no-undef
 type FetchBody = RequestInit['body']
 type ReplayableBody = {
-  stream(): Readable
+  stream(): Readable;
 }
 const bodyFactory = Symbol('credential-manager-body-factory')
 type ReplayableRequestOptions = HTTPRequestOptions & {
-  [bodyFactory]?: () => Readable
+  [bodyFactory]?: () => Readable;
 }
 const require = createRequire(import.meta.url)
 type CommandProxyPolicy = {
-  agent(https: boolean, host?: string): unknown
-  certs: Buffer[]
-  env: NodeJS.ProcessEnv
+  agent(https: boolean, host?: string): unknown;
+  certs: Buffer[];
+  env: NodeJS.ProcessEnv;
 }
 const commandProxyPolicy = (require('@heroku/http-call/lib/proxy.js') as {default: CommandProxyPolicy}).default
 
@@ -89,13 +89,12 @@ async function platformRequest<T>(request: () => Promise<CommandResponse<T>>): P
 /** Binds one operation token to the exact get/delete Platform API surface expected by credential-manager login. */
 export function createCredentialManagerPlatformAdapter(client: CommandPlatformClient, token: string): HerokuApiClientLike {
   return {
-    delete: <T>(path: string, options?: HerokuApiRequestOptions) => platformRequest(() => client.delete<T>(path, platformOptions(options, token))),
-    get: <T>(path: string, options?: HerokuApiRequestOptions) => platformRequest(() => client.get<T>(path, platformOptions(options, token))),
+    delete: async <T>(path: string, options?: HerokuApiRequestOptions) => platformRequest(async () => client.delete<T>(path, platformOptions(options, token))),
+    get: async <T>(path: string, options?: HerokuApiRequestOptions) => platformRequest(async () => client.get<T>(path, platformOptions(options, token))),
   }
 }
 
-// Node 20 provides these fetch globals at runtime; the lint engine's compatibility table predates that support.
-/* eslint-disable n/no-unsupported-features/node-builtins, no-undef */
+/* eslint-disable n/no-unsupported-features/node-builtins, no-undef -- Node 20+ provides these fetch globals at runtime; the lint engine's compatibility table predates that support */
 async function replayableBody(request: Request): Promise<ReplayableBody | undefined> {
   if (request.body === null) return
   const bytes = new Uint8Array(await request.arrayBuffer())
@@ -203,10 +202,6 @@ export function createCredentialManagerFetchAdapter(transport: CommandLoginTrans
       this.options.agent = agent
     }
 
-    static async request<T>(url: string, options?: HTTPRequestOptions): Promise<HTTP<T>> {
-      return super.request<T>(url, options)
-    }
-
     async _redirect(): Promise<void> {
       throw redirectError(this)
     }
@@ -221,7 +216,7 @@ export function createCredentialManagerFetchAdapter(transport: CommandLoginTrans
       return super._request()
     }
 
-    abortableRetryWait(delay: number): Promise<void> {
+    async abortableRetryWait(delay: number): Promise<void> {
       const {signal} = this.options
       return new Promise((resolve, reject) => {
         const timer = setTimeout(() => {
@@ -243,11 +238,11 @@ export function createCredentialManagerFetchAdapter(transport: CommandLoginTrans
   // Preserve http-call 5.5.2's complete _maybeRetry policy while replacing only its private timer primitive.
   // There is no public wait/retry policy hook; runtime dispatch still routes the parent method through this override.
   Object.defineProperty(RedirectRejectingTransport.prototype, '_wait', {
-    value(this: RedirectRejectingTransport<unknown>, delay: number) {
+    async value(this: RedirectRejectingTransport<unknown>, delay: number) {
       return this.abortableRetryWait(delay)
     },
   })
 
-  return (input, init) => commandFetch(RedirectRejectingTransport, input, init)
+  return async (input, init) => commandFetch(RedirectRejectingTransport, input, init)
 }
 /* eslint-enable n/no-unsupported-features/node-builtins, no-undef */
