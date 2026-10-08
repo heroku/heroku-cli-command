@@ -295,11 +295,11 @@ describe('credential-manager compatibility', function () {
       baseline: packageJsonLookup,
       path: 'lib/cli-command-telemetry.ts',
     }])
-    expect(listFiles(archivedRoot).sort()).to.deep.equal(baseline.files.map(file => file.path).sort())
+    expect(listFiles(archivedRoot).toSorted()).to.deep.equal(baseline.files.map(file => file.path).toSorted())
 
     for (const file of baseline.files) {
       const archivedSource = fs.readFileSync(path.join(archivedRoot, file.path), 'utf8')
-      const normalizedSource = archivedSource.replace(relocatedPackageJsonLookup, packageJsonLookup)
+      const normalizedSource = archivedSource.replace(relocatedPackageJsonLookup, () => packageJsonLookup)
       expect(Buffer.byteLength(normalizedSource), `${file.path} byte length`).to.equal(file.bytes)
       expect(sha256(normalizedSource), `${file.path} SHA-256`).to.equal(file.sha256)
 

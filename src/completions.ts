@@ -13,7 +13,7 @@ export const herokuGet = async (resource: string, ctx: {config: Config}): Promis
   const heroku = new APIClient(ctx.config)
   let {body: resources} = await heroku.get<any>(`/${resource}`)
   if (typeof resources === 'string') resources = JSON.parse(resources)
-  return resources.map((a: any) => a.name).sort()
+  return resources.map((a: any) => a.name).toSorted()
 }
 
 export const AppCompletion = {

@@ -54,7 +54,7 @@ function interfaceMethodNames(declarations: string, interfaceName: string): stri
   }
 
   visit(sourceFile)
-  return methodNames.sort()
+  return methodNames.toSorted()
 }
 
 function classMemberNames(declarations: string, className: string): string[] {
@@ -70,7 +70,7 @@ function classMemberNames(declarations: string, className: string): string[] {
   }
 
   visit(sourceFile)
-  return methodNames.sort()
+  return methodNames.toSorted()
 }
 
 describe('package contracts', () => {

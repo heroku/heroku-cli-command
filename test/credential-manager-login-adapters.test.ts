@@ -102,7 +102,7 @@ describe('credential manager login adapters', () => {
       }
       const adapter = createCredentialManagerPlatformAdapter(client, 'token-b')
 
-      expect(Object.keys(adapter).sort()).to.deep.equal(['delete', 'get'])
+      expect(Object.keys(adapter).toSorted()).to.deep.equal(['delete', 'get'])
       const response = await adapter.get('/account', {
         headers: {Authorization: 'Bearer token-a', Range: 'id ..; max=2', 'X-Package': 'yes'},
         signal: getSignal,
