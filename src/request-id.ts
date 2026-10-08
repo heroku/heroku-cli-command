@@ -2,6 +2,8 @@ import {randomUUID} from 'node:crypto'
 
 export const requestIdHeader = 'Request-Id'
 
+/* eslint-disable unicorn/class-reference-in-static-methods -- RequestId is exported public API; `this` would change behavior for detached methods (TypeError) and subclasses (per-subclass `ids` instead of the shared store), so reference the class explicitly as it always has */
+
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- RequestId is an exported static-class public API (RequestId.create()/track()/etc.); converting to free functions would be a breaking change
 export class RequestId {
   static ids: string[] = []
@@ -11,24 +13,25 @@ export class RequestId {
   }
 
   static create(): string[] {
-    const tracked = this.ids
-    const generatedId = this._generate()
-    this.ids = [generatedId, ...tracked]
-    return this.ids
+    const tracked = RequestId.ids
+    const generatedId = RequestId._generate()
+    RequestId.ids = [generatedId, ...tracked]
+    return RequestId.ids
   }
 
   static empty(): void {
-    this.ids = []
+    RequestId.ids = []
   }
 
   static track(...ids: string[]) {
-    const tracked = this.ids
+    const tracked = RequestId.ids
     ids = ids.filter(id => !(tracked.includes(id)))
-    this.ids = [...ids, ...tracked]
-    return this.ids
+    RequestId.ids = [...ids, ...tracked]
+    return RequestId.ids
   }
 
   static get headerValue() {
-    return this.ids.join(',')
+    return RequestId.ids.join(',')
   }
 }
+/* eslint-enable unicorn/class-reference-in-static-methods */
