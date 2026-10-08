@@ -1,39 +1,39 @@
 import {HTTP} from '@heroku/http-call'
 import {expect} from 'chai'
 import {readdirSync, readFileSync} from 'node:fs'
-import {join, resolve} from 'node:path'
+import path from 'node:path'
 import ts from 'typescript'
 
 const packageName = '@heroku/heroku-credential-manager'
 const expectedVersion = '0.1.0'
-const packagePath = resolve('node_modules', packageName)
+const packagePath = path.resolve('node_modules', packageName)
 const httpCallPackageName = '@heroku/http-call'
 const httpCallVersion = '5.5.2'
-const httpCallPackagePath = resolve('node_modules', httpCallPackageName)
+const httpCallPackagePath = path.resolve('node_modules', httpCallPackageName)
 
 type PackageManifest = {
-  dependencies: Record<string, string>
-  exports: Record<string, unknown>
-  version: string
+  dependencies: Record<string, string>;
+  exports: Record<string, unknown>;
+  version: string;
 }
 
 type Lockfile = {
   packages: Record<string, {
-    dependencies?: Record<string, string>
-    integrity?: string
-    resolved?: string
-    version?: string
-  }>
+    dependencies?: Record<string, string>;
+    integrity?: string;
+    resolved?: string;
+    version?: string;
+  }>;
 }
 
-function readJson<T>(path: string): T {
-  return JSON.parse(readFileSync(path, 'utf8')) as T
+function readJson<T>(filePath: string): T {
+  return JSON.parse(readFileSync(filePath, 'utf8')) as T
 }
 
-function readDeclarations(path: string): string {
-  return readdirSync(path, {withFileTypes: true})
+function readDeclarations(dirPath: string): string {
+  return readdirSync(dirPath, {withFileTypes: true})
     .flatMap(entry => {
-      const entryPath = join(path, entry.name)
+      const entryPath = path.join(dirPath, entry.name)
 
       if (entry.isDirectory()) return readDeclarations(entryPath)
       return entry.name.endsWith('.d.ts') ? readFileSync(entryPath, 'utf8') : []
@@ -54,7 +54,7 @@ function interfaceMethodNames(declarations: string, interfaceName: string): stri
   }
 
   visit(sourceFile)
-  return methodNames.sort()
+  return methodNames.toSorted()
 }
 
 function classMemberNames(declarations: string, className: string): string[] {
@@ -70,7 +70,7 @@ function classMemberNames(declarations: string, className: string): string[] {
   }
 
   visit(sourceFile)
-  return methodNames.sort()
+  return methodNames.toSorted()
 }
 
 describe('package contracts', () => {
@@ -87,8 +87,8 @@ describe('package contracts', () => {
   })
 
   it(`pins the immutable ${packageName} package and lockfile artifact`, () => {
-    const manifest = readJson<PackageManifest>(resolve('package.json'))
-    const lockfile = readJson<Lockfile>(resolve('package-lock.json'))
+    const manifest = readJson<PackageManifest>(path.resolve('package.json'))
+    const lockfile = readJson<Lockfile>(path.resolve('package-lock.json'))
     const lockRoot = lockfile.packages['']
     const lockPackage = lockfile.packages[`node_modules/${packageName}`]
 
@@ -102,7 +102,7 @@ describe('package contracts', () => {
   })
 
   it(`installs the expected ${packageName} package API contract`, () => {
-    const installedManifest = readJson<PackageManifest>(join(packagePath, 'package.json'))
+    const installedManifest = readJson<PackageManifest>(path.join(packagePath, 'package.json'))
     const declarations = readDeclarations(packagePath)
 
     expect(installedManifest.version).to.equal(expectedVersion)
@@ -112,17 +112,17 @@ describe('package contracts', () => {
   })
 
   it(`pins the verified ${httpCallPackageName} version in the manifest and lockfile`, () => {
-    const manifest = readJson<PackageManifest>(resolve('package.json'))
-    const lockfile = readJson<Lockfile>(resolve('package-lock.json'))
+    const manifest = readJson<PackageManifest>(path.resolve('package.json'))
+    const lockfile = readJson<Lockfile>(path.resolve('package-lock.json'))
 
     expect(manifest.dependencies[httpCallPackageName]).to.equal(httpCallVersion)
     expect(lockfile.packages[''].dependencies?.[httpCallPackageName]).to.equal(httpCallVersion)
     expect(lockfile.packages[`node_modules/${httpCallPackageName}`].version).to.equal(httpCallVersion)
-    expect(readJson<PackageManifest>(join(httpCallPackagePath, 'package.json')).version).to.equal(httpCallVersion)
+    expect(readJson<PackageManifest>(path.join(httpCallPackagePath, 'package.json')).version).to.equal(httpCallVersion)
   })
 
   it('provides the transport hooks required by the login adapter', async () => {
-    const declarations = readFileSync(join(httpCallPackagePath, 'lib/http.d.ts'), 'utf8')
+    const declarations = readFileSync(path.join(httpCallPackagePath, 'lib/http.d.ts'), 'utf8')
     const requiredHooks = ['_maybeRetry', '_redirect', '_request', '_wait']
     const runtimePrototype = HTTP.prototype as unknown as Record<string, unknown>
 
@@ -130,9 +130,9 @@ describe('package contracts', () => {
     for (const hook of requiredHooks) expect(runtimePrototype[hook]).to.be.a('function')
 
     const request = new HTTP('https://example.test') as unknown as {
-      _maybeRetry(error: Error): Promise<void>
-      _request(): Promise<void>
-      _wait(delay: number): Promise<void>
+      _maybeRetry(error: Error): Promise<void>;
+      _request(): Promise<void>;
+      _wait(delay: number): Promise<void>;
     }
     const calls: string[] = []
     request._wait = async () => {

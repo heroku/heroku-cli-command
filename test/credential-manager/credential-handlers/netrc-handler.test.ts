@@ -1,14 +1,13 @@
 import {expect, use} from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 import fs from 'fs-extra'
-import {resolve} from 'node:path'
-
-import {MachineToken} from '../../../src/deprecated/credential-manager-core/lib/netrc-parser.js'
-
-use(chaiAsPromised)
+import path from 'node:path'
 
 import {NetrcHandler} from '../../../src/deprecated/credential-manager-core/credential-handlers/netrc-handler.js'
+import {type MachineToken} from '../../../src/deprecated/credential-manager-core/lib/netrc-parser.js'
 import {restoreNetrcStub, stubNetrc} from '../helpers/netrc-stub.js'
+
+use(chaiAsPromised)
 
 describe('NetrcHandler', function () {
   beforeEach(stubNetrc)
@@ -70,12 +69,12 @@ describe('NetrcHandler', function () {
   })
 
   describe('batch netrc (temp file, no prototype stub)', function () {
-    const tmpDir = resolve('tmp/netrc-handler-batch')
+    const tmpDir = path.resolve('tmp/netrc-handler-batch')
     let netrcPath: string
 
     beforeEach(async function () {
       await fs.mkdirp(tmpDir)
-      netrcPath = resolve(tmpDir, `n-${Date.now()}-${Math.random().toString(36).slice(2)}`)
+      netrcPath = path.resolve(tmpDir, `n-${Date.now()}-${Math.random().toString(36).slice(2)}`)
       await fs.writeFile(netrcPath, '', 'utf8')
     })
 

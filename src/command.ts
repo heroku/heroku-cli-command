@@ -1,8 +1,8 @@
 import {Command as Base} from '@oclif/core/command'
-import {CLIError} from '@oclif/core/errors'
+import {type CLIError} from '@oclif/core/errors'
 import * as Flags from '@oclif/core/flags'
 
-import {APIClient, IOptions} from './api-client.js'
+import {APIClient, type IOptions} from './api-client.js'
 
 export abstract class Command extends Base {
   /**
@@ -15,12 +15,13 @@ export abstract class Command extends Base {
       helpGroup: 'GLOBAL',
     }),
   }
+
   /**
    * Set this to false in a command class to disable the --prompt flag for that command
    */
   static promptFlagActive = true
   _heroku!: APIClient
-  allowArbitraryFlags: boolean = false
+  allowArbitraryFlags = false
 
   /**
    * Helper function to get baseFlags without the prompt flag
@@ -99,16 +100,16 @@ export abstract class Command extends Base {
         const nonExistentFlagsWithValues = {...parsed}
 
         if (nonExistentFlags && nonExistentFlags.length > 0) {
-          this.warn(`You're using a deprecated syntax with the [${nonExistentFlags}] flag.\nAdd a '--' (end of options) separator before the flags you're passing through.`)
+          this.warn(`You're using a deprecated syntax with the [${nonExistentFlags.join(',')}] flag.\nAdd a '--' (end of options) separator before the flags you're passing through.`)
           for (const flag of nonExistentFlags) {
             const key = flag.replace('--', '')
-            delete parsed[key]
+            Reflect.deleteProperty(parsed, key)
           }
         }
 
         for (const key in parsed) {
           if (Reflect.has(parsed, key)) {
-            delete nonExistentFlagsWithValues[key]
+            Reflect.deleteProperty(nonExistentFlagsWithValues, key)
           }
         }
 
@@ -118,16 +119,15 @@ export abstract class Command extends Base {
 
         for (let index = 0; index < result.nonExistentFlags.length; index++) {
           const positionalValue = result.nonExistentFlags[index]
-          const doubleHyphenRegex = /^--/
-          const positionalValueIsFlag = doubleHyphenRegex.test(positionalValue)
+          const positionalValueIsFlag = positionalValue.startsWith('--')
           if (positionalValueIsFlag) {
             const nextElement = result.nonExistentFlags[index + 1] ?? ''
-            const nextElementIsFlag = doubleHyphenRegex.test(nextElement)
+            const nextElementIsFlag = nextElement.startsWith('--')
             // eslint-disable-next-line max-depth
             if (nextElement && !nextElementIsFlag) {
               result.argv.push(`${positionalValue}=${nextElement}`)
             } else if (!nextElement || nextElementIsFlag) {
-              result.argv.push(`${positionalValue}=${true}`)
+              result.argv.push(`${positionalValue}=true`)
             }
           }
         }

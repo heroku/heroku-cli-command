@@ -708,6 +708,10 @@ async function runGeneratedSmoke(root, environment) {
   })
   await run(process.execPath, [
     path.join(root, 'node_modules/typescript/bin/tsc'),
+    // TypeScript 6 errors (TS5112) when files are passed on the command line
+    // while a tsconfig.json is present; this generated smoke file is compiled
+    // in isolation with explicit flags, so ignore the repo config.
+    '--ignoreConfig',
     '--noEmit',
     '--strict',
     '--skipLibCheck',

@@ -148,7 +148,9 @@ attribute.service = heroku-cli
         status: 1,
         stderr: 'Permission denied',
       })
-      expect(() => handler.removeAuth('test@example.com', 'heroku-cli')).to.throw('Failed to remove token from Linux keyring: Permission denied')
+      expect(() => {
+        handler.removeAuth('test@example.com', 'heroku-cli')
+      }).to.throw('Failed to remove token from Linux keyring: Permission denied')
     })
 
     it('should return when no matching credential exists', function () {
@@ -157,7 +159,9 @@ attribute.service = heroku-cli
         status: 1,
         stderr: 'No matching credentials\n',
       })
-      expect(() => handler.removeAuth('missing@example.com', 'heroku-cli')).to.not.throw()
+      expect(() => {
+        handler.removeAuth('missing@example.com', 'heroku-cli')
+      }).to.not.throw()
     })
 
     it('should scrub sensitive data from error messages', function () {
@@ -184,7 +188,9 @@ attribute.service = heroku-cli
         status: 1,
         stderr: '',
       })
-      expect(() => handler.removeAuth('missing@example.com', 'heroku-cli')).to.not.throw()
+      expect(() => {
+        handler.removeAuth('missing@example.com', 'heroku-cli')
+      }).to.not.throw()
     })
 
     it('should return when secret-tool exits 1 with whitespace-only stderr', function () {
@@ -193,7 +199,9 @@ attribute.service = heroku-cli
         status: 1,
         stderr: '  \n',
       })
-      expect(() => handler.removeAuth('missing@example.com', 'heroku-cli')).to.not.throw()
+      expect(() => {
+        handler.removeAuth('missing@example.com', 'heroku-cli')
+      }).to.not.throw()
     })
 
     it('should pass LC_ALL=C in the environment', function () {
@@ -247,7 +255,9 @@ attribute.service = heroku-cli
         status: 1,
         stderr: 'error communicating with Secret Service',
       })
-      expect(() => handler.saveAuth(authMock)).to.throw('Failed to store token in Linux keyring: error communicating with Secret Service')
+      expect(() => {
+        handler.saveAuth(authMock)
+      }).to.throw('Failed to store token in Linux keyring: error communicating with Secret Service')
     })
 
     it('should throw an error when spawnSync encounters a system error', function () {
@@ -262,7 +272,9 @@ attribute.service = heroku-cli
         status: null,
         stderr: '',
       })
-      expect(() => handler.saveAuth(authMock)).to.throw('Failed to store token in Linux keyring: ENOENT: secret-tool command not found')
+      expect(() => {
+        handler.saveAuth(authMock)
+      }).to.throw('Failed to store token in Linux keyring: ENOENT: secret-tool command not found')
     })
 
     it('should use fallback error message when stderr is empty', function () {
@@ -277,7 +289,9 @@ attribute.service = heroku-cli
         status: 1,
         stderr: '', // Empty stderr triggers fallback
       })
-      expect(() => handler.saveAuth(authMock)).to.throw('Failed to store token in Linux keyring: Unknown error')
+      expect(() => {
+        handler.saveAuth(authMock)
+      }).to.throw('Failed to store token in Linux keyring: Unknown error')
     })
 
     it('should scrub sensitive data from error messages', function () {
