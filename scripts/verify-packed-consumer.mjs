@@ -48,6 +48,10 @@ const expectedDependencies = new Map([
     version: '5.5.2',
   }],
 ])
+// Dependency ranges allowed to differ from the authoritative baseline. The
+// baseline pins @heroku/http-call exactly (asserted below); @oclif/core is an
+// intentional major upgrade (v4 -> v5) performed in the toolchain modernization.
+const intentionalDependencyChanges = new Set(['@heroku/http-call', '@oclif/core'])
 const expectedCompatibilityPaths = new Set([
   'lib/credential-manager-core/credential-handlers/linux-handler.js',
   'lib/credential-manager-core/credential-handlers/macos-handler.js',
@@ -557,7 +561,7 @@ async function verifyPackManifest(packMetadata, baseline) {
   const changedDependencies = Object.keys(currentDependencies).filter(name => name in baselineDependencies && currentDependencies[name] !== baselineDependencies[name])
   check(addedDependencies.every(name => intentionalPackageAdditions.has(name)), `unexpected dependencies added versus baseline: ${addedDependencies.join(', ')}`)
   check(removedDependencies.length === 0, `dependencies removed versus baseline: ${removedDependencies.join(', ')}`)
-  check(changedDependencies.every(name => name === '@heroku/http-call'), `unexpected dependency ranges changed versus baseline: ${changedDependencies.join(', ')}`)
+  check(changedDependencies.every(name => intentionalDependencyChanges.has(name)), `unexpected dependency ranges changed versus baseline: ${changedDependencies.join(', ')}`)
   check(currentDependencies['@heroku/http-call'] === expectedDependencies.get('@heroku/http-call').version, '@heroku/http-call baseline range did not change to the required exact version')
   return {added, paths}
 }

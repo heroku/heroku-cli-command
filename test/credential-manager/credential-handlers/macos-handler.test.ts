@@ -162,14 +162,18 @@ attributes:
 
     it('should throw an error when removal fails', function () {
       execSyncStub.throws(new Error('Permission denied'))
-      expect(() => handler.removeAuth('test@example.com', 'heroku-cli')).to.throw('Failed to remove token from macOS Keychain: Permission denied')
+      expect(() => {
+        handler.removeAuth('test@example.com', 'heroku-cli')
+      }).to.throw('Failed to remove token from macOS Keychain: Permission denied')
     })
 
     it('should return when the generic password does not exist (exit 44)', function () {
       const err = new Error('Command failed') as Error & {status?: number}
       err.status = 44
       execSyncStub.throws(err)
-      expect(() => handler.removeAuth('missing@example.com', 'heroku-cli')).to.not.throw()
+      expect(() => {
+        handler.removeAuth('missing@example.com', 'heroku-cli')
+      }).to.not.throw()
     })
 
     it('should scrub sensitive data from error messages', function () {
@@ -209,7 +213,9 @@ attributes:
         token: 'mytoken',
       }
 
-      expect(() => handler.saveAuth(authMock)).to.throw('Failed to store token in macOS Keychain: Permission denied')
+      expect(() => {
+        handler.saveAuth(authMock)
+      }).to.throw('Failed to store token in macOS Keychain: Permission denied')
     })
 
     it('should scrub sensitive data from error messages', function () {

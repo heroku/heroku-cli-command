@@ -9,16 +9,16 @@ beforeEach(() => {
 })
 
 describe('mutex', () => {
-  it('should run promises in order', () => {
+  it('should run promises in order', async () => {
     const mutex = new Mutex()
     return Promise.all([
-      mutex.synchronize(() => new Promise(resolve => {
+      mutex.synchronize(async () => new Promise(resolve => {
         setTimeout(() => {
           output.push('foo')
           resolve('foo')
         }, 3)
       })),
-      mutex.synchronize(() => new Promise(resolve => {
+      mutex.synchronize(async () => new Promise(resolve => {
         setTimeout(() => {
           output.push('bar')
           resolve('bar')
@@ -30,18 +30,18 @@ describe('mutex', () => {
     })
   })
 
-  it('should propegate errors', () => {
+  it('should propegate errors', async () => {
     const mutex = new Mutex()
     return Promise.all([
-      mutex.synchronize(() => new Promise(resolve => {
+      mutex.synchronize(async () => new Promise(resolve => {
         output.push('foo')
         resolve('foo')
       })),
-      mutex.synchronize(() => new Promise((_, reject) => {
+      mutex.synchronize(async () => new Promise((_, reject) => {
         output.push('bar')
         reject(new Error('bar'))
       })),
-      mutex.synchronize(() => new Promise(resolve => {
+      mutex.synchronize(async () => new Promise(resolve => {
         output.push('biz')
         resolve('biz')
       })),
@@ -49,8 +49,8 @@ describe('mutex', () => {
       .then(() => {
         throw new Error('x')
       })
-      .catch(error => {
-        expect(error.message).to.deep.equal('bar')
+      .catch((error: unknown) => {
+        expect((error as Error).message).to.deep.equal('bar')
         expect(output).to.deep.equal(['foo', 'bar', 'biz'])
       })
   })
@@ -58,7 +58,7 @@ describe('mutex', () => {
   it('should run promises after draining the queue', done => {
     const mutex = new Mutex()
     mutex
-      .synchronize(() => new Promise(resolve => {
+      .synchronize(async () => new Promise(resolve => {
         output.push('foo')
         resolve('foo')
       }))
@@ -67,8 +67,8 @@ describe('mutex', () => {
           expect('foo').to.deep.equal(results)
           expect(output).to.deep.equal(['foo'])
 
-          return mutex
-            .synchronize(() => new Promise(resolve => {
+          void mutex
+            .synchronize(async () => new Promise(resolve => {
               output.push('bar')
               resolve('bar')
             }))
@@ -80,5 +80,28 @@ describe('mutex', () => {
         })
       })
       .catch(done)
+  })
+
+  it('rejects the caller and keeps draining when a task throws synchronously', async () => {
+    const mutex = new Mutex<string>()
+
+    let caught: unknown
+    await mutex
+      .synchronize(() => {
+        throw new Error('sync boom')
+      })
+      .catch((error: unknown) => {
+        caught = error
+      })
+
+    expect((caught as Error).message).to.equal('sync boom')
+
+    // The queue must not stall: a task queued after the throwing one still runs.
+    const result = await mutex.synchronize(async () => {
+      output.push('after-throw')
+      return 'ok'
+    })
+    expect(result).to.equal('ok')
+    expect(output).to.deep.equal(['after-throw'])
   })
 })

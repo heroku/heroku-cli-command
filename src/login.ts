@@ -1,25 +1,22 @@
-import type {
-  LoginOptions as CredentialManagerLoginOptions,
-  LoginPromptSelection,
-  LoginResult,
-  LoginStorage,
-} from '@heroku/heroku-credential-manager/login'
-import type {HTTP} from '@heroku/http-call'
 import type {Config} from '@oclif/core/interfaces'
 import type {ChildProcess} from 'node:child_process'
 
 import {
   Login as CredentialManagerLogin,
+  type LoginOptions as CredentialManagerLoginOptions,
   LoginCancelledError,
+  type LoginPromptSelection,
   LoginRequestError,
+  type LoginResult,
+  type LoginStorage,
 } from '@heroku/heroku-credential-manager/login'
-import {HTTPError} from '@heroku/http-call'
+import {type HTTP, HTTPError} from '@heroku/http-call'
 import {ux} from '@oclif/core/ux'
 import {greenBright, yellow} from 'ansis'
 import os from 'node:os'
 import * as readline from 'node:readline'
 
-import {APIClient, HerokuAPIError, type IHerokuAPIErrorOptions} from './api-client.js'
+import {type APIClient, HerokuAPIError, type IHerokuAPIErrorOptions} from './api-client.js'
 import {getStorageConfig} from './credential-manager-core/lib/credential-storage-selector.js'
 import {
   readLoginState,
@@ -48,23 +45,23 @@ export const NONINTERACTIVE_LOGIN_ERROR_CODE = 'HEROKU_NONINTERACTIVE_LOGIN'
 export namespace Login {
   export type Method = 'b' | 'browser' | 'i' | 'interactive' | 's' | 'sso'
 
-  export interface Options {
-    browser?: string
-    expiresIn?: number
-    method?: Method
+  export type Options = {
+    browser?: string;
+    expiresIn?: number;
+    method?: Method;
   }
 }
 
 type PromptOperation = {
-  cancel?: (reason: unknown) => void
-  completion?: Promise<void>
+  cancel?: (reason: unknown) => void;
+  completion?: Promise<void>;
 }
 
 type PromptValueOptions = {
-  defaultValue?: string
-  message: string
-  name: 'email' | 'orgName' | 'password' | 'secondFactor'
-  type: 'input' | 'password'
+  defaultValue?: string;
+  message: string;
+  name: 'email' | 'orgName' | 'password' | 'secondFactor';
+  type: 'input' | 'password';
 }
 
 export class Login {
@@ -74,7 +71,7 @@ export class Login {
   constructor(private readonly config: Config, private readonly heroku: APIClient) {}
 
   async login(opts: Login.Options = {}): Promise<void> {
-    return this.serialize(() => this.loginUnlocked(opts))
+    return this.serialize(async () => this.loginUnlocked(opts))
   }
 
   /**
@@ -144,7 +141,7 @@ export class Login {
           const open = (await import('open')).default
           const child = await open(url, {
             wait: false,
-            ...(options?.browser ? {app: {name: options.browser}} : {}),
+            ...(options?.browser && {app: {name: options.browser}}),
           })
           observeBrowserChild(child)
         },
@@ -163,15 +160,23 @@ export class Login {
       environment: {get: name => process.env[name]},
       fetch: createCredentialManagerFetchAdapter(),
       output: {
-        warn: message => ux.warn(message),
-        write: message => ux.stderr(/^https?:\/\//.test(message) ? greenBright(message) : message),
+        warn(message) {
+          ux.warn(message)
+        },
+        write(message) {
+          ux.stderr(/^https?:\/\//.test(message) ? greenBright(message) : message)
+        },
       },
       progress: {
-        start: message => ux.action.start(message),
-        stop: () => ux.action.stop(),
+        start(message) {
+          ux.action.start(message)
+        },
+        stop() {
+          ux.action.stop()
+        },
       },
       prompt: {
-        accessToken: () => this.promptValue(promptOperation, {
+        accessToken: async () => this.promptValue(promptOperation, {
           message: 'Access token',
           name: 'password',
           type: 'password',
@@ -185,19 +190,21 @@ export class Login {
             type: 'input',
           })
         },
-        loginMethod: () => this.loginMethod(promptOperation),
-        organization: defaultOrganization => this.promptValue(promptOperation, {
+        loginMethod: async () => this.loginMethod(promptOperation),
+        organization: async defaultOrganization => this.promptValue(promptOperation, {
           defaultValue: defaultOrganization,
           message: 'Organization name',
           name: 'orgName',
           type: 'input',
         }),
-        password: () => this.promptValue(promptOperation, {message: 'Password', name: 'password', type: 'password'}),
-        secondFactor: () => this.promptValue(promptOperation, {message: 'Two-factor code', name: 'secondFactor', type: 'password'}),
+        password: async () => this.promptValue(promptOperation, {message: 'Password', name: 'password', type: 'password'}),
+        secondFactor: async () => this.promptValue(promptOperation, {message: 'Two-factor code', name: 'secondFactor', type: 'password'}),
       },
       storage,
       timers: {
-        clearTimeout: timer => clearTimeout(timer as ReturnType<typeof setTimeout>),
+        clearTimeout(timer) {
+          clearTimeout(timer as ReturnType<typeof setTimeout>)
+        },
         setTimeout: (handler, timeoutMs) => {
           const timer = setTimeout(() => {
             this.cancelActivePrompt(promptOperation, new Error('Login timed out')).then(handler, handler)
@@ -210,7 +217,7 @@ export class Login {
   }
 
   private getLoginMethodFromPromptKey(key: string): LoginPromptSelection {
-    if (key === '\u0003') return {cancelled: 'interrupt'}
+    if (key === '\u{3}') return {cancelled: 'interrupt'}
     if (key.toLowerCase() === 'q') return {cancelled: 'quit'}
     return {method: 'browser'}
   }
@@ -219,6 +226,7 @@ export class Login {
     ux.stderr(`heroku: Press any key to open up the browser to login or ${yellow('q')} to exit`)
     const rl = readline.createInterface({input: process.stdin, output: process.stdout})
     const canSetRawMode = typeof process.stdin.setRawMode === 'function'
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-conversion -- process.stdin.isRaw is typed `boolean` but is `undefined` for non-TTY streams; Boolean() normalizes it so setRawMode() restores false, not undefined
     const previousRawMode = Boolean(process.stdin.isRaw)
     if (canSetRawMode) process.stdin.setRawMode(true)
     process.stdin.resume()
@@ -227,7 +235,10 @@ export class Login {
     let onData: ((data: Buffer) => void) | undefined
     const pending = new Promise<string>((resolve, reject) => {
       cancelPrompt = reject
-      onData = data => resolve(data.toString())
+      onData = data => {
+        resolve(data.toString())
+      }
+
       process.stdin.once('data', onData)
     })
     operation.cancel = cancelPrompt
@@ -273,9 +284,9 @@ export class Login {
     if (!(error instanceof LoginRequestError)) return error
 
     const body: IHerokuAPIErrorOptions = {
-      ...(error.id ? {id: error.id} : {}),
+      ...(error.id && {id: error.id}),
       message: error.body?.message || error.message || 'Login request failed',
-      ...(error.body?.resource ? {resource: error.body.resource} : {}),
+      ...(error.body?.resource && {resource: error.body.resource}),
     }
     const response = {
       body,
@@ -289,14 +300,16 @@ export class Login {
 
   private normalizeOptions(opts: Login.Options): CredentialManagerLoginOptions {
     const aliases = {b: 'browser', i: 'interactive', s: 'sso'} as const
-    const method = opts.method && opts.method in aliases
+    const method = opts.method && Object.hasOwn(aliases, opts.method)
       ? aliases[opts.method as keyof typeof aliases]
       : opts.method
     return {...opts, method: method as CredentialManagerLoginOptions['method']}
   }
 
   private observeBrowserChild(child: ChildProcess): void {
-    child.once('error', cause => ux.warn(cause))
+    child.once('error', cause => {
+      ux.warn(cause)
+    })
     child.once('close', code => {
       if (code !== 0) ux.warn('Cannot open browser. Continue with the manual URL above.')
     })
@@ -308,12 +321,15 @@ export class Login {
   ): Promise<string> {
     const controller = new AbortController()
     const pending = prompter.prompt<Record<typeof name, string>>([{
-      ...(defaultValue ? {default: defaultValue} : {}),
+      ...(defaultValue && {default: defaultValue}),
       message,
       name,
       type,
     }], {signal: controller.signal})
-    const cancelPrompt = (reason: unknown) => controller.abort(reason)
+    const cancelPrompt = (reason: unknown) => {
+      controller.abort(reason)
+    }
+
     operation.cancel = cancelPrompt
     operation.completion = pending.then(() => {}, () => {})
 
@@ -321,7 +337,7 @@ export class Login {
       const answer = await pending
       return answer[name]
     } catch (error) {
-      if (controller.signal.aborted) throw controller.signal.reason
+      if (controller.signal.aborted) throw controller.signal.reason as Error
       throw error
     } finally {
       if (operation.cancel === cancelPrompt) {
@@ -331,7 +347,7 @@ export class Login {
     }
   }
 
-  private serialize<T>(operation: () => Promise<T>): Promise<T> {
+  private async serialize<T>(operation: () => Promise<T>): Promise<T> {
     const result = this.lifecycle.then(operation, operation)
     this.lifecycle = result.then(() => {}, () => {})
     return result

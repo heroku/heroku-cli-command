@@ -13,7 +13,7 @@ import {mkdtempSync, rmSync, writeFileSync} from 'node:fs'
 import {createServer} from 'node:http'
 import {createRequire} from 'node:module'
 import {tmpdir} from 'node:os'
-import {dirname, resolve} from 'node:path'
+import path from 'node:path'
 import {fileURLToPath} from 'node:url'
 import * as sinon from 'sinon'
 
@@ -26,7 +26,7 @@ import {
 
 chai.use(chaiAsPromised)
 const {expect} = chai
-const __dirname = dirname(fileURLToPath(import.meta.url))
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const require = createRequire(import.meta.url)
 type ProxyPolicy = {env: NodeJS.ProcessEnv}
 const proxyPolicy = (require('@heroku/http-call/lib/proxy.js') as {default: ProxyPolicy}).default
@@ -73,7 +73,7 @@ const storage: LoginDependencies['storage'] = {
   hasNativeStorage() {
     return false
   },
-  readLoginState: async () => undefined as undefined,
+  readLoginState: async () => undefined,
   async removeAuth() {},
   async saveAuth() {},
   async writeLoginState() {},
@@ -102,7 +102,7 @@ describe('credential manager login adapters', () => {
       }
       const adapter = createCredentialManagerPlatformAdapter(client, 'token-b')
 
-      expect(Object.keys(adapter).sort()).to.deep.equal(['delete', 'get'])
+      expect(Object.keys(adapter).toSorted()).to.deep.equal(['delete', 'get'])
       const response = await adapter.get('/account', {
         headers: {Authorization: 'Bearer token-a', Range: 'id ..; max=2', 'X-Package': 'yes'},
         signal: getSignal,
@@ -181,8 +181,8 @@ describe('credential manager login adapters', () => {
         }
       }
       const client: CommandPlatformClient = {
-        delete: <T>(path: string, options?: HTTPRequestOptions) => NoRetryHTTP.delete<T>(`https://api.heroku.com${path}`, options),
-        get: <T>(path: string, options?: HTTPRequestOptions) => NoRetryHTTP.get<T>(`https://api.heroku.com${path}`, options),
+        delete: async <T>(path: string, options?: HTTPRequestOptions) => NoRetryHTTP.delete<T>(`https://api.heroku.com${path}`, options),
+        get: async <T>(path: string, options?: HTTPRequestOptions) => NoRetryHTTP.get<T>(`https://api.heroku.com${path}`, options),
       }
       const adapter = createCredentialManagerPlatformAdapter(client, 'token-b')
 
@@ -191,7 +191,9 @@ describe('credential manager login adapters', () => {
         nock('https://api.heroku.com').intercept(abortPath, method.toUpperCase()).delay(100).reply(200, {})
         const controller = new AbortController()
         const pending = adapter[method](abortPath, {signal: controller.signal, timeoutMs: 1000})
-        setTimeout(() => controller.abort(new Error(`${method} caller cancelled`)), 10)
+        setTimeout(() => {
+          controller.abort(new Error(`${method} caller cancelled`))
+        }, 10)
         // eslint-disable-next-line no-await-in-loop
         await expect(pending).to.be.rejectedWith('The operation was aborted')
 
@@ -222,7 +224,7 @@ describe('credential manager login adapters', () => {
     })
 
     it('turns the first 401 into LoginRequestError without command auth/login hooks or token replacement', async () => {
-      const config = new Config({root: resolve(__dirname, '../package.json')})
+      const config = new Config({root: path.resolve(__dirname, '../package.json')})
       const command = new Command([], config)
       command.heroku.setAuthEntry({account: 'old@example.com', token: 'token-a'})
       const loginHook = sinon.spy(command.heroku, 'login')
@@ -329,7 +331,7 @@ describe('credential manager login adapters', () => {
           return {}
         })
       const fetch = createCredentialManagerFetchAdapter()
-      /* eslint-disable n/no-unsupported-features/node-builtins, no-undef */
+      /* eslint-disable n/no-unsupported-features/node-builtins, no-undef -- Node 20+ provides these fetch globals (FormData/Blob) at runtime; the lint engine's compatibility table predates that support */
       const formData = new FormData()
       formData.append('field', 'form-body')
       const bodies: Array<[BodyInit, string]> = [
@@ -386,16 +388,18 @@ describe('credential manager login adapters', () => {
     it('replays identical complete POST bytes after a real socket reset', async () => {
       const bodies: string[] = []
       nock.enableNetConnect('127.0.0.1')
-      const server = createServer(async (request, response) => {
-        const chunks: Buffer[] = []
-        for await (const chunk of request) chunks.push(Buffer.from(chunk))
-        bodies.push(Buffer.concat(chunks).toString())
-        if (bodies.length === 1) {
-          request.socket.destroy()
-        } else {
-          response.setHeader('content-type', 'application/json')
-          response.end('{"ok":true}')
-        }
+      const server = createServer((request, response) => {
+        void (async () => {
+          const chunks: Buffer[] = []
+          for await (const chunk of request) chunks.push(Buffer.from(chunk))
+          bodies.push(Buffer.concat(chunks).toString())
+          if (bodies.length === 1) {
+            request.socket.destroy()
+          } else {
+            response.setHeader('content-type', 'application/json')
+            response.end('{"ok":true}')
+          }
+        })()
       })
       await new Promise<void>(resolve => {
         server.listen(0, '127.0.0.1', resolve)
@@ -412,7 +416,9 @@ describe('credential manager login adapters', () => {
         expect(bodies).to.deep.equal(['complete-post-body', 'complete-post-body'])
       } finally {
         await new Promise<void>((resolve, reject) => {
-          server.close(error => error ? reject(error) : resolve())
+          server.close(error => {
+            error ? reject(error) : resolve()
+          })
         })
         nock.disableNetConnect()
       }
@@ -606,7 +612,7 @@ describe('credential manager login adapters', () => {
       process.env.HTTPS_PROXY = 'http://proxy.example.test:8080'
       process.env.NO_PROXY = 'direct.example.test'
       const directory = mkdtempSync(`${tmpdir()}/login-adapter-ca-`)
-      const certificate = resolve(directory, 'custom-ca.pem')
+      const certificate = path.resolve(directory, 'custom-ca.pem')
       writeFileSync(certificate, 'custom-ca')
       process.env.SSL_CERT_FILE = certificate
       class InspectingTransport<T> extends HTTP<T> {
@@ -641,7 +647,7 @@ describe('credential manager login adapters', () => {
     it('reevaluates proxy, NO_PROXY, and CA settings after process.env object replacement', async () => {
       const originalEnvironment = process.env
       const directory = mkdtempSync(`${tmpdir()}/login-adapter-replaced-env-`)
-      const certificate = resolve(directory, 'custom-ca.pem')
+      const certificate = path.resolve(directory, 'custom-ca.pem')
       writeFileSync(certificate, 'replacement-ca')
       process.env = {
         ...originalEnvironment,
@@ -792,7 +798,9 @@ describe('credential manager login adapters', () => {
         redirect: 'error',
         signal: controller.signal,
       })
-      setTimeout(() => controller.abort(new Error('abort during backoff')), 10)
+      setTimeout(() => {
+        controller.abort(new Error('abort during backoff'))
+      }, 10)
       await expect(pending).to.be.rejectedWith('abort during backoff')
       expect(Date.now() - started).to.be.lessThan(100)
     })
@@ -824,8 +832,8 @@ describe('credential manager login adapters', () => {
     it('cancels retry backoff so no request callback runs after abort', async () => {
       let requests = 0
       const scheduled = new Set<ReturnType<typeof setTimeout>>()
-      const originalSetTimeout = globalThis.setTimeout
-      const originalClearTimeout = globalThis.clearTimeout
+      const originalSetTimeout = setTimeout
+      const originalClearTimeout = clearTimeout
       sinon.stub(globalThis, 'setTimeout').callsFake(((handler: (...arguments_: unknown[]) => void, timeout?: number, ...arguments_: unknown[]) => {
         const timer = originalSetTimeout(handler, timeout, ...arguments_)
         scheduled.add(timer)
@@ -833,8 +841,8 @@ describe('credential manager login adapters', () => {
       }) as typeof setTimeout)
       sinon.stub(globalThis, 'clearTimeout').callsFake((timer => {
         scheduled.delete(timer as ReturnType<typeof setTimeout>)
-        return originalClearTimeout(timer)
-      }) as typeof clearTimeout)
+        originalClearTimeout(timer)
+      }))
       class BackoffTransport<T> extends HTTP<T> {
         async _request(): Promise<void> {
           requests++

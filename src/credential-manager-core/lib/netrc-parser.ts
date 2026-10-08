@@ -16,4 +16,5 @@ export type {
 } from '@heroku/heroku-credential-manager'
 
 /** @deprecated Import and instantiate `Netrc` from `@heroku/heroku-credential-manager`. */
-export default new Netrc()
+const defaultNetrc = new Netrc()
+export default defaultNetrc

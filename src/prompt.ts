@@ -1,13 +1,13 @@
-/* eslint-disable complexity */
+/* eslint-disable complexity -- interactive prompt flows branch heavily on tty/env/default state; splitting them would obscure the control flow */
 import {type Config} from '@oclif/core/config'
 import {run} from '@oclif/core/run'
 
 import {prompter} from './prompter.js'
 
-interface PromptOptions {
-  argv: string[]
-  commandId: string
-  config: Config
+type PromptOptions = {
+  argv: string[];
+  commandId: string;
+  config: Config;
 }
 
 /**
@@ -43,13 +43,13 @@ export async function promptAndRun(options: PromptOptions): Promise<void> {
       },
     }])
 
-    if (input && input.trim()) {
+    if (input?.trim()) {
       userInputByArg.set(argKey, input)
     }
   }
 
   // Prompt for flags
-  for (const [, flagDef] of Object.entries(commandMeta.flags)) {
+  for (const flagDef of Object.values(commandMeta.flags)) {
     const {char, description, hidden, name, options, type} = flagDef as any
 
     // Skip hidden flags, the prompt flag itself, and flags without descriptions
@@ -92,7 +92,7 @@ export async function promptAndRun(options: PromptOptions): Promise<void> {
         type: 'input',
       }])
 
-      if (value && value.trim()) {
+      if (value?.trim()) {
         userInputByFlag.set(name, value)
       }
     }

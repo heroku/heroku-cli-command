@@ -1,4 +1,4 @@
-import {Context} from 'mocha'
+import {type Context} from 'mocha'
 import {execSync} from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -7,15 +7,15 @@ import {listKeychainAccounts, removeAuth} from '../../../src/credential-manager-
 import {Netrc} from '../../../src/credential-manager-core/lib/netrc-parser.js'
 
 export type AcceptanceFixture = {
-  account: string,
-  hosts: string[],
-  service: string,
-  token: string,
+  account: string;
+  hosts: string[];
+  service: string;
+  token: string;
 }
 
 export type NetrcSnapshot = {
-  netrcPath: string
-  restore: () => void
+  netrcPath: string;
+  restore: () => void;
 }
 
 export const HOST_NAME = 'acceptance.test.heroku.com'
@@ -54,10 +54,12 @@ export async function cleanupDefaultNetrc(): Promise<void> {
   const netrc = new Netrc()
   await netrc.load()
   for (const host of hosts) {
-    if (netrc.machines[host]) {
-      delete netrc.machines[host]
-      changed = true
+    if (!Object.hasOwn(netrc.machines, host)) {
+      continue;
     }
+
+    Reflect.deleteProperty(netrc.machines, host)
+    changed = true
   }
 
   if (changed) {
@@ -71,7 +73,7 @@ export async function cleanupDefaultNetrc(): Promise<void> {
 export async function cleanupCredentialStore(): Promise<void> {
   const services = getAllAcceptanceServices()
   for (const service of services) {
-    /* eslint-disable no-await-in-loop */
+    /* eslint-disable no-await-in-loop -- keychain cleanup must run sequentially; each account delete has to complete before listing/removing the next */
     const accounts = await listKeychainAccounts(service)
     if (accounts.length === 0) continue
 
@@ -139,9 +141,9 @@ export function snapshotDefaultNetrc(): NetrcSnapshot {
 }
 
 export type FakeCredentialStoreSetup = {
-  cleanup: () => void
-  originalPath: string
-  tmpDir: string
+  cleanup: () => void;
+  originalPath: string;
+  tmpDir: string;
 }
 
 /**
@@ -239,6 +241,7 @@ export function setupFakePowerShell(): FakeCredentialStoreSetup {
  * @returns An object with the original PATH and a cleanup function to restore state, or undefined if platform is not supported
  */
 export function setupFakeCredentialStore(): FakeCredentialStoreSetup | undefined {
+  // eslint-disable-next-line @typescript-eslint/switch-exhaustiveness-check -- process.platform has ~11 members; only darwin/linux/win32 are supported and the default returns undefined for the rest
   switch (process.platform) {
     case 'darwin': {
       if (!isSecurityAvailable()) return undefined

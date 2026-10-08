@@ -1,7 +1,7 @@
 import {expect} from 'chai'
 import fs from 'node:fs'
 import os from 'node:os'
-import {join, resolve} from 'node:path'
+import path from 'node:path'
 import * as sinon from 'sinon'
 
 import {readLoginState} from '../src/credential-manager-core/lib/login-state.js'
@@ -14,11 +14,7 @@ import {
 } from '../src/login-state-coordinator.js'
 
 function deferred<T = void>() {
-  let resolve!: (value: PromiseLike<T> | T) => void
-  const promise = new Promise<T>(resolvePromise => {
-    resolve = resolvePromise
-  })
-  return {promise, resolve}
+  return Promise.withResolvers<T>()
 }
 
 describe('login-state coordinator', () => {
@@ -26,8 +22,8 @@ describe('login-state coordinator', () => {
   let tmpDir: string
 
   beforeEach(() => {
-    tmpDir = fs.mkdtempSync(join(os.tmpdir(), 'heroku-login-state-coordinator-'))
-    otherDir = fs.mkdtempSync(join(os.tmpdir(), 'heroku-login-state-coordinator-other-'))
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'heroku-login-state-coordinator-'))
+    otherDir = fs.mkdtempSync(path.join(os.tmpdir(), 'heroku-login-state-coordinator-other-'))
   })
 
   afterEach(() => {
@@ -38,14 +34,14 @@ describe('login-state coordinator', () => {
   it('serializes one normalized dataDir in invocation order while another dataDir proceeds', async () => {
     const lockHeld = deferred()
     const releaseLock = deferred()
-    const first = withLoginStateCoordination(join(tmpDir, '.'), async () => {
+    const first = withLoginStateCoordination(path.join(tmpDir, '.'), async () => {
       lockHeld.resolve()
       await releaseLock.promise
     })
     await lockHeld.promise
 
     const write = writeLoginStateCoordinated(tmpDir, 'queued@example.com')
-    const remove = deleteLoginStateCoordinated(resolve(tmpDir))
+    const remove = deleteLoginStateCoordinated(path.resolve(tmpDir))
     await writeLoginStateCoordinated(otherDir, 'parallel@example.com')
 
     expect(await readLoginState(tmpDir)).to.be.undefined
@@ -97,9 +93,9 @@ describe('login-state coordinator', () => {
   })
 
   it('increments the shared normalized-key revision only after successful package mutations', async () => {
-    const initialRevision = (await getLoginStateRevision(join(tmpDir, '.'))).revision
+    const initialRevision = (await getLoginStateRevision(path.join(tmpDir, '.'))).revision
     await writeLoginStateCoordinated(tmpDir, 'revision@example.com')
-    const writtenRevision = (await getLoginStateRevision(resolve(tmpDir))).revision
+    const writtenRevision = (await getLoginStateRevision(path.resolve(tmpDir))).revision
     expect(writtenRevision).to.equal(initialRevision + 1)
 
     const writeFailure = new Error('write failed')
@@ -130,7 +126,7 @@ describe('login-state coordinator', () => {
     const beforeRemoval = await getLoginStateRevision(tmpDir)
     fs.rmSync(tmpDir, {force: true, recursive: true})
 
-    expect(await getLoginStateRevision(join(tmpDir, '.'))).to.deep.equal(beforeRemoval)
+    expect(await getLoginStateRevision(path.join(tmpDir, '.'))).to.deep.equal(beforeRemoval)
 
     await writeLoginStateCoordinated(tmpDir, 'after@example.com')
     expect((await getLoginStateRevision(tmpDir)).revision).to.equal(beforeRemoval.revision + 1)
@@ -145,10 +141,10 @@ describe('login-state coordinator', () => {
   })
 
   it('uses the original normalized configured dataDir for package I/O', async () => {
-    const configuredDataDir = join(tmpDir, 'nested', '..')
+    const configuredDataDir = path.join(tmpDir, 'nested', '..')
     await writeLoginStateCoordinated(configuredDataDir, 'normalized@example.com')
 
-    expect(await readLoginState(resolve(configuredDataDir))).to.deep.equal({account: 'normalized@example.com'})
+    expect(await readLoginState(path.resolve(configuredDataDir))).to.deep.equal({account: 'normalized@example.com'})
   })
 
   it('retains the package direct-symlink write protection', async function () {

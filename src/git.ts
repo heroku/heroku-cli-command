@@ -3,9 +3,9 @@ import childProcess from 'node:child_process'
 
 import {vars} from './vars.js'
 
-export interface IGitRemote {
-  name: string
-  url: string
+export type IGitRemote = {
+  name: string;
+  url: string;
 }
 
 export class Git {
@@ -14,8 +14,8 @@ export class Git {
       .split('\n')
       .filter(l => l.endsWith('(fetch)'))
       .map(l => {
-        const [name, url] = l.split('\t')
-        return {name, url: url.split(' ')[0]}
+        const [name, url] = l.split('\t', 2)
+        return {name, url: url.split(' ', 1)[0]}
       })
   }
 
@@ -42,9 +42,9 @@ export function configRemote() {
   } catch {}
 }
 
-export interface IGitRemotes {
-  app: string
-  remote: string
+export type IGitRemotes = {
+  app: string;
+  remote: string;
 }
 
 export function getGitRemotes(onlyRemote: string | undefined): IGitRemotes[] {
@@ -62,11 +62,12 @@ export function getGitRemotes(onlyRemote: string | undefined): IGitRemotes[] {
     for (const prefix of vars.gitPrefixes) {
       const suffix = '.git'
       const match = remote.url.match(`${prefix}(.*)${suffix}`)
-      if (!match) continue
-      appRemotes.push({
-        app: match[1],
-        remote: remote.name,
-      })
+      if (match) {
+        appRemotes.push({
+          app: match[1],
+          remote: remote.name,
+        })
+      }
     }
   }
 
