@@ -224,4 +224,8 @@ describe('defaultHelp', () => {
       : undefined
     expect(helpText).to.equal('myapp-production')
   })
+
+  it('is not cached into generated docs or manifests', () => {
+    expect(flags.app().noCacheDefault).to.equal(true)
+  })
 })
