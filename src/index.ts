@@ -1,5 +1,6 @@
 export * from './api-client.js'
 export {Command, Command as default} from './command.js'
+export type * from './completion-types.js'
 export * from './completions.js'
 export {
   getAuth,
