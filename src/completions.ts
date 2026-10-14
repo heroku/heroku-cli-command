@@ -33,22 +33,65 @@ const COMPLETION_TIMEOUT_MS = 2500
  */
 let authedClientPromise: Promise<APIClient> | undefined
 
+/**
+ * Race a promise against the completion deadline. Auth resolution reads the
+ * keychain / netrc, which can occasionally block (a locked macOS keychain, a
+ * stale network mount); a TAB must never hang on it, so we cap the wait and let
+ * the call sites treat an overrun as "no auth" — offer nothing rather than freeze.
+ */
+async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>
+  const deadline = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error('completion auth resolution timed out'))
+    }, ms)
+  })
+  try {
+    return await Promise.race([promise, deadline])
+  } finally {
+    clearTimeout(timer!)
+  }
+}
+
 async function authedClient(ctx: CompletionContext): Promise<APIClient> {
   if (!authedClientPromise) {
     const heroku = new APIClient(ctx.config)
-    authedClientPromise = heroku.getAuth().then(() => heroku)
+    // Bound auth resolution by the completion deadline, and clear the memo if it
+    // rejects (timeout or error) so a later TAB can retry — a cached rejected
+    // promise would otherwise wedge every subsequent completion in this process.
+    authedClientPromise = withTimeout(heroku.getAuth(), COMPLETION_TIMEOUT_MS)
+      .then(() => heroku)
+      .catch((error: unknown) => {
+        authedClientPromise = undefined
+        throw error
+      })
   }
 
   return authedClientPromise
 }
 
 /**
+ * Test-only: clear the memoized authed client so specs don't leak a resolved (or
+ * rejected) client into one another. Intentionally NOT re-exported from the
+ * package entry (index.ts) — it is not part of the public API.
+ */
+export function resetCompletionAuthClient(): void {
+  authedClientPromise = undefined
+}
+
+/**
  * Resolve the CLI's auth token non-interactively, or `undefined` when the user
- * is not logged in.
+ * is not logged in (or auth resolution failed/timed out). A `cacheKey` must
+ * never throw, or the host's TAB handler errors instead of simply offering an
+ * un-partitioned (anon) key.
  */
 async function resolveToken(ctx: CompletionContext): Promise<string | undefined> {
-  const heroku = await authedClient(ctx)
-  return heroku.auth
+  try {
+    const heroku = await authedClient(ctx)
+    return heroku.auth
+  } catch {
+    return undefined
+  }
 }
 
 /**
@@ -109,18 +152,24 @@ async function platformClient(ctx: CompletionContext) {
  * the other completions (nothing offered when logged out; aborts on timeout).
  */
 async function stackNames(ctx: CompletionContext): Promise<string[]> {
-  const heroku = await authedClient(ctx)
-  if (!heroku.auth) return []
+  try {
+    const heroku = await authedClient(ctx)
+    if (!heroku.auth) return []
 
-  const client = new HerokuApiClient(completionClientOptions(heroku))
-  const response = await client.get('/stacks', {signal: AbortSignal.timeout(COMPLETION_TIMEOUT_MS)})
-  const stacks = (await response.json()) as ReadonlyArray<{name?: string}>
-  return stacks
-    .map(stack => stack.name)
-    .filter((name): name is string => typeof name === 'string')
-    // in-place sort is safe on this freshly-mapped array; `.sort` keeps the source es2022-compatible (the package compiles its declarations under es2022 — see test/credential-manager/fixtures/source-declaration-compatibility.ts)
-    // eslint-disable-next-line unicorn/no-array-sort
-    .sort()
+    const client = new HerokuApiClient(completionClientOptions(heroku))
+    const response = await client.get('/stacks', {signal: AbortSignal.timeout(COMPLETION_TIMEOUT_MS)})
+    const stacks = (await response.json()) as ReadonlyArray<{name?: string}>
+    return stacks
+      .map(stack => stack.name)
+      .filter((name): name is string => typeof name === 'string')
+      // in-place sort is safe on this freshly-mapped array; `.sort` keeps the source es2022-compatible (the package compiles its declarations under es2022 — see test/credential-manager/fixtures/source-declaration-compatibility.ts)
+      // eslint-disable-next-line unicorn/no-array-sort
+      .sort()
+  } catch {
+    // A completion must never surface an error to the shell: a network failure,
+    // API error, or the per-request deadline all mean "offer nothing".
+    return []
+  }
 }
 
 type PlatformClient = NonNullable<Awaited<ReturnType<typeof platformClient>>>
@@ -139,11 +188,18 @@ async function withPlatform<T>(
   ctx: CompletionContext,
   fetch: (platform: PlatformClient) => Promise<T>,
 ): Promise<T | undefined> {
-  const platform = await platformClient(ctx)
-  if (!platform) return undefined
+  try {
+    const platform = await platformClient(ctx)
+    if (!platform) return undefined
 
-  const scoped = platform.withOptions({signal: AbortSignal.timeout(COMPLETION_TIMEOUT_MS)})
-  return fetch(scoped)
+    const scoped = platform.withOptions({signal: AbortSignal.timeout(COMPLETION_TIMEOUT_MS)})
+    // `return await` (not `return`) so a rejected fetch is caught here, not by the caller.
+    return await fetch(scoped)
+  } catch {
+    // Any failure — auth resolution, the per-request deadline, an API error —
+    // means the completion offers nothing rather than surfacing an error.
+    return undefined
+  }
 }
 
 /**
@@ -271,11 +327,10 @@ export const AddonCompletion: Completion = {
 /**
  * The newest release versions for the app on the command line, as `vNNN`
  * (e.g. `v4123`), used by the release positional args of `releases:info`,
- * `releases:output`, and `releases:rollback`. The API lists releases ascending
- * and the SDK auto-paginates, so we sort newest-first and cap the menu: a long-
- * lived app can have thousands of releases, and only the most recent are useful
- * to complete (an over-large fetch simply aborts on the deadline → nothing).
- * Short TTL: a new release lands on every deploy and config change.
+ * `releases:output`, and `releases:rollback`. A long-lived app can have thousands
+ * of releases and only the most recent are useful to complete, so we request just
+ * the newest page, descending, via a `Range` header rather than fetching and
+ * sorting them all. Short TTL: a new release lands on every deploy and config change.
  */
 const MAX_RELEASE_COMPLETIONS = 100
 export const ReleaseCompletion: Completion = {
@@ -283,11 +338,20 @@ export const ReleaseCompletion: Completion = {
   cacheKey: async ctx => accountCacheKey(`release:${ctx.app ?? ''}`, apiHost(), await resolveToken(ctx)),
   async options(ctx) {
     if (!ctx.app) return []
-    const releases = await withPlatform(ctx, async platform => platform.release.list(ctx.app!))
+    // Ask for only the newest page, descending. A caller-supplied `Range` header
+    // also makes the SDK skip auto-pagination (see @heroku/sdk dispatcher
+    // `hasCallerRangeHeader`), so this is one bounded request, not a walk of
+    // every release page on a long-lived app.
+    const releases = await withPlatform(ctx, async platform =>
+      platform
+        .withHeaders({Range: `version ..; order=desc, max=${MAX_RELEASE_COMPLETIONS}`})
+        .release.list(ctx.app!),
+    )
     if (!releases) return []
     return releases
       .map(release => release.version)
       .filter((version): version is number => typeof version === 'number')
+      // Server already returns newest-first via the Range header; sort defensively in case it is ignored.
       // eslint-disable-next-line unicorn/no-array-sort -- in-place sort is safe here; keeps the source es2022-compatible (see stackNames)
       .sort((a, b) => b - a)
       .slice(0, MAX_RELEASE_COMPLETIONS)
@@ -376,7 +440,7 @@ export const ProcessTypeCompletion: Completion = {
 export const RemoteCompletion: Completion = {
   options() {
     try {
-      return execSync('git remote', {encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore']})
+      return execSync('git remote', {encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: COMPLETION_TIMEOUT_MS})
         .split('\n')
         .map(line => line.trim())
         .filter(Boolean)

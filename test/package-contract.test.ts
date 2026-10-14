@@ -111,6 +111,17 @@ describe('package contracts', () => {
     expect(declarations).not.to.match(/\bLoginHttp\w*/)
   })
 
+  it('publishes without an `exports` map so the barrel and deep imports resolve to one module instance', () => {
+    // The host CLI keys completion behavior off the reference identity of the
+    // Completion singletons: a `completionCatalog` entry must be the SAME object
+    // the host sees however it imports this package. That holds only while
+    // package.json has NO `exports` field — without one, the root barrel and any
+    // subpath co-resolve to a single ESM instance; an `exports` map would fork
+    // them into two instances and break identity. See the note in src/index.ts.
+    const manifest = readJson<Record<string, unknown>>(path.resolve('package.json'))
+    expect(manifest).to.not.have.property('exports')
+  })
+
   it(`pins the verified ${httpCallPackageName} version in the manifest and lockfile`, () => {
     const manifest = readJson<PackageManifest>(path.resolve('package.json'))
     const lockfile = readJson<Lockfile>(path.resolve('package-lock.json'))

@@ -25,6 +25,7 @@ import {
   RegionCompletion,
   ReleaseCompletion,
   RemoteCompletion,
+  resetCompletionAuthClient,
   RoleCompletion,
   ScopeCompletion,
   SpaceCompletion,
@@ -32,6 +33,10 @@ import {
   StageCompletion,
   TeamCompletion,
 } from '../../src/completions.js'
+import {
+  restoreCredentialManagerStub,
+  stubCredentialManagerWithNoCredentials,
+} from '../helpers/credential-manager-stub.js'
 import {mockSDKPlatform} from '../helpers/mock-sdk.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -142,6 +147,9 @@ describe('autocomplete completion sources', function () {
         release: {list: async (app: string) => (app === 'myapp' ? [{version: 3}, {version: 1}, {version: 2}] : [])},
         space: {list: async () => named(['space'])},
         team: {list: async () => named(['team-b', 'team-a'])},
+        withHeaders() {
+          return this
+        },
         withOptions() {
           return this
         },
@@ -228,6 +236,39 @@ describe('autocomplete completion sources', function () {
         .reply(200, [{name: 'heroku-24'}, {name: 'heroku-22'}])
       expect(await StackCompletion.options(ctx)).to.deep.equal(['heroku-22', 'heroku-24'])
       expect(scope.isDone(), 'the mocked /stacks request should have been made').to.be.true
+    })
+  })
+
+  describe('when the user is not logged in', function () {
+    // The memoized authed client is process-wide, so earlier specs leave a
+    // resolved (authed) client behind. Reset it, point the credential manager at
+    // "no credentials" (APIClient.getAuth → undefined), and clear any ambient
+    // HEROKU_API_KEY so auth genuinely resolves to nothing on this run. The auth
+    // path short-circuits before any network, so no platform stub is needed.
+    let savedApiKey: string | undefined
+
+    beforeEach(function () {
+      savedApiKey = process.env.HEROKU_API_KEY
+      delete process.env.HEROKU_API_KEY
+      resetCompletionAuthClient()
+      stubCredentialManagerWithNoCredentials()
+    })
+
+    afterEach(function () {
+      restoreCredentialManagerStub()
+      resetCompletionAuthClient()
+      if (savedApiKey === undefined) delete process.env.HEROKU_API_KEY
+      else process.env.HEROKU_API_KEY = savedApiKey
+    })
+
+    it('SDK-backed completions offer nothing instead of erroring', async function () {
+      expect(await AppCompletion.options(ctx)).to.deep.equal([])
+    })
+
+    it('the direct /stacks completion offers nothing instead of erroring', async function () {
+      // No nock scope registered: if auth did not short-circuit, the request
+      // would hit the globally-disabled net and throw rather than return [].
+      expect(await StackCompletion.options(ctx)).to.deep.equal([])
     })
   })
 
