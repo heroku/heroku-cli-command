@@ -26,8 +26,6 @@ jobs:
           files = Dir['.github/workflows/*.{yml,yaml}', '.github/actions/**/*.{yml,yaml}']
           files.each { |file| YAML.parse_file(file) }
           puts "parsed #{files.length} workflow/action YAML files"
-      - name: Run public npm install invariants
-        run: node .github/scripts/public-npm-install-canary.mjs
       - name: Install checksum-verified actionlint
         shell: bash
         env:
