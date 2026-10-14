@@ -38,7 +38,7 @@ jobs:
           repositories: heroku-cli-command
           permission-contents: write
           permission-pull-requests: write
-      - name: Generate metadata helper read token
+      - name: Generate workflow helper read token
         id: helper-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
         with:
@@ -58,7 +58,7 @@ jobs:
           repository: heroku/npm-release-workflows
           token: ${{ steps.helper-token.outputs.token }}
           path: workflows-repo
-          ref: 753436625b1c8e39093f321cef758765d591d9a7
+          ref: 9cc6da3718f77f2abce513df70298d1ec821e516
           persist-credentials: false
       - name: Set up Node.js for metadata generation
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7

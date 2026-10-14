@@ -38,36 +38,32 @@ jobs:
           repositories: heroku-cli-command
           permission-contents: write
           permission-pull-requests: write
-      - name: Check out release metadata only
+      - name: Generate workflow helper read token
+        id: helper-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        with:
+          app-id: ${{ vars.DEV_TOOLS_RELEASE_WORKFLOW_APP_ID }}
+          private-key: ${{ secrets.DEV_TOOLS_RELEASE_WORKFLOW_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: npm-release-workflows
+          permission-contents: read
+      - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.sha }}
-          sparse-checkout: |
-            .github/release-configs
           persist-credentials: false
-      - name: Select release channel metadata
-        id: channel
-        shell: bash
-        env:
-          BRANCH_NAME: ${{ github.ref_name }}
-        run: |
-          set -euo pipefail
-          case "$BRANCH_NAME" in
-            main)
-              echo 'config_file=.github/release-configs/release-please-config.json' >> "$GITHUB_OUTPUT"
-              echo 'manifest_file=.github/release-configs/release-please-manifest.json' >> "$GITHUB_OUTPUT"
-              ;;
-            beta)
-              echo 'config_file=.github/release-configs/release-please-config.beta.json' >> "$GITHUB_OUTPUT"
-              echo 'manifest_file=.github/release-configs/release-please-manifest.beta.json' >> "$GITHUB_OUTPUT"
-              ;;
-            *) exit 1 ;;
-          esac
-      - name: Create GitHub release metadata
-        uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4.4.1
+      - name: Check out shared release workflows
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          repository: heroku/npm-release-workflows
+          token: ${{ steps.helper-token.outputs.token }}
+          path: workflows-repo
+          ref: 9cc6da3718f77f2abce513df70298d1ec821e516
+          persist-credentials: false
+      - name: Create GitHub Release
+        uses: ./workflows-repo/.github/actions/release-on-push-create-release-public
+        with:
+          package-manager: npm
+          node-version: '22'
+          branch_name: ${{ github.ref_name }}
           token: ${{ steps.app-token.outputs.token }}
-          target-branch: ${{ github.ref_name }}
-          config-file: ${{ steps.channel.outputs.config_file }}
-          manifest-file: ${{ steps.channel.outputs.manifest_file }}
-          skip-github-pull-request: true

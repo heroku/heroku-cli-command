@@ -35,35 +35,31 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.sha }}
-          path: candidate
           persist-credentials: false
-      - name: Set up Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      - name: Generate workflow helper read token
+        id: helper-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
         with:
-          node-version: 22.x
-          package-manager-cache: false
-      - name: Prepare anonymous npm configuration
-        working-directory: candidate
-        run: node scripts/public-npm-config.mjs
-      - name: Install dependencies
-        working-directory: candidate
-        run: npm ci --ignore-scripts
-      - name: Rebuild dependencies
-        working-directory: candidate
-        run: npm rebuild
-      - name: Build
-        working-directory: candidate
-        run: npm run build
-      - name: Lint
-        working-directory: candidate
-        run: npm run lint
-      - name: Test
-        working-directory: candidate
-        run: npm test
-      - name: Remove isolated public npm configuration
-        if: always()
-        working-directory: candidate
-        run: node scripts/public-npm-config.mjs cleanup
+          app-id: ${{ vars.DEV_TOOLS_RELEASE_WORKFLOW_APP_ID }}
+          private-key: ${{ secrets.DEV_TOOLS_RELEASE_WORKFLOW_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: npm-release-workflows
+          permission-contents: read
+      - name: Check out shared release workflows
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: heroku/npm-release-workflows
+          token: ${{ steps.helper-token.outputs.token }}
+          path: workflows-repo
+          ref: 9cc6da3718f77f2abce513df70298d1ec821e516
+          persist-credentials: false
+      - name: Validate and test
+        uses: ./workflows-repo/.github/actions/release-validate-public
+        with:
+          package-manager: npm
+          node-version: '22'
+          lint_command: 'run lint'
+          test_command: 'test'
 
   release-please-pr:
     needs: validate
@@ -76,18 +72,32 @@ jobs:
     environment: CredentialManagerInstall
     runs-on: pub-hk-ubuntu-24.04-ip
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
     outputs:
+      package_name: ${{ steps.release-workflow.outputs.package_name }}
+      npm_tag: ${{ steps.release-workflow.outputs.npm_tag }}
       pr_number: ${{ steps.release-metadata.outputs.pr_number }}
       pr_branch: ${{ steps.release-metadata.outputs.pr_branch }}
+      manifest_file: ${{ steps.release-workflow.outputs.manifest_file }}
       candidate_sha: ${{ steps.release-metadata.outputs.candidate_sha }}
-      npm_tag: ${{ steps.channel.outputs.npm_tag }}
-      manifest_file: ${{ steps.channel.outputs.manifest_file }}
       release_candidate: ${{ steps.release-metadata.outputs.release_candidate }}
     steps:
       - name: Confirm owner-controlled release prerequisites
         run: echo 'CredentialManagerInstall approval and protected main/beta source are required; repository enablement defaults fail-closed.'
+      - name: Check out trusted release metadata
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.ref }}
+          persist-credentials: false
+      - name: Generate workflow helper read token
+        id: helper-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        with:
+          app-id: ${{ vars.DEV_TOOLS_RELEASE_WORKFLOW_APP_ID }}
+          private-key: ${{ secrets.DEV_TOOLS_RELEASE_WORKFLOW_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: npm-release-workflows
+          permission-contents: read
       - name: Generate release GitHub App token
         id: app-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
@@ -98,80 +108,101 @@ jobs:
           repositories: heroku-cli-command
           permission-contents: write
           permission-pull-requests: write
-      - name: Check out trusted release metadata
+      - name: Check out shared release workflows
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ github.ref }}
+          repository: heroku/npm-release-workflows
+          token: ${{ steps.helper-token.outputs.token }}
+          path: workflows-repo
+          ref: 9cc6da3718f77f2abce513df70298d1ec821e516
           persist-credentials: false
-      - name: Select release channel metadata
-        id: channel
-        shell: bash
-        env:
-          BRANCH_NAME: ${{ github.ref_name }}
-        run: |
-          set -euo pipefail
-          case "$BRANCH_NAME" in
-            main)
-              echo 'config_file=.github/release-configs/release-please-config.json' >> "$GITHUB_OUTPUT"
-              echo 'manifest_file=.github/release-configs/release-please-manifest.json' >> "$GITHUB_OUTPUT"
-              echo 'npm_tag=latest' >> "$GITHUB_OUTPUT"
-              ;;
-            beta)
-              echo 'config_file=.github/release-configs/release-please-config.beta.json' >> "$GITHUB_OUTPUT"
-              echo 'manifest_file=.github/release-configs/release-please-manifest.beta.json' >> "$GITHUB_OUTPUT"
-              echo 'npm_tag=beta' >> "$GITHUB_OUTPUT"
-              ;;
-            *) exit 1 ;;
-          esac
-      - name: Verify release metadata files
-        shell: bash
-        env:
-          CONFIG_FILE: ${{ steps.channel.outputs.config_file }}
-          MANIFEST_FILE: ${{ steps.channel.outputs.manifest_file }}
-        run: test -f "$CONFIG_FILE" && test -f "$MANIFEST_FILE"
-      - name: Create or update release PR
-        id: release-please
-        uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4.4.1
+      - name: Create release PR
+        id: release-workflow
+        uses: ./workflows-repo/.github/actions/release-please-pr-public
         with:
+          package-manager: npm
+          node-version: '22'
+          branch_name: ${{ github.ref_name }}
+          dry_run: ${{ inputs.dry_run }}
           token: ${{ steps.app-token.outputs.token }}
-          target-branch: ${{ github.ref_name }}
-          config-file: ${{ steps.channel.outputs.config_file }}
-          manifest-file: ${{ steps.channel.outputs.manifest_file }}
-          skip-github-release: true
-      - name: Resolve release PR metadata
+      - name: Resolve and verify release candidate
         id: release-metadata
         shell: bash
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          PR_JSON: ${{ steps.release-please.outputs.pr }}
+          PACKAGE_NAME: ${{ steps.release-workflow.outputs.package_name }}
+          SHARED_NPM_TAG: ${{ steps.release-workflow.outputs.npm_tag }}
+          SHARED_MANIFEST_FILE: ${{ steps.release-workflow.outputs.manifest_file }}
+          SHARED_PR_NUMBER: ${{ steps.release-workflow.outputs.pr_number }}
+          SHARED_NO_RELEASE_NEEDED: ${{ steps.release-workflow.outputs.no_release_needed }}
+          SHARED_PR_ALREADY_EXISTS: ${{ steps.release-workflow.outputs.pr_already_exists }}
           REPOSITORY: ${{ github.repository }}
           TARGET_BRANCH: ${{ github.ref_name }}
         run: |
           set -euo pipefail
-          test -n "$PR_JSON"
-          PR_NUMBER=$(node -e 'const pr=JSON.parse(process.env.PR_JSON); process.stdout.write(String(pr.number ?? ""))')
-          PR_BRANCH=$(node -e 'const pr=JSON.parse(process.env.PR_JSON); process.stdout.write(pr.headBranchName ?? "")')
-          PR_BASE=$(node -e 'const pr=JSON.parse(process.env.PR_JSON); process.stdout.write(pr.baseBranchName ?? "")')
-          test -n "$PR_NUMBER"
-          test -n "$PR_BRANCH"
-          test "$PR_BASE" = "$TARGET_BRANCH"
-          PR_DATA=$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER")
-          PR_STATE=$(PR_DATA="$PR_DATA" node -e 'const pr=JSON.parse(process.env.PR_DATA); process.stdout.write(pr.state ?? "")')
-          PR_HEAD_REPO=$(PR_DATA="$PR_DATA" node -e 'const pr=JSON.parse(process.env.PR_DATA); process.stdout.write(pr.head?.repo?.full_name ?? "")')
-          PR_HEAD_BRANCH=$(PR_DATA="$PR_DATA" node -e 'const pr=JSON.parse(process.env.PR_DATA); process.stdout.write(pr.head?.ref ?? "")')
-          PR_BASE_BRANCH=$(PR_DATA="$PR_DATA" node -e 'const pr=JSON.parse(process.env.PR_DATA); process.stdout.write(pr.base?.ref ?? "")')
-          CANDIDATE_SHA=$(PR_DATA="$PR_DATA" node -e 'const pr=JSON.parse(process.env.PR_DATA); process.stdout.write(pr.head?.sha ?? "")')
+          UNSCOPED_PACKAGE_NAME="${PACKAGE_NAME#@*/}"
+          PR_BRANCH="release-please--branches--$TARGET_BRANCH--components--$UNSCOPED_PACKAGE_NAME"
+          if [ "$SHARED_NO_RELEASE_NEEDED" = 'true' ] &&
+            [ "$SHARED_PR_ALREADY_EXISTS" != 'true' ] &&
+            [ -z "$SHARED_PR_NUMBER" ]; then
+            echo 'release_candidate=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          OPEN_PRS=$(gh api "repos/$REPOSITORY/pulls?state=open&head=$REPOSITORY:$PR_BRANCH&base=$TARGET_BRANCH")
+          PR_RECORD=$(OPEN_PRS="$OPEN_PRS" REPOSITORY="$REPOSITORY" PR_BRANCH="$PR_BRANCH" TARGET_BRANCH="$TARGET_BRANCH" node -e '
+            const prs = JSON.parse(process.env.OPEN_PRS);
+            const pr = prs.find(item =>
+              item.state === "open" &&
+              item.head?.repo?.full_name === process.env.REPOSITORY &&
+              item.head?.ref === process.env.PR_BRANCH &&
+              item.base?.ref === process.env.TARGET_BRANCH
+            );
+            if (!pr) process.exit(0);
+            process.stdout.write([
+              String(pr.number ?? ""),
+              pr.state ?? "",
+              pr.head?.repo?.full_name ?? "",
+              pr.head?.ref ?? "",
+              pr.base?.ref ?? "",
+              pr.head?.sha ?? "",
+            ].join("\n"));
+          ')
+          if [ -z "$PR_RECORD" ]; then
+            if [ "$SHARED_NO_RELEASE_NEEDED" = 'true' ]; then
+              echo 'release_candidate=false' >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo 'Expected release PR was not found; refusing to build a candidate' >&2
+            exit 1
+          fi
+          mapfile -t PR_FIELDS <<< "$PR_RECORD"
+          PR_NUMBER="${PR_FIELDS[0]}"
+          PR_STATE="${PR_FIELDS[1]}"
+          PR_HEAD_REPO="${PR_FIELDS[2]}"
+          PR_BRANCH="${PR_FIELDS[3]}"
+          PR_BASE_BRANCH="${PR_FIELDS[4]}"
+          CANDIDATE_SHA="${PR_FIELDS[5]}"
+
           test "$PR_STATE" = 'open'
           test "$PR_HEAD_REPO" = "$REPOSITORY"
-          test "$PR_HEAD_BRANCH" = "$PR_BRANCH"
+          test "$PR_BRANCH" = "release-please--branches--$TARGET_BRANCH--components--$UNSCOPED_PACKAGE_NAME"
           test "$PR_BASE_BRANCH" = "$TARGET_BRANCH"
-          test "$CANDIDATE_SHA" = "$(gh api "repos/$REPOSITORY/git/ref/heads/$PR_BRANCH" --jq '.object.sha')"
-          {
-            echo "pr_number=$PR_NUMBER"
-            echo "pr_branch=$PR_BRANCH"
-            echo "candidate_sha=$CANDIDATE_SHA"
-            echo 'release_candidate=true'
-          } >> "$GITHUB_OUTPUT"
+          test -n "$CANDIDATE_SHA"
+          test "$(gh api "repos/$REPOSITORY/git/ref/heads/$PR_BRANCH" --jq '.object.sha')" = "$CANDIDATE_SHA"
+          if [ -n "$SHARED_PR_NUMBER" ] && [ "$SHARED_PR_NUMBER" != "$PR_NUMBER" ]; then
+            echo 'Shared action PR number does not match the validated release PR' >&2
+            exit 1
+          fi
+
+          case "$TARGET_BRANCH:$SHARED_NPM_TAG:$SHARED_MANIFEST_FILE" in
+            main:latest:.github/release-configs/release-please-manifest.json) ;;
+            beta:beta:.github/release-configs/release-please-manifest.beta.json) ;;
+            *) echo 'Shared release action returned unexpected channel metadata' >&2; exit 1 ;;
+          esac
+          echo "candidate_sha=$CANDIDATE_SHA" >> "$GITHUB_OUTPUT"
+          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "pr_branch=$PR_BRANCH" >> "$GITHUB_OUTPUT"
+          echo 'release_candidate=true' >> "$GITHUB_OUTPUT"
 
   build-package:
     needs: release-please-pr
@@ -186,7 +217,6 @@ jobs:
     permissions:
       contents: read
     outputs:
-      artifact_name: ${{ steps.pack.outputs.artifact_name }}
       tarball_name: ${{ steps.pack.outputs.tarball_name }}
       tarball_sha256: ${{ steps.pack.outputs.tarball_sha256 }}
       artifact_id: ${{ steps.upload.outputs.artifact-id }}
@@ -225,16 +255,11 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22.x
+          registry-url: https://registry.npmjs.org
           package-manager-cache: false
-      - name: Prepare anonymous npm configuration
-        working-directory: candidate
-        run: node scripts/public-npm-config.mjs
       - name: Install dependencies
         working-directory: candidate
-        run: npm ci --ignore-scripts
-      - name: Rebuild dependencies
-        working-directory: candidate
-        run: npm rebuild
+        run: npm ci
       - name: Build and test release candidate
         working-directory: candidate
         run: |
@@ -243,8 +268,7 @@ jobs:
           npm run verify:rollback
       - name: Verify packed consumer
         working-directory: candidate
-        run: |
-          npm run verify:packed-consumer
+        run: npm run verify:packed-consumer
       - name: Pack command tarball
         id: pack
         shell: bash
@@ -265,7 +289,6 @@ jobs:
           printf '%s\n' "$PACKAGE_VERSION" > "$RUNNER_TEMP/release-artifact/PACKAGE_VERSION"
           printf '%s\n' "$NPM_TAG" > "$RUNNER_TEMP/release-artifact/NPM_TAG"
           {
-            echo 'artifact_name=command-release-candidate'
             echo "tarball_name=$TARBALL"
             echo "tarball_sha256=$SHA256"
           } >> "$GITHUB_OUTPUT"
@@ -283,10 +306,6 @@ jobs:
             ${{ runner.temp }}/release-artifact/NPM_TAG
           if-no-files-found: error
           retention-days: 1
-      - name: Remove isolated public npm configuration
-        if: always()
-        working-directory: candidate
-        run: node scripts/public-npm-config.mjs cleanup
 
   publish:
     needs: [release-please-pr, build-package]
@@ -301,8 +320,19 @@ jobs:
     permissions:
       contents: read
       actions: read
+      pull-requests: read
       id-token: write
     steps:
+      - name: Generate release GitHub App read token
+        id: release-read-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        with:
+          app-id: ${{ vars.DEV_TOOLS_RELEASE_WORKFLOW_APP_ID }}
+          private-key: ${{ secrets.DEV_TOOLS_RELEASE_WORKFLOW_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: heroku-cli-command
+          permission-contents: read
+          permission-pull-requests: read
       - name: Download exact release artifact
         shell: bash
         env:
@@ -353,6 +383,11 @@ jobs:
         shell: bash
         env:
           DRY_RUN: ${{ inputs.dry_run }}
+          GH_TOKEN: ${{ steps.release-read-token.outputs.token }}
+          PR_NUMBER: ${{ needs.release-please-pr.outputs.pr_number }}
+          PR_BRANCH: ${{ needs.release-please-pr.outputs.pr_branch }}
+          REPOSITORY: ${{ github.repository }}
+          TARGET_BRANCH: ${{ github.ref_name }}
           NPM_TAG: ${{ needs.release-please-pr.outputs.npm_tag }}
           TARBALL_NAME: ${{ needs.build-package.outputs.tarball_name }}
           TARBALL_SHA256: ${{ needs.build-package.outputs.tarball_sha256 }}
@@ -360,6 +395,20 @@ jobs:
           EXPECTED_PACKAGE_NAME: '@heroku-cli/command'
         run: |
           set -euo pipefail
+          PR_DATA=$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER")
+          PR_FIELDS=$(PR_DATA="$PR_DATA" REPOSITORY="$REPOSITORY" PR_BRANCH="$PR_BRANCH" TARGET_BRANCH="$TARGET_BRANCH" CANDIDATE_SHA="$CANDIDATE_SHA" node -e '
+            const pr = JSON.parse(process.env.PR_DATA);
+            const valid = pr.state === "open" &&
+              pr.head?.repo?.full_name === process.env.REPOSITORY &&
+              pr.head?.ref === process.env.PR_BRANCH &&
+              pr.head?.sha === process.env.CANDIDATE_SHA &&
+              pr.base?.ref === process.env.TARGET_BRANCH;
+            if (!valid) process.exit(1);
+            process.stdout.write("valid\n");
+          ')
+          test "$PR_FIELDS" = 'valid'
+          test "$(gh api "repos/$REPOSITORY/git/ref/heads/$PR_BRANCH" --jq '.object.sha')" = "$CANDIDATE_SHA"
+
           ARTIFACT="$RUNNER_TEMP/release-artifact/$TARBALL_NAME"
           test "$(cat "$RUNNER_TEMP/release-artifact/SOURCE_SHA")" = "$CANDIDATE_SHA"
           test "$(cat "$RUNNER_TEMP/release-artifact/PACKAGE_NAME")" = "$EXPECTED_PACKAGE_NAME"
