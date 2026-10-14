@@ -30,7 +30,7 @@ describe('public npm config', () => {
       expect(readFileSync(configPath, 'utf8')).to.equal(publicNpmConfig)
       expect(readFileSync(configPath, 'utf8')).to.match(/^registry=https:\/\/registry\.npmjs\.org\/\n$/)
       expect(readFileSync(configPath, 'utf8')).not.to.match(/_authToken|_auth|NODE_AUTH_TOKEN|NPM_READ_TOKEN|always-auth/)
-      expect(statSync(configPath).mode % 0o1000).to.equal(0o600)
+      if (process.platform !== 'win32') expect(statSync(configPath).mode % 0o1000).to.equal(0o600)
     } finally {
       rmSync(directory, {force: true, recursive: true})
     }
