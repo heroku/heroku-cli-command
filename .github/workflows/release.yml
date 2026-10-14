@@ -31,26 +31,26 @@ jobs:
     environment: CredentialManagerInstall
     runs-on: pub-hk-ubuntu-24.04-ip
     steps:
-      - name: Check out trusted action definition
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          ref: ${{ github.sha }}
-          path: trusted-action
-          persist-credentials: false
       - name: Check out exact candidate source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.sha }}
           path: candidate
           persist-credentials: false
-      - name: Install private dependencies
-        id: private-install
-        uses: ./trusted-action/.github/actions/private-npm-install
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22.x
-          read-token: ${{ secrets.NPM_READ_TOKEN_HEROKU_CREDENTIAL_MANAGER }}
-          expected-action-sha: ${{ github.sha }}
-          working-directory: candidate
+          package-manager-cache: false
+      - name: Prepare anonymous npm configuration
+        working-directory: candidate
+        run: node scripts/public-npm-config.mjs
+      - name: Install dependencies
+        working-directory: candidate
+        run: npm ci --ignore-scripts
+      - name: Rebuild dependencies
+        working-directory: candidate
+        run: npm rebuild
       - name: Build
         working-directory: candidate
         run: npm run build
@@ -60,12 +60,10 @@ jobs:
       - name: Test
         working-directory: candidate
         run: npm test
-      - name: Remove token-free npm paths
+      - name: Remove isolated public npm configuration
         if: always()
-        env:
-          PRIVATE_NPM_BASE: ${{ runner.temp }}
-          PRIVATE_NPM_CLEAN_ROOT: ${{ steps.private-install.outputs.clean-root }}
-        run: node trusted-action/.github/actions/private-npm-install/finalize.mjs
+        working-directory: candidate
+        run: node scripts/public-npm-config.mjs cleanup
 
   release-please-pr:
     needs: validate
@@ -193,12 +191,6 @@ jobs:
       tarball_sha256: ${{ steps.pack.outputs.tarball_sha256 }}
       artifact_id: ${{ steps.upload.outputs.artifact-id }}
     steps:
-      - name: Check out trusted action definition
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          ref: ${{ github.sha }}
-          path: trusted-action
-          persist-credentials: false
       - name: Check out exact release candidate source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -229,14 +221,20 @@ jobs:
           esac
           echo "package_name=$PACKAGE_NAME" >> "$GITHUB_OUTPUT"
           echo "package_version=$PACKAGE_VERSION" >> "$GITHUB_OUTPUT"
-      - name: Install private dependencies
-        id: private-install
-        uses: ./trusted-action/.github/actions/private-npm-install
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22.x
-          read-token: ${{ secrets.NPM_READ_TOKEN_HEROKU_CREDENTIAL_MANAGER }}
-          expected-action-sha: ${{ github.sha }}
-          working-directory: candidate
+          package-manager-cache: false
+      - name: Prepare anonymous npm configuration
+        working-directory: candidate
+        run: node scripts/public-npm-config.mjs
+      - name: Install dependencies
+        working-directory: candidate
+        run: npm ci --ignore-scripts
+      - name: Rebuild dependencies
+        working-directory: candidate
+        run: npm rebuild
       - name: Build and test release candidate
         working-directory: candidate
         run: |
@@ -245,8 +243,6 @@ jobs:
           npm run verify:rollback
       - name: Verify packed consumer
         working-directory: candidate
-        env:
-          PACKED_VERIFY_NPM_TOKEN: ${{ secrets.NPM_READ_TOKEN_HEROKU_CREDENTIAL_MANAGER }}
         run: |
           npm run verify:packed-consumer
       - name: Pack command tarball
@@ -287,12 +283,10 @@ jobs:
             ${{ runner.temp }}/release-artifact/NPM_TAG
           if-no-files-found: error
           retention-days: 1
-      - name: Remove token-free npm paths
+      - name: Remove isolated public npm configuration
         if: always()
-        env:
-          PRIVATE_NPM_BASE: ${{ runner.temp }}
-          PRIVATE_NPM_CLEAN_ROOT: ${{ steps.private-install.outputs.clean-root }}
-        run: node trusted-action/.github/actions/private-npm-install/finalize.mjs
+        working-directory: candidate
+        run: node scripts/public-npm-config.mjs cleanup
 
   publish:
     needs: [release-please-pr, build-package]
@@ -332,24 +326,29 @@ jobs:
             '
           gh api "repos/$REPOSITORY/actions/artifacts/$ARTIFACT_ID/zip" > "$RUNNER_TEMP/release-artifact.zip"
           unzip -q "$RUNNER_TEMP/release-artifact.zip" -d "$RUNNER_TEMP/release-artifact"
+      - name: Check out trusted npm configuration helper
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          path: trusted-release-workflow
+          sparse-checkout: scripts/public-npm-config.mjs
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
       - name: Set up Node.js for OIDC publish
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22.x
           package-manager-cache: false
+      - name: Prepare isolated public npm configuration
+        run: node trusted-release-workflow/scripts/public-npm-config.mjs setup
       - name: Install exact npm trusted-publishing client
         env:
           EXPECTED_NPM_VERSION: 11.6.2
-        run: |
-          set -euo pipefail
-          npm install --global --ignore-scripts --no-audit --no-fund "npm@$EXPECTED_NPM_VERSION"
-          test "$(npm --version)" = "$EXPECTED_NPM_VERSION"
-          node -e '
-            const actual = process.argv[1].split(".").map(Number)
-            const minimum = [11, 5, 1]
-            const meetsMinimum = actual.some((part, index) => part > minimum[index] && actual.slice(0, index).every((value, prior) => value === minimum[prior])) || actual.every((part, index) => part === minimum[index])
-            if (!meetsMinimum) process.exit(1)
-          ' "$(npm --version)"
+        run: npm install --global --ignore-scripts --no-audit --no-fund "npm@$EXPECTED_NPM_VERSION"
+      - name: Verify exact npm trusted-publishing client version
+        env:
+          EXPECTED_NPM_VERSION: 11.6.2
+        run: test "$(npm --version)" = "$EXPECTED_NPM_VERSION"
       - name: Verify and publish tarball
         shell: bash
         env:
@@ -382,3 +381,6 @@ jobs:
           else
             npm publish "$ARTIFACT" --ignore-scripts --tag "$NPM_TAG"
           fi
+      - name: Remove isolated public npm configuration
+        if: always()
+        run: node trusted-release-workflow/scripts/public-npm-config.mjs cleanup

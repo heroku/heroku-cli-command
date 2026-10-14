@@ -12,6 +12,7 @@ import {
   readFile,
   readdir,
   rm,
+  stat,
   writeFile,
 } from 'node:fs/promises'
 import {createServer} from 'node:http'
@@ -20,6 +21,7 @@ import {dirname, join, relative, resolve, sep} from 'node:path'
 import {fileURLToPath, pathToFileURL} from 'node:url'
 import {promisify} from 'node:util'
 import {parseArgs} from 'node:util'
+import {createPublicNpmEnvironment, publicNpmConfig, writePublicNpmConfig} from './public-npm-config.mjs'
 
 const require = createRequire(import.meta.url)
 const ts = require('typescript')
@@ -162,22 +164,11 @@ async function walk(path, root = path) {
   return files.sort()
 }
 
-function redactionVariants(value) {
-  if (!value || value.length < 4) return []
-  const variants = new Set([value])
-  try {
-    variants.add(encodeURIComponent(value))
-    variants.add(Buffer.from(value).toString('base64'))
-    variants.add(Buffer.from(value).toString('base64url'))
-  } catch {}
-  return [...variants].filter(Boolean)
-}
-
 function redact(value) {
   let redacted = String(value)
   for (const secret of workspace?.redactions ?? []) redacted = redacted.replaceAll(secret, '[redacted]')
   return redacted
-    .replace(/((?:_authToken|_auth|password)\s*[=:]\s*)\S+/gi, '$1[redacted]')
+    .replace(/((?:_authToken|_auth|password|token|api[_-]?key|session)\s*[=:]\s*)\S+/gi, '$1[redacted]')
     .replace(/(https?:\/\/)[^/@\s]+@/gi, '$1[redacted]@')
 }
 
@@ -208,51 +199,8 @@ async function run(command, args, options = {}) {
   }
 }
 
-function resolveConfigEnvironment(value, environment, key) {
-  return value.replace(/\$\{([^}]+)\}/g, (_, name) => {
-    check(Object.hasOwn(environment, name), `npm config ${key} references unavailable environment variable ${name}`)
-    return environment[name]
-  })
-}
-
 async function createMinimalNpmConfig(target) {
-  const userConfig = process.env.npm_config_userconfig || process.env.NPM_CONFIG_USERCONFIG
-  const configPath = userConfig || (process.env.HOME ? join(process.env.HOME, '.npmrc') : undefined)
-  const lines = configPath ? (await readFile(configPath, 'utf8').catch(() => '')).split(/\r?\n/) : []
-  const output = ['registry=https://registry.npmjs.org/']
-  const childEnvironment = {}
-  let secretIndex = 0
-
-  for (const line of lines) {
-    const trimmed = line.trim()
-    if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith(';')) continue
-    const separator = trimmed.indexOf('=')
-    if (separator < 1) continue
-    const key = trimmed.slice(0, separator).trim()
-    const rawValue = trimmed.slice(separator + 1).trim()
-    const relevant = key === 'registry' || key.endsWith(':registry') || /(?:_authToken|_auth|username|password|always-auth)$/i.test(key)
-    if (!relevant) continue
-    const resolved = resolveConfigEnvironment(rawValue, process.env, key)
-    if (/(?:_authToken|_auth|password)$/i.test(key)) {
-      const name = `PACKED_VERIFY_NPM_SECRET_${secretIndex++}`
-      childEnvironment[name] = resolved
-      output.push(`${key}=\${${name}}`)
-      for (const variant of redactionVariants(resolved)) workspace.redactions.add(variant)
-    } else {
-      output.push(`${key}=${resolved}`)
-    }
-  }
-
-  if (process.env.PACKED_VERIFY_NPM_TOKEN) {
-    const name = `PACKED_VERIFY_NPM_SECRET_${secretIndex++}`
-    childEnvironment[name] = process.env.PACKED_VERIFY_NPM_TOKEN
-    output.push(`//registry.npmjs.org/:_authToken=\${${name}}`)
-    for (const variant of redactionVariants(process.env.PACKED_VERIFY_NPM_TOKEN)) workspace.redactions.add(variant)
-  }
-
-  await writeFile(target, `${output.join('\n')}\n`, {mode: 0o600})
-  await chmod(target, 0o600)
-  return childEnvironment
+  await writePublicNpmConfig(target)
 }
 
 function specifiersFromSource(source, fileName) {
@@ -351,9 +299,7 @@ async function runMutationChecks() {
         encoding: 'utf8',
         env: sanitizedEnvironment({
           HOME: process.env.HOME,
-          NPM_CONFIG_CACHE: process.env.npm_config_cache || process.env.NPM_CONFIG_CACHE,
           PACKED_VERIFY_NPM_CLI: npmCliPath,
-          PACKED_VERIFY_NPM_TOKEN: process.env.PACKED_VERIFY_NPM_TOKEN,
           PACKED_CONSUMER_BASELINE_SHA: baselineSha,
           PACKED_VERIFY_SKIP_MUTATIONS: '1',
           USERPROFILE: process.env.USERPROFILE ?? process.env.HOME,
@@ -456,7 +402,14 @@ function isolatedPaths(name) {
 async function createIsolatedEnvironment(name, extra = {}) {
   const paths = isolatedPaths(name)
   await Promise.all(Object.values(paths).map(path => mkdir(path, {recursive: true})))
-  const environment = sanitizedEnvironment({
+  if (process.platform !== 'win32') {
+    await Promise.all(Object.values(paths).map(path => chmod(path, 0o700)))
+  }
+  const configPath = join(paths.root, 'npmrc')
+  const globalConfigPath = join(paths.root, 'global.npmrc')
+  await createMinimalNpmConfig(configPath)
+  await createMinimalNpmConfig(globalConfigPath)
+  const npmEnvironmentSource = sanitizedEnvironment({
     HOME: paths.home,
     TMP: paths.temporary,
     TEMP: paths.temporary,
@@ -465,13 +418,18 @@ async function createIsolatedEnvironment(name, extra = {}) {
     XDG_CACHE_HOME: paths.cache,
     XDG_CONFIG_HOME: paths.config,
     XDG_DATA_HOME: paths.data,
-    npm_config_cache: paths.cache,
     npm_config_ignore_scripts: 'true',
-    npm_config_logs_dir: paths.logs,
-    npm_config_userconfig: workspace.npmUserConfig,
-    ...workspace.npmEnvironment,
     ...extra,
-  })
+    })
+  const environment = createPublicNpmEnvironment(npmEnvironmentSource, {cachePath: paths.cache, configPath, globalConfigPath, logsPath: paths.logs})
+  for (const [name, value] of Object.entries(npmEnvironmentSource)) {
+    if (/(?:_authToken|_auth|token|password|username)/i.test(name) && value) {
+      for (const secret of [value, encodeURIComponent(value), Buffer.from(value).toString('base64'), Buffer.from(value).toString('base64url')]) {
+        if (secret.length >= 4) workspace.redactions.add(secret)
+      }
+    }
+  }
+  await assertAnonymousNpmEnvironment(environment, paths)
   return {environment, paths}
 }
 
@@ -531,7 +489,7 @@ async function packOriginBaseline(packDirectory) {
   })
   await run(process.execPath, [join(baselineRepository, 'node_modules/typescript/bin/tsc'), '--project', join(baselineRepository, 'tsconfig.json')], {
     cwd: baselineRepository,
-    env: sanitizedEnvironment({...isolated.environment, npm_config_userconfig: undefined, ...Object.fromEntries(Object.keys(workspace.npmEnvironment).map(key => [key, undefined]))}),
+    env: isolated.environment,
     label: `token-free ${baselineSha} TypeScript build`,
   })
   const metadata = await npmPack(baselineRepository, packDirectory, isolated.environment, `authoritative ${baselineSha} npm pack --ignore-scripts`)
@@ -731,10 +689,11 @@ async function initializeWorkspace() {
     workspace.redactions.add(normalizePath(process.env.HOME))
   }
   workspace.npmUserConfig = join(workspace.root, 'npmrc')
-  workspace.npmEnvironment = await createMinimalNpmConfig(workspace.npmUserConfig)
+  await createMinimalNpmConfig(workspace.npmUserConfig)
   const control = await createIsolatedEnvironment('control')
   workspace.controlPaths = control.paths
   workspace.baseEnvironment = control.environment
+  await assertAnonymousNpmEnvironment(workspace.baseEnvironment, workspace.controlPaths)
   const npmPackagePath = npmCliPath ? resolve(dirname(npmCliPath), '..', 'package.json') : undefined
   const resolvedNpmPackagePath = npmPackagePath ?? join((await run('npm', ['root', '--global'], {env: workspace.baseEnvironment})).stdout.trim(), 'npm', 'package.json')
   const npmRequire = createRequire(resolvedNpmPackagePath)
@@ -743,6 +702,34 @@ async function initializeWorkspace() {
   npmTar = npmRequire('tar')
   npmPacklist = npmRequire('npm-packlist')
   workspace.Arborist = npmRequire('@npmcli/arborist')
+}
+
+async function assertAnonymousNpmEnvironment(environment, paths) {
+  for (const [key, value] of Object.entries(environment)) {
+    if (/^(?:NODE_AUTH_TOKEN|NPM_TOKEN)$/i.test(key)) {
+      check(value === '', `npm verifier environment does not clear ${key}`)
+      continue
+    }
+    if (/^npm_config_/i.test(key) && /(?:auth|token|password|username)/i.test(key)) {
+      fail(`npm verifier environment includes credential setting ${key}`)
+    }
+    check(!/(?:_authToken|_auth|token|password|username)/i.test(key), `npm verifier environment includes credential setting ${key}`)
+    check(!/(?:_authToken|_auth|token|password|username)/i.test(value), `npm verifier environment contains credential value for ${key}`)
+  }
+  check(environment.NODE_AUTH_TOKEN === '' && environment.NPM_TOKEN === '', 'npm verifier environment does not explicitly clear token variables')
+  check(environment.NPM_CONFIG_USERCONFIG === join(paths.root, 'npmrc'), 'npm user config is not isolated')
+  check(environment.NPM_CONFIG_GLOBALCONFIG === join(paths.root, 'global.npmrc'), 'npm global config is not isolated')
+  check(environment.NPM_CONFIG_CACHE === paths.cache, 'npm cache is not isolated')
+  check(environment.NPM_CONFIG_LOGS_DIR === paths.logs, 'npm logs are not isolated')
+  check(environment.NPM_CONFIG_REGISTRY === 'https://registry.npmjs.org/', 'npm registry is not explicitly public')
+  check(await readFile(environment.NPM_CONFIG_USERCONFIG, 'utf8') === publicNpmConfig, 'npm config is not an empty public-registry config')
+  if (process.platform !== 'win32') {
+    for (const directory of [paths.root, paths.cache, paths.logs]) {
+      assert.equal((await stat(directory)).mode & 0o777, 0o700)
+    }
+    assert.equal((await stat(environment.NPM_CONFIG_USERCONFIG)).mode & 0o777, 0o600)
+    assert.equal((await stat(environment.NPM_CONFIG_GLOBALCONFIG)).mode & 0o777, 0o600)
+  }
 }
 
 async function main() {

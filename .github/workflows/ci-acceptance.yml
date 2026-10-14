@@ -2,8 +2,6 @@ name: Node CI Suite - Acceptance
 
 on:
   push:
-    # Keep integration and publishing branches covered because all retain the
-    # package-scoped private credential-manager dependency.
     branches: [v14.0.0, main, beta]
   pull_request:
     branches: [v14.0.0]
@@ -13,25 +11,7 @@ permissions:
   contents: read
 
 jobs:
-  trust-configuration-notice:
-    if: >-
-      github.repository == 'heroku/heroku-cli-command' &&
-      vars.CREDENTIAL_MANAGER_INSTALL_ENABLED != 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Explain fail-closed acceptance matrix
-        run: echo 'Acceptance is disabled until an owner protects CredentialManagerInstall and v14.0.0/main/beta, then sets CREDENTIAL_MANAGER_INSTALL_ENABLED=true.'
-
   acceptance:
-    if: >-
-      github.repository == 'heroku/heroku-cli-command' &&
-      vars.CREDENTIAL_MANAGER_INSTALL_ENABLED == 'true' &&
-      (((github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
-        (github.ref == 'refs/heads/v14.0.0' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/beta')) ||
-       (github.event_name == 'pull_request' &&
-        github.base_ref == 'v14.0.0' &&
-        github.event.pull_request.head.repo.full_name == github.repository &&
-        github.event.pull_request.user.login != 'dependabot[bot]'))
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -41,36 +21,29 @@ jobs:
     env:
       ACCEPTANCE_TESTS: 'true'
     steps:
-      - name: Check out trusted action definition
+      - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: ${{ github.sha }}
-          path: trusted-action
           persist-credentials: false
-      - name: Check out exact candidate source
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          ref: ${{ github.sha }}
-          path: candidate
-          persist-credentials: false
-      - name: Install private dependencies
-        id: private-install
-        uses: ./trusted-action/.github/actions/private-npm-install
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: ${{ matrix.node-version }}
-          read-token: ${{ secrets.NPM_READ_TOKEN_HEROKU_CREDENTIAL_MANAGER }}
-          expected-action-sha: ${{ github.sha }}
-          working-directory: candidate
+          package-manager-cache: false
+      - name: Prepare anonymous npm configuration
+        run: node scripts/public-npm-config.mjs
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+      - name: Rebuild dependencies
+        run: npm rebuild
       - name: Install libsecret tools for Linux
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libsecret-tools gnome-keyring
       - name: Run acceptance tests on macOS and Windows
         if: runner.os != 'Linux'
-        working-directory: candidate
         run: npm run test:ci:acceptance
       - name: Run acceptance tests on Linux
         if: runner.os == 'Linux'
-        working-directory: candidate
         run: |
           # The command substitution intentionally expands in the child shell.
           # shellcheck disable=SC2016
@@ -78,9 +51,6 @@ jobs:
             eval "$(echo -n "heroku-credential-manager-ci" | gnome-keyring-daemon --unlock --components=secrets)"
             npm run test:ci:acceptance
           '
-      - name: Remove token-free npm paths
+      - name: Remove isolated public npm configuration
         if: always()
-        env:
-          PRIVATE_NPM_BASE: ${{ runner.temp }}
-          PRIVATE_NPM_CLEAN_ROOT: ${{ steps.private-install.outputs.clean-root }}
-        run: node trusted-action/.github/actions/private-npm-install/finalize.mjs
+        run: node scripts/public-npm-config.mjs cleanup
