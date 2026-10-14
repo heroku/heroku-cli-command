@@ -11,7 +11,7 @@
     "@sentry/node": "^10.45.0",
     "ansis": "^4",
     "debug": "^4.4.0",
-    "execa": "^9.6.1",
+    "execa": "^10.0.1",
     "inquirer": "^12.11.1",
     "open": "^11.0.0",
     "tsheredoc": "^1.0.1",
