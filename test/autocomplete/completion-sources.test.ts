@@ -1,6 +1,5 @@
 import {Config} from '@oclif/core'
 import {expect} from 'chai'
-import nock from 'nock'
 import {execFileSync} from 'node:child_process'
 import {mkdtempSync, rmSync, writeFileSync} from 'node:fs'
 import {tmpdir} from 'node:os'
@@ -146,6 +145,7 @@ describe('autocomplete completion sources', function () {
         region: {list: async () => named(['us', 'eu'])},
         release: {list: async (app: string) => (app === 'myapp' ? [{version: 3}, {version: 1}, {version: 2}] : [])},
         space: {list: async () => named(['space'])},
+        stack: {list: async () => named(['heroku-24', 'heroku-22'])},
         team: {list: async () => named(['team-b', 'team-a'])},
         withHeaders() {
           return this
@@ -179,6 +179,10 @@ describe('autocomplete completion sources', function () {
 
     it('RegionCompletion returns the regions, sorted', async function () {
       expect(await RegionCompletion.options(ctx)).to.deep.equal(['eu', 'us'])
+    })
+
+    it('StackCompletion returns the stack names, sorted', async function () {
+      expect(await StackCompletion.options(ctx)).to.deep.equal(['heroku-22', 'heroku-24'])
     })
 
     it('DynoSizeCompletion lower-cases and sorts the dyno sizes', async function () {
@@ -221,24 +225,6 @@ describe('autocomplete completion sources', function () {
     })
   })
 
-  describe('StackCompletion (direct /stacks fetch)', function () {
-    afterEach(function () {
-      nock.cleanAll()
-    })
-
-    it('lists stack names from the /stacks collection, sorted', async function () {
-      // The global test setup (test/helpers/init.mjs) runs nock.disableNetConnect()
-      // for the whole suite, so an un-intercepted request throws rather than hitting
-      // api.heroku.com. isDone() additionally asserts the mocked GET was consumed —
-      // i.e. the completion really drove the heroku-fetch request through nock.
-      const scope = nock('https://api.heroku.com')
-        .get('/stacks')
-        .reply(200, [{name: 'heroku-24'}, {name: 'heroku-22'}])
-      expect(await StackCompletion.options(ctx)).to.deep.equal(['heroku-22', 'heroku-24'])
-      expect(scope.isDone(), 'the mocked /stacks request should have been made').to.be.true
-    })
-  })
-
   describe('when the user is not logged in', function () {
     // The memoized authed client is process-wide, so earlier specs leave a
     // resolved (authed) client behind. Reset it, point the credential manager at
@@ -265,9 +251,9 @@ describe('autocomplete completion sources', function () {
       expect(await AppCompletion.options(ctx)).to.deep.equal([])
     })
 
-    it('the direct /stacks completion offers nothing instead of erroring', async function () {
-      // No nock scope registered: if auth did not short-circuit, the request
-      // would hit the globally-disabled net and throw rather than return [].
+    it('StackCompletion offers nothing instead of erroring', async function () {
+      // No platform stub registered: the auth short-circuit returns [] before any
+      // request. If it did not, the globally-disabled net would throw instead.
       expect(await StackCompletion.options(ctx)).to.deep.equal([])
     })
   })

@@ -1,4 +1,3 @@
-import {HerokuApiClient} from '@heroku/heroku-fetch'
 import {type HerokuApiClientOptions, HerokuSDK} from '@heroku/sdk'
 import {execSync} from 'node:child_process'
 import {createHash} from 'node:crypto'
@@ -99,8 +98,7 @@ async function resolveToken(ctx: CompletionContext): Promise<string | undefined>
  * `baseUrl` plus the two completion-only guarantees a TAB needs so it can never
  * hang the shell — a short per-request `timeout`, and a `twoFactor` handler that
  * rejects rather than reading a 2FA code from stdin (the default handler prompts).
- * Shared by the SDK platform client and the direct heroku-fetch client the stack
- * completion uses.
+ * Used by the SDK platform client that backs every completion value source.
  *
  * `baseUrl`/`token` thread the CLI's resolved platform host (`vars.apiUrl`, which
  * honors HEROKU_HOST) and auth token (keychain / netrc / HEROKU_API_KEY, via
@@ -136,40 +134,6 @@ async function platformClient(ctx: CompletionContext) {
 
   const sdk = new HerokuSDK({clientOptions: completionClientOptions(heroku)})
   return sdk.platform
-}
-
-/**
- * List all stack names via a direct `GET /stacks`.
- *
- * The SDK's `platform.stack.listGet()` cannot list stacks account-wide: a
- * `@heroku/types` generator collision (two "List" links collapsing onto one
- * method key) leaves its only runtime route app-scoped
- * (`GET /apps/{app}/available-stacks`), so a no-arg call throws "Missing path
- * parameter". Until a regenerated `@heroku/types` exposes a no-arg stacks list
- * (fixed upstream in typescript-api-schema's patch-hyperschema.ts), we bypass
- * the SDK and hit the real collection endpoint through heroku-fetch directly.
- * Auth/timeout/2FA handling matches platformClient so behavior is identical to
- * the other completions (nothing offered when logged out; aborts on timeout).
- */
-async function stackNames(ctx: CompletionContext): Promise<string[]> {
-  try {
-    const heroku = await authedClient(ctx)
-    if (!heroku.auth) return []
-
-    const client = new HerokuApiClient(completionClientOptions(heroku))
-    const response = await client.get('/stacks', {signal: AbortSignal.timeout(COMPLETION_TIMEOUT_MS)})
-    const stacks = (await response.json()) as ReadonlyArray<{name?: string}>
-    return stacks
-      .map(stack => stack.name)
-      .filter((name): name is string => typeof name === 'string')
-      // in-place sort is safe on this freshly-mapped array; `.sort` keeps the source es2022-compatible (the package compiles its declarations under es2022 — see test/credential-manager/fixtures/source-declaration-compatibility.ts)
-      // eslint-disable-next-line unicorn/no-array-sort
-      .sort()
-  } catch {
-    // A completion must never surface an error to the shell: a network failure,
-    // API error, or the per-request deadline all mean "offer nothing".
-    return []
-  }
 }
 
 type PlatformClient = NonNullable<Awaited<ReturnType<typeof platformClient>>>
@@ -218,7 +182,7 @@ async function listNames(
   if (!items) return []
 
   const names = items.map(item => item.name).filter((name): name is string => typeof name === 'string')
-  // eslint-disable-next-line unicorn/no-array-sort -- in-place sort is safe here; keeps the source es2022-compatible (see stackNames)
+  // eslint-disable-next-line unicorn/no-array-sort -- in-place sort is safe here; keeps the source es2022-compatible (declarations compile under es2022 — see test/credential-manager/fixtures/source-declaration-compatibility.ts)
   return transform(names).sort()
 }
 
@@ -282,7 +246,7 @@ export const RegionCompletion: Completion = {
 export const StackCompletion: Completion = {
   cacheDuration: oneDay,
   cacheKey: () => hostCacheKey('stack', apiHost()),
-  options: async ctx => stackNames(ctx),
+  options: async ctx => listNames(ctx, async platform => platform.stack.list()),
 }
 
 export const DynoSizeCompletion: Completion = {
@@ -352,7 +316,7 @@ export const ReleaseCompletion: Completion = {
       .map(release => release.version)
       .filter((version): version is number => typeof version === 'number')
       // Server already returns newest-first via the Range header; sort defensively in case it is ignored.
-      // eslint-disable-next-line unicorn/no-array-sort -- in-place sort is safe here; keeps the source es2022-compatible (see stackNames)
+      // eslint-disable-next-line unicorn/no-array-sort -- in-place sort is safe here; keeps the source es2022-compatible (see listNames)
       .sort((a, b) => b - a)
       .slice(0, MAX_RELEASE_COMPLETIONS)
       .map(version => `v${version}`)
@@ -371,7 +335,7 @@ export const ConfigVarCompletion: Completion = {
   async options(ctx) {
     if (!ctx.app) return []
     const config = await withPlatform(ctx, async platform => platform.configVar.infoForApp(ctx.app!))
-    // eslint-disable-next-line unicorn/no-array-sort -- in-place sort is safe here; keeps the source es2022-compatible (see stackNames)
+    // eslint-disable-next-line unicorn/no-array-sort -- in-place sort is safe here; keeps the source es2022-compatible (see listNames)
     return config ? Object.keys(config).sort() : []
   },
 }
