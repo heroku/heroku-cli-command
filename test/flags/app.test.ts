@@ -1,7 +1,5 @@
-import {Plugin} from '@oclif/core'
 import {expect, fancy} from 'fancy-test'
 import nock from 'nock'
-import {fileURLToPath} from 'node:url'
 
 import {Command as Base} from '../../src/command.js'
 import * as flags from '../../src/flags/index.js'
@@ -225,26 +223,5 @@ describe('defaultHelp', () => {
       ? await appFlag.defaultHelp({flags: {remote: 'production'}, options: {name: 'app'}} as any)
       : undefined
     expect(helpText).to.equal('myapp-production')
-  })
-
-  describe('manifest generation', () => {
-    const fixtureRoot = fileURLToPath(new URL('../fixtures/app-flag-plugin', import.meta.url))
-    const cachedAppDefault = async (respectNoCacheDefault: boolean) => {
-      const plugin = new Plugin({ignoreManifest: true, respectNoCacheDefault, root: fixtureRoot})
-      await plugin.load()
-      return plugin.manifest.commands.demo.flags.app.default
-    }
-
-    beforeEach(() => {
-      process.env.HEROKU_APP = 'my-local-app'
-    })
-
-    it('caches the local app default when generating at runtime', async () => {
-      expect(await cachedAppDefault(false)).to.equal('my-local-app')
-    })
-
-    it('keeps the local app default out of generated docs and manifests', async () => {
-      expect(await cachedAppDefault(true)).to.be.undefined
-    })
   })
 })

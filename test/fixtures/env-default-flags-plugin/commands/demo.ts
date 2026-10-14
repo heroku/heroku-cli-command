@@ -7,6 +7,8 @@ import * as flags from '../../../../src/flags/index.js'
 export default class Demo extends Command {
   static flags = {
     app: flags.app({required: true}),
+    org: flags.org(),
+    team: flags.team(),
   }
 
   async run() {}
