@@ -1,0 +1,6 @@
+{
+  "name": "env-default-flags-plugin",
+  "version": "0.0.0",
+  "type": "module",
+  "oclif": {"commands": "./commands"}
+}
