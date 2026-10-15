@@ -9,13 +9,13 @@ import {
 } from '@heroku/js-blanket'
 import * as Sentry from '@sentry/node'
 import {readFileSync} from 'node:fs'
-import {dirname, join} from 'node:path'
+import path from 'node:path'
 import {fileURLToPath} from 'node:url'
 
 import type {CredentialStore} from './credential-storage-selector.js'
 
-const DSN
-  = 'https://4eb3812769d649a09ae76ef3fcd03dbb@o4508609692368896.ingest.us.sentry.io/4511095245832192'
+const DSN =
+  'https://4eb3812769d649a09ae76ef3fcd03dbb@o4508609692368896.ingest.us.sentry.io/4511095245832192'
 
 const scrubber = new Scrubber({
   fields: [...HEROKU_FIELDS, ...GDPR_FIELDS, ...PCI_FIELDS],
@@ -38,8 +38,8 @@ function readPackageVersion(): string {
     return releaseCache
   }
 
-  const dir = dirname(fileURLToPath(import.meta.url))
-  const pkgPath = join(dir, '../../../package.json')
+  const dir = path.dirname(fileURLToPath(import.meta.url))
+  const pkgPath = path.join(dir, '../../../package.json')
   const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as {version?: string}
   releaseCache = pkg.version ?? 'unknown'
   return releaseCache
@@ -78,8 +78,8 @@ function ensureCredentialSentryInitialized(): void {
 
   sentryClient = credentialSentrySdk.init({
     beforeSend(event) {
-      const scrubbed
-        = scrubber.scrub(event as unknown as Record<string, unknown>).data
+      const scrubbed =
+        scrubber.scrub(event as unknown as Record<string, unknown>).data
       return scrubbed as unknown as ErrorEvent
     },
     dsn: DSN,

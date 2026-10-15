@@ -8,6 +8,7 @@ import os from 'node:os'
 import path from 'node:path'
 import {fileURLToPath, pathToFileURL} from 'node:url'
 import {parseArgs} from 'node:util'
+import {createPublicNpmEnvironment, publicNpmConfig, writePublicNpmConfig} from './public-npm-config.mjs'
 
 const scriptPath = fileURLToPath(import.meta.url)
 const repositoryRoot = path.resolve(path.dirname(scriptPath), '..')
@@ -19,10 +20,10 @@ const baselinePackageLookup = "join(dir, '../../../package.json')"
 const relocatedPackageLookup = "join(dir, '../../../../package.json')"
 const expectedRepositoryReferences = new Set([
   'git+https://github.com/heroku/heroku-cli-command.git',
+  'https://github.com/heroku/heroku-cli-command',
   'github:heroku/heroku-cli-command',
   'heroku/heroku-cli-command',
   'https://github.com/heroku/heroku-cli-command.git',
-  'https://github.com/heroku/heroku-cli-command',
 ])
 const signalExitCodes = {SIGHUP: 129, SIGINT: 130, SIGTERM: 143}
 const supportedSignals = process.platform === 'win32' ? ['SIGINT', 'SIGTERM'] : ['SIGHUP', 'SIGINT', 'SIGTERM']
@@ -40,6 +41,7 @@ const copyEntries = [
   '.c8rc.json',
   '.mocharc.json',
   'eslint.config.mjs',
+  'scripts',
   'package-lock.json',
   'package.json',
   'src',
@@ -101,8 +103,6 @@ const focusedTests = [
 let activeChild
 let cleanupStarted = false
 let dependencyIsolation = 'not installed'
-let isolatedDependenciesReadOnly = false
-let realDependencyFingerprint
 let temporaryRoot
 const confinedSecrets = []
 
@@ -123,83 +123,9 @@ function listFiles(root, relativeRoot = '') {
   })
 }
 
-function copyTree(source, destination) {
-  const stat = fs.lstatSync(source)
-  if (stat.isSymbolicLink()) {
-    fs.symlinkSync(fs.readlinkSync(source), destination, process.platform === 'win32' ? 'junction' : undefined)
-    return
-  }
-
-  if (stat.isDirectory()) {
-    fs.mkdirSync(destination, {mode: stat.mode, recursive: true})
-    for (const entry of fs.readdirSync(source)) copyTree(path.join(source, entry), path.join(destination, entry))
-    fs.chmodSync(destination, stat.mode)
-    return
-  }
-
-  if (stat.isFile()) {
-    fs.copyFileSync(source, destination, fs.constants.COPYFILE_EXCL)
-    fs.chmodSync(destination, stat.mode)
-    return
-  }
-
-  throw new Error(`unsupported dependency entry type: ${source}`)
-}
-
-function treeFingerprint(root) {
-  const hash = createHash('sha256')
-  const visit = (absolutePath, relativePath) => {
-    const stat = fs.lstatSync(absolutePath)
-    const metadata = {
-      mode: stat.mode.toString(8),
-      path: relativePath.split(path.sep).join('/'),
-      size: stat.size,
-      target: stat.isSymbolicLink() ? fs.readlinkSync(absolutePath) : undefined,
-      type: fileKind(stat),
-    }
-    hash.update(JSON.stringify(metadata))
-    if (stat.isFile()) hash.update(fs.readFileSync(absolutePath))
-    if (stat.isDirectory()) {
-      for (const entry of fs.readdirSync(absolutePath).sort()) {
-        visit(path.join(absolutePath, entry), path.join(relativePath, entry))
-      }
-    }
-  }
-
-  visit(root, '.')
-  return hash.digest('hex')
-}
-
-function makeTreeReadOnly(root) {
-  const stat = fs.lstatSync(root)
-  if (stat.isSymbolicLink()) return
-  if (stat.isDirectory()) {
-    for (const entry of fs.readdirSync(root)) makeTreeReadOnly(path.join(root, entry))
-  }
-
-  // Preserve read/execute permissions while removing every write bit.
-  // eslint-disable-next-line no-bitwise
-  fs.chmodSync(root, stat.mode & ~0o222)
-}
-
-function makeTreeWritable(root) {
-  const stat = fs.lstatSync(root)
-  if (stat.isSymbolicLink()) return
-  // eslint-disable-next-line no-bitwise
-  fs.chmodSync(root, stat.mode | 0o200)
-  if (stat.isDirectory()) {
-    for (const entry of fs.readdirSync(root)) makeTreeWritable(path.join(root, entry))
-  }
-}
-
 function cleanupTemporaryRoot() {
   if (cleanupStarted) return
   cleanupStarted = true
-  if (temporaryRoot && isolatedDependenciesReadOnly) {
-    const dependencyRoot = path.join(temporaryRoot, 'node_modules')
-    if (fs.existsSync(dependencyRoot)) makeTreeWritable(dependencyRoot)
-  }
-
   if (temporaryRoot) fs.rmSync(temporaryRoot, {force: true, recursive: true})
   temporaryRoot = undefined
 }
@@ -452,35 +378,11 @@ function npmInvocation() {
   return {arguments_: [npmCli], command: process.execPath, directory: path.dirname(npmExecutable)}
 }
 
-async function createConfinedNpmConfig(target, npm) {
-  const source = (await run(npm.command, [...npm.arguments_, 'config', 'get', 'userconfig'], {
-    env: {PATH: process.env.PATH},
-  })).trim()
-  let registryLine = 'registry=https://registry.npmjs.org/'
-  let npmAuthToken
-  if (source && source !== 'undefined' && fs.existsSync(source)) {
-    const contents = fs.readFileSync(source, 'utf8')
-    const registry = contents.split(/\r?\n/).find(line => /^registry\s*=/.test(line))
-    const auth = contents.split(/\r?\n/).find(line => /^\/\/registry\.npmjs\.org\/:_authToken\s*=/.test(line))
-    if (registry) registryLine = registry
-    if (auth) {
-      const rawToken = auth.slice(auth.indexOf('=') + 1).trim()
-      const variable = /^\$\{([^}]+)\}$/.exec(rawToken)?.[1]
-      npmAuthToken = variable ? process.env[variable] : rawToken
-      assert.ok(npmAuthToken && !npmAuthToken.includes('${'), 'npm registry token must resolve before rollback verification')
-      confinedSecrets.push(npmAuthToken)
-    }
-  }
-
-  fs.writeFileSync(target, [registryLine, npmAuthToken && '//registry.npmjs.org/:_authToken=\${NODE_AUTH_TOKEN}', 'always-auth=false', ''].filter(Boolean).join('\n'), {mode: 0o600})
-  fs.chmodSync(target, 0o600)
+async function createConfinedNpmConfig(target) {
+  await writePublicNpmConfig(target)
   // eslint-disable-next-line no-bitwise
   assert.equal(fs.statSync(target).mode & 0o777, 0o600)
-  if (npmAuthToken) {
-    assert.match(fs.readFileSync(target, 'utf8'), /_authToken=\$\{NODE_AUTH_TOKEN\}/)
-    assert.doesNotMatch(fs.readFileSync(target, 'utf8'), new RegExp(npmAuthToken.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
-  }
-  return npmAuthToken
+  assert.doesNotMatch(fs.readFileSync(target, 'utf8'), /_authToken|NODE_AUTH_TOKEN/)
 }
 
 async function createHermeticEnvironment(root, npm) {
@@ -490,7 +392,7 @@ async function createHermeticEnvironment(root, npm) {
   const temp = path.join(root, '.tmp')
   const userConfig = path.join(root, '.rollback-npmrc')
   for (const directory of [bin, dataDir, home, temp]) fs.mkdirSync(directory, {mode: 0o700, recursive: true})
-  const npmAuthToken = await createConfinedNpmConfig(userConfig, npm)
+  await createConfinedNpmConfig(userConfig)
 
   const unixStub = '#!/bin/sh\necho "native credential stores and GPG are disabled in the rollback drill" >&2\nexit 97\n'
   const windowsStub = '@echo off\r\necho native credential stores and GPG are disabled in the rollback drill 1>&2\r\nexit /b 97\r\n'
@@ -514,7 +416,7 @@ async function createHermeticEnvironment(root, npm) {
     executableDirectories.add('/bin')
   }
 
-  const environment = {
+  const allowedEnvironment = {
     ACCEPTANCE_TESTS: 'true',
     CI: 'true',
     DISABLE_TELEMETRY: 'true',
@@ -523,11 +425,6 @@ async function createHermeticEnvironment(root, npm) {
     HEROKU_NETRC_WRITE: 'true',
     HOME: home,
     NODE_ENV: 'test',
-    NPM_CONFIG_AUDIT: 'false',
-    NPM_CONFIG_CACHE: path.join(root, '.npm-cache'),
-    NPM_CONFIG_FUND: 'false',
-    NPM_CONFIG_UPDATE_NOTIFIER: 'false',
-    NPM_CONFIG_USERCONFIG: userConfig,
     PATH: [...executableDirectories].join(path.delimiter),
     TEMP: temp,
     TMP: temp,
@@ -537,37 +434,55 @@ async function createHermeticEnvironment(root, npm) {
     XDG_DATA_HOME: path.join(home, '.local', 'share'),
   }
   for (const name of ['COMSPEC', 'LANG', 'LC_ALL', 'PATHEXT', 'SystemRoot', 'WINDIR']) {
-    if (process.env[name]) environment[name] = process.env[name]
+    if (process.env[name]) allowedEnvironment[name] = process.env[name]
   }
 
+  const npmPaths = {
+    cachePath: path.join(root, '.npm-cache'),
+    configPath: userConfig,
+    globalConfigPath: path.join(root, '.rollback-global-npmrc'),
+    logsPath: path.join(root, '.npm-logs'),
+  }
+  for (const [name, value] of Object.entries(process.env)) {
+    if (/(?:_authToken|_auth|token|password|username)/i.test(name) && value && value.length >= 6) confinedSecrets.push(value)
+  }
+  fs.mkdirSync(npmPaths.cachePath, {mode: 0o700, recursive: true})
+  fs.mkdirSync(npmPaths.logsPath, {mode: 0o700, recursive: true})
+  await writePublicNpmConfig(npmPaths.globalConfigPath)
+  const environment = createPublicNpmEnvironment(allowedEnvironment, npmPaths)
+  Object.assign(environment, {
+    npm_config_audit: 'false',
+    NPM_CONFIG_AUDIT: 'false',
+    npm_config_fund: 'false',
+    NPM_CONFIG_FUND: 'false',
+    npm_config_update_notifier: 'false',
+    NPM_CONFIG_UPDATE_NOTIFIER: 'false',
+  })
+
   assert.deepEqual(
-    Object.keys(environment).filter(name => /(?:AUTH|KEY|PROXY|SESSION|TOKEN)/i.test(name)),
+    Object.keys(environment).filter(name => /(?:AUTH|KEY|PROXY|SESSION|TOKEN)/i.test(name) && !['NODE_AUTH_TOKEN', 'NPM_TOKEN'].includes(name)),
     [],
     'allowlisted environment contains a credential/proxy variable',
   )
-  return {environment, npmAuthToken}
+  assert.equal(environment.NODE_AUTH_TOKEN, '')
+  assert.equal(environment.NPM_TOKEN, '')
+  assert.equal(environment.NPM_CONFIG_USERCONFIG, userConfig)
+  assert.equal(environment.NPM_CONFIG_GLOBALCONFIG, npmPaths.globalConfigPath)
+  assert.equal(environment.NPM_CONFIG_REGISTRY, 'https://registry.npmjs.org/')
+  assert.equal(fs.readFileSync(userConfig, 'utf8'), publicNpmConfig)
+  assert.equal(fs.readFileSync(npmPaths.globalConfigPath, 'utf8'), publicNpmConfig)
+  if (process.platform !== 'win32') {
+    // eslint-disable-next-line no-bitwise
+    for (const directory of [root, npmPaths.cachePath, npmPaths.logsPath]) assert.equal(fs.statSync(directory).mode & 0o777, 0o700)
+    // eslint-disable-next-line no-bitwise
+    for (const configPath of [userConfig, npmPaths.globalConfigPath]) assert.equal(fs.statSync(configPath).mode & 0o777, 0o600)
+  }
+  return environment
 }
 
-async function installDependencies(root, environment, npm, npmAuthToken) {
-  try {
-    await run(npm.command, [...npm.arguments_, 'ci', '--ignore-scripts', '--no-audit', '--no-fund'], {
-      cwd: root,
-      env: npmAuthToken ? {...environment, NODE_AUTH_TOKEN: npmAuthToken} : environment,
-    })
-    dependencyIsolation = 'npm ci --ignore-scripts from copied package-lock'
-  } catch (error) {
-    if (!/E404|E401|E403|not in this registry|Unable to authenticate/i.test(String(error))) throw error
-    const realDependencies = path.join(repositoryRoot, 'node_modules')
-    assert.equal(fs.existsSync(realDependencies), true, 'authenticated npm install failed and no local dependency tree is available')
-    const before = treeFingerprint(realDependencies)
-    realDependencyFingerprint = before
-    copyTree(realDependencies, path.join(root, 'node_modules'))
-    assert.equal(treeFingerprint(realDependencies), before, 'real dependency tree changed while it was copied')
-    makeTreeReadOnly(path.join(root, 'node_modules'))
-    isolatedDependenciesReadOnly = true
-    dependencyIsolation = `read-only copied dependency tree; real tree fingerprint ${before}`
-  }
-
+async function installDependencies(root, environment, npm) {
+  await run(npm.command, [...npm.arguments_, 'ci', '--ignore-scripts', '--no-audit', '--no-fund'], {cwd: root, env: environment})
+  dependencyIsolation = 'anonymous npm ci --ignore-scripts from copied package-lock'
   await run(npm.command, [...npm.arguments_, 'ls', '--all', '--json'], {cwd: root, env: environment})
 
   const sourceLock = JSON.parse(read('package-lock.json', root))
@@ -585,6 +500,40 @@ async function installDependencies(root, environment, npm, npmAuthToken) {
   for (const name of Object.keys({...manifest.dependencies, ...manifest.devDependencies})) {
     assert.ok(sourceLock.packages[`node_modules/${name}`]?.version, `${name} has no copied lockfile entry`)
     assert.equal(fs.existsSync(path.join(root, 'node_modules', name, 'package.json')), true, `${name} was not installed`)
+  }
+}
+
+async function selfTestAnonymousNpmFailure() {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), `${rollbackPrefix}anonymous-npm-test-`))
+  try {
+    const npm = npmInvocation()
+    const environment = await createHermeticEnvironment(root, npm)
+    const homeNpmrc = path.join(environment.HOME, '.npmrc')
+    fs.writeFileSync(homeNpmrc, '//registry.npmjs.org/:_authToken=must-not-be-read\n')
+    assert.equal(await run(npm.command, [...npm.arguments_, 'config', 'get', 'userconfig'], {cwd: root, env: environment}), environment.NPM_CONFIG_USERCONFIG)
+    assert.equal(await run(npm.command, [...npm.arguments_, 'config', 'get', 'registry'], {cwd: root, env: environment}), 'https://registry.npmjs.org/')
+
+    const probeFile = path.join(root, '.tmp', 'npm-probe.json')
+    const fakeNpm = path.join(root, '.tmp', 'fail-npm.mjs')
+    fs.writeFileSync(fakeNpm, [
+      "import {writeFileSync} from 'node:fs'",
+      "writeFileSync(process.env.ROLLBACK_NPM_PROBE_FILE, JSON.stringify({args: process.argv.slice(2), config: process.env.NPM_CONFIG_USERCONFIG, nodeAuthToken: process.env.NODE_AUTH_TOKEN, npmToken: process.env.NPM_TOKEN}))",
+      'process.exit(42)',
+      '',
+    ].join('\n'))
+    environment.ROLLBACK_NPM_PROBE_FILE = probeFile
+    await assert.rejects(
+      installDependencies(root, environment, {arguments_: [fakeNpm], command: process.execPath}),
+      /failed with exit 42/,
+    )
+    const probe = JSON.parse(fs.readFileSync(probeFile, 'utf8'))
+    assert.deepEqual(probe.args, ['ci', '--ignore-scripts', '--no-audit', '--no-fund'])
+    assert.equal(probe.config, environment.NPM_CONFIG_USERCONFIG)
+    assert.equal(probe.nodeAuthToken, '')
+    assert.equal(probe.npmToken, '')
+    assert.equal(fs.existsSync(path.join(root, 'node_modules')), false, 'failed anonymous install must not fall back to another dependency tree')
+  } finally {
+    fs.rmSync(root, {force: true, recursive: true})
   }
 }
 
@@ -708,6 +657,10 @@ async function runGeneratedSmoke(root, environment) {
   })
   await run(process.execPath, [
     path.join(root, 'node_modules/typescript/bin/tsc'),
+    // TypeScript 6 errors (TS5112) when files are passed on the command line
+    // while a tsconfig.json is present; this generated smoke file is compiled
+    // in isolation with explicit flags, so ignore the repo config.
+    '--ignoreConfig',
     '--noEmit',
     '--strict',
     '--skipLibCheck',
@@ -797,7 +750,9 @@ async function selfTestGuards() {
     fs.rmSync(probeRoot, {force: true, recursive: true})
   }
 
-  console.log('Credential-manager rollback guard self-test passed (arbitrary checkout name accepted; wiring drift and archive tamper rejected).')
+  await selfTestAnonymousNpmFailure()
+
+  console.log('Credential-manager rollback guard self-test passed (anonymous npm config, auth absence, failed-install fail-closed behavior, rollback wiring, and archive integrity).')
 }
 
 async function waitForMarker(marker) {
@@ -887,9 +842,9 @@ async function runDrill() {
   assert.equal(verifyArchiveHashes(temporaryRoot), archiveFileCount)
 
   const npm = npmInvocation()
-  const {environment, npmAuthToken} = await createHermeticEnvironment(temporaryRoot, npm)
+  const environment = await createHermeticEnvironment(temporaryRoot, npm)
   console.log('Rollback drill: installing copied lockfile with npm ci --ignore-scripts...')
-  await installDependencies(temporaryRoot, environment, npm, npmAuthToken)
+  await installDependencies(temporaryRoot, environment, npm)
   console.log('Rollback drill: building and running active-path smoke...')
   await buildRollbackCopy(temporaryRoot, environment)
   await runGeneratedSmoke(temporaryRoot, environment)
@@ -899,14 +854,6 @@ async function runDrill() {
 
   assertExternalSourceActive()
   assert.equal(await captureRepositoryState(), repositoryStateBefore, 'tracked/staged/untracked Git state changed during the drill')
-  if (realDependencyFingerprint) {
-    assert.equal(
-      treeFingerprint(path.join(repositoryRoot, 'node_modules')),
-      realDependencyFingerprint,
-      'real dependency tree changed during the drill',
-    )
-  }
-
   cleanupTemporaryRoot()
 
   console.log('\nCredential-manager rollback drill passed.')
@@ -919,7 +866,7 @@ async function runDrill() {
   console.log(isolationSummary)
   console.log('- Cleanup: the temporary copy was removed; failure/signal behavior is covered by --self-test-cleanup.')
   console.log('- Platform-dependent native credential-store and GPG success paths were not invoked; Windows behavior still requires its remote matrix.')
-  console.log('- Real tree: external-package source remained active; tracked, staged, and untracked Git state fingerprint was unchanged. Ignored files were not fingerprinted or shared.')
+  console.log('- Real tree: external-package source remained active; tracked, staged, and untracked Git state fingerprint was unchanged. Ignored files were not fingerprinted.')
 }
 
 async function main() {

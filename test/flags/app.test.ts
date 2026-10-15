@@ -14,6 +14,7 @@ const withRemotes = (remotes: any) => {
 beforeEach(() => {
   api = nock('https://api.heroku.com')
 })
+
 afterEach(() => {
   Object.defineProperty(Git.prototype, 'remotes', origRemotes as any)
   api.done()
@@ -57,8 +58,8 @@ describe('required', () => {
     ])
     await class extends Command {
       async run() {
-        await this.parse(Command).catch((error: Error) => {
-          expect(error.message).to.equal('remote foo not found in git remotes')
+        await this.parse(Command).catch((error: unknown) => {
+          expect((error as Error).message).to.equal('remote foo not found in git remotes')
         })
       }
     }.run(['--remote', 'foo'])
@@ -67,8 +68,8 @@ describe('required', () => {
   it('errors with no app', async () => {
     await class extends Command {
       async run() {
-        await this.parse(Command).catch((error: Error) => {
-          expect(error.message).to.contain('Missing required flag app')
+        await this.parse(Command).catch((error: unknown) => {
+          expect((error as Error).message).to.contain('Missing required flag app')
         })
       }
     }.run([])
@@ -81,8 +82,8 @@ describe('required', () => {
     ])
     await class extends Command {
       async run() {
-        await this.parse(Command).catch((error: Error) => {
-          expect(error.message).to.contain('Multiple apps in git remotes')
+        await this.parse(Command).catch((error: unknown) => {
+          expect((error as Error).message).to.contain('Multiple apps in git remotes')
         })
       }
     }.run([])

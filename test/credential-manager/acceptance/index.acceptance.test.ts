@@ -2,7 +2,11 @@ import {expect, use} from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 
 import {
-  getAuth, listKeychainAccounts, Netrc, removeAuth, saveAuth,
+  getAuth,
+  listKeychainAccounts,
+  Netrc,
+  removeAuth,
+  saveAuth,
 } from '../../../src/credential-manager-core/index.js'
 import {
   cleanupCredentialStore,
@@ -169,7 +173,7 @@ describe('credential-manager acceptance', function () {
       const netrc = new Netrc()
       await netrc.load()
       for (const host of CREDENTIAL.hosts) {
-        if (netrc.machines[host]) {
+        if (Object.hasOwn(netrc.machines, host)) {
           netrcHasCredentials = true
         }
       }
