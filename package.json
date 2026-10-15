@@ -10,6 +10,8 @@
     "@heroku/heroku-credential-manager": "0.1.0",
     "@heroku/http-call": "5.5.2",
     "@heroku/js-blanket": "^1.0.0",
+    "@heroku/sdk": "^0.9.0",
+    "@heroku/types": "^5.4.0",
     "@oclif/core": "^5.1.2",
     "@sentry/node": "^10.45.0",
     "ansis": "^4",
@@ -48,7 +50,7 @@
     "typescript": "^6.0.3"
   },
   "engines": {
-    "node": ">= 22"
+    "node": ">= 22.19.0"
   },
   "files": [
     "lib"
