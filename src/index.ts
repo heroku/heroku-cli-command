@@ -1,6 +1,16 @@
 export * from './api-client.js'
 export {Command, Command as default} from './command.js'
-export * from './completions.js'
+export type * from './completion-types.js'
+// Public completion surface: the catalog the host CLI wires by id, plus the two
+// cache-key helpers. The individual Completion singletons and internal helpers
+// stay module-private — consumers go through `completionCatalog`.
+//
+// IMPORTANT: this package must resolve to exactly ONE module instance so the host
+// CLI and this package share the same Completion object identities (the host keys
+// behavior off reference identity). That holds only because package.json has NO
+// `exports` field, so the root barrel and any deep import co-resolve to one ESM
+// instance. Do not add an `exports` map. (Guarded by test/package-contract.test.ts.)
+export {accountCacheKey, completionCatalog, hostCacheKey} from './completions.js'
 export {
   getAuth,
   listKeychainAccounts,

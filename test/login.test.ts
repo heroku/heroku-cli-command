@@ -6,7 +6,7 @@ import {expect, fancy} from 'fancy-test'
 import nock from 'nock'
 import childProcess from 'node:child_process'
 import {EventEmitter} from 'node:events'
-import {dirname, resolve} from 'node:path'
+import path from 'node:path'
 import {fileURLToPath} from 'node:url'
 import * as sinon from 'sinon'
 
@@ -22,7 +22,7 @@ class Command extends CommandBase {
 }
 
 const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
+const __dirname = path.dirname(__filename)
 const environmentNames = [
   'HEROKU_API_KEY',
   'HEROKU_GIT_HOST',
@@ -34,19 +34,19 @@ const environmentNames = [
 ] as const
 let previousEnvironment: Record<(typeof environmentNames)[number], string | undefined>
 
-const test = fancy.add('config', () => new Config({root: resolve(__dirname, '../package.json')}))
+const test = fancy.add('config', () => new Config({root: path.resolve(__dirname, '../package.json')}))
 type Delegate = {
-  apiClientForToken(token: string): Record<string, unknown>
-  browser: Record<string, unknown>
-  config: Record<string, unknown>
-  environment: {get(name: string): string | undefined}
-  fetch: unknown
-  login(options: Record<string, unknown>): Promise<{account: string; token: string}>
-  output: Record<string, unknown>
-  progress: Record<string, unknown>
-  prompt: Record<string, unknown>
-  storage: Record<string, unknown>
-  timers: Record<string, unknown>
+  apiClientForToken(token: string): Record<string, unknown>;
+  browser: Record<string, unknown>;
+  config: Record<string, unknown>;
+  environment: {get(name: string): string | undefined};
+  fetch: unknown;
+  login(options: Record<string, unknown>): Promise<{account: string; token: string}>;
+  output: Record<string, unknown>;
+  progress: Record<string, unknown>;
+  prompt: Record<string, unknown>;
+  storage: Record<string, unknown>;
+  timers: Record<string, unknown>;
 }
 
 function stubBrowserSpawn(): sinon.SinonStub {
@@ -55,7 +55,9 @@ function stubBrowserSpawn(): sinon.SinonStub {
     const child = Object.assign(new EventEmitter(), {pid: 12_345, unref: sinon.stub()})
     setImmediate(() => {
       child.emit('spawn')
-      if (process.platform === 'win32') setImmediate(() => child.emit('close', 0))
+      if (process.platform === 'win32') setImmediate(() => {
+        child.emit('close', 0)
+      })
     })
     return child
   }) as unknown as typeof childProcess.spawn)
@@ -97,13 +99,13 @@ function stubPrompts() {
 describe('Login facade', () => {
   beforeEach(() => {
     previousEnvironment = Object.fromEntries(environmentNames.map(name => [name, process.env[name]])) as typeof previousEnvironment
-    for (const name of environmentNames) delete process.env[name]
+    for (const name of environmentNames) Reflect.deleteProperty(process.env, name)
     provider()
   })
 
   afterEach(() => {
     for (const name of environmentNames) {
-      if (previousEnvironment[name] === undefined) delete process.env[name]
+      if (previousEnvironment[name] === undefined) Reflect.deleteProperty(process.env, name)
       else process.env[name] = previousEnvironment[name]
     }
 
@@ -423,7 +425,9 @@ describe('Login facade', () => {
     sinon.stub(childProcess, 'spawn').callsFake((() => {
       setImmediate(() => {
         child.emit('spawn')
-        if (process.platform === 'win32') setImmediate(() => child.emit('close', 0))
+        if (process.platform === 'win32') setImmediate(() => {
+          child.emit('close', 0)
+        })
       })
       return child
     }) as unknown as typeof childProcess.spawn)
@@ -481,7 +485,7 @@ describe('Login facade', () => {
     }
   })
 
-  for (const [key, exit] of [['q', 2], ['\u0003', 130]] as const) {
+  for (const [key, exit] of [['q', 2], ['\u{3}', 130]] as const) {
     test.it(`maps ${key === 'q' ? 'q' : 'Ctrl-C'} cancellation to command exit ${exit} and restores raw mode`, async ctx => {
       const originalIsTTY = Object.getOwnPropertyDescriptor(process.stdin, 'isTTY')
       const originalSetRawMode = process.stdin.setRawMode
@@ -493,7 +497,9 @@ describe('Login facade', () => {
       sinon.stub(ux, 'stdout')
       const exitError = Object.assign(new Error('cancelled'), {oclif: {exit}})
       const uxError = sinon.stub(ux, 'error').throws(exitError)
-      setTimeout(() => process.stdin.emit('data', Buffer.from(key)), 0)
+      setTimeout(() => {
+        process.stdin.emit('data', Buffer.from(key))
+      }, 0)
       try {
         const error = await new Login(ctx.config, new Command([], ctx.config).heroku).login().catch((error: unknown) => error)
         expect(error).to.equal(exitError)

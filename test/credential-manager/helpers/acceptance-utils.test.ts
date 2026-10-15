@@ -1,5 +1,5 @@
 import {expect} from 'chai'
-import {Context} from 'mocha'
+import {type Context} from 'mocha'
 import fs from 'node:fs'
 import sinon from 'sinon'
 

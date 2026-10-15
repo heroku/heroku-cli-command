@@ -20,7 +20,7 @@ heroku\thttps://git.heroku.com/myapp.git  (pull)
 
   it('rethrows other git error', () => {
     const stub = sinon.stub(childProcess, 'execSync').callsFake(() => {
-      const err: any = new Error('some other message')
+      const err = new Error('some other message') as Error & {code: string}
       err.code = 'SOME_OTHER_CODE'
       throw err
     })

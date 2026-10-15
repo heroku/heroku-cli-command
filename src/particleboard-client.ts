@@ -1,21 +1,20 @@
 import type {Config} from '@oclif/core/interfaces'
 
-import {HTTP, HTTPRequestOptions} from '@heroku/http-call'
-import {URL} from 'node:url'
+import {HTTP, type HTTPRequestOptions} from '@heroku/http-call'
 
 import {RequestId, requestIdHeader} from './request-id.js'
 import {vars} from './vars.js'
 
-export interface IDelinquencyInfo {
-  scheduled_deletion_time?: null | string
-  scheduled_suspension_time?: null | string
+export type IDelinquencyInfo = {
+  scheduled_deletion_time?: null | string;
+  scheduled_suspension_time?: null | string;
 }
 
-export interface IDelinquencyConfig {
-  fetch_delinquency: boolean
-  fetch_url?: string
-  resource_type?: 'account' | 'team'
-  warning_shown: boolean
+export type IDelinquencyConfig = {
+  fetch_delinquency: boolean;
+  fetch_url?: string;
+  resource_type?: 'account' | 'team';
+  warning_shown: boolean;
 }
 
 export class ParticleboardClient {
@@ -39,10 +38,10 @@ export class ParticleboardClient {
     }
     this.http = class ParticleboardHTTPClient<T> extends HTTP.create(particleboardOpts)<T> {
       static async request<T>(url: string, opts: HTTPRequestOptions = {}): Promise<ParticleboardHTTPClient<T>> {
-        opts.headers = opts.headers || {}
+        opts.headers ||= {}
         opts.headers[requestIdHeader] = RequestId.create() && RequestId.headerValue
 
-        if (!Object.keys(opts.headers).some(h => h.toLowerCase() === 'authorization')) {
+        if (Object.keys(opts.headers).every(h => h.toLowerCase() !== 'authorization')) {
           opts.headers.authorization = `Bearer ${self.auth}`
         }
 
@@ -74,7 +73,7 @@ export class ParticleboardClient {
     return this.http.defaults
   }
 
-  get<T>(url: string, options: HTTPRequestOptions = {}) {
+  async get<T>(url: string, options: HTTPRequestOptions = {}) {
     return this.http.get<T>(url, options)
   }
 }

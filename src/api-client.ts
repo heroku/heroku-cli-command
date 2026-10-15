@@ -1,13 +1,12 @@
 import type {Config} from '@oclif/core/interfaces'
 
 import {NativeCredentialNotFoundError} from '@heroku/heroku-credential-manager'
-import {HTTP, HTTPError, HTTPRequestOptions} from '@heroku/http-call'
+import {HTTP, HTTPError, type HTTPRequestOptions} from '@heroku/http-call'
 import {CLIError, warn} from '@oclif/core/errors'
 import {ux} from '@oclif/core/ux'
 import debug from 'debug'
 import {access} from 'node:fs/promises'
-import {join} from 'node:path'
-import * as url from 'node:url'
+import path from 'node:path'
 
 import {getStorageConfig} from './credential-manager-core/lib/credential-storage-selector.js'
 import {readLoginState} from './credential-manager-core/lib/login-state.js'
@@ -19,7 +18,7 @@ import {
 } from './login-state-coordinator.js'
 import {Login} from './login.js'
 import {Mutex} from './mutex.js'
-import {IDelinquencyConfig, IDelinquencyInfo, ParticleboardClient} from './particleboard-client.js'
+import {type IDelinquencyConfig, type IDelinquencyInfo, ParticleboardClient} from './particleboard-client.js'
 import {prompter} from './prompter.js'
 import {RequestId, requestIdHeader} from './request-id.js'
 import {vars} from './vars.js'
@@ -34,24 +33,24 @@ function credentialService(): string {
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace APIClient {
-  export interface Options extends HTTPRequestOptions {
-    retryAuth?: boolean
+  export type Options = HTTPRequestOptions & {
+    retryAuth?: boolean;
   }
 }
 
-export interface IOptions {
-  debug?: boolean
-  debugHeaders?: boolean
-  preauth?: boolean
-  required?: boolean
+export type IOptions = {
+  debug?: boolean;
+  debugHeaders?: boolean;
+  preauth?: boolean;
+  required?: boolean;
 }
 
-export interface IHerokuAPIErrorOptions {
-  app?: {id: string; name: string}
-  id?: string
-  message?: string
-  resource?: string
-  url?: string
+export type IHerokuAPIErrorOptions = {
+  app?: {id: string; name: string};
+  id?: string;
+  message?: string;
+  resource?: string;
+  url?: string;
 }
 
 export class HerokuAPIError extends CLIError {
@@ -61,10 +60,10 @@ export class HerokuAPIError extends CLIError {
   constructor(httpError: HTTPError) {
     if (!httpError) throw new Error('invalid error')
     const options: IHerokuAPIErrorOptions = httpError.body
-    if (!options || !options.message) throw httpError
+    if (!options?.message) throw httpError
     const info = []
     if (options.id) info.push(`Error ID: ${options.id}`)
-    if (options.app && options.app.name) info.push(`App: ${options.app.name}`)
+    if (options.app?.name) info.push(`App: ${options.app.name}`)
     if (options.url) info.push(`See ${options.url} for more information.`)
     if (info.length > 0) super([options.message, '', ...info].join('\n'))
     else super(options.message)
@@ -76,7 +75,7 @@ export class HerokuAPIError extends CLIError {
 export class APIClient {
   authPromise?: Promise<HTTP<any>>
   http: typeof HTTP
-  preauthPromises: {[k: string]: Promise<HTTP<any>>}
+  preauthPromises: Record<string, Promise<HTTP<any>>>
   private _account?: string
   private _auth?: string
   /** Orders explicit login/logout transactions without blocking unrelated API requests. */
@@ -99,7 +98,7 @@ export class APIClient {
     if (options.debug) debug.enable('http')
     if (options.debug && options.debugHeaders) debug.enable('http,http:headers')
     this.options = options
-    const apiUrl = new url.URL(vars.apiUrl)
+    const apiUrl = new URL(vars.apiUrl)
     const envHeaders = JSON.parse(process.env.HEROKU_HEADERS || '{}')
     this.preauthPromises = {}
     const self = this as any
@@ -129,7 +128,7 @@ export class APIClient {
           return
         }
 
-        const match = url.match(/^\/teams\/([^#/?]+)/i)
+        const match = /^\/teams\/([^#/?]+)/i.exec(url)
         if (match) {
           delinquencyConfig.fetch_url = `/teams/${match[1]}`
           delinquencyConfig.fetch_delinquency = true
@@ -152,22 +151,22 @@ export class APIClient {
           const now = Date.now()
 
           if (suspension > now) {
-            warn(`This ${resource} is delinquent with payment and we'll suspend it on ${new Date(suspension)}.`)
+            warn(`This ${resource} is delinquent with payment and we'll suspend it on ${new Date(suspension).toString()}.`)
             delinquencyConfig.warning_shown = true
             return
           }
 
           if (deletion)
-            warn(`This ${resource} is delinquent with payment and we suspended it on ${new Date(suspension)}. If the ${resource} is still delinquent, we'll delete it on ${new Date(deletion)}.`)
+            warn(`This ${resource} is delinquent with payment and we suspended it on ${new Date(suspension).toString()}. If the ${resource} is still delinquent, we'll delete it on ${new Date(deletion).toString()}.`)
         } else if (deletion)
-          warn(`This ${resource} is delinquent with payment and we'll delete it on ${new Date(deletion)}.`)
+          warn(`This ${resource} is delinquent with payment and we'll delete it on ${new Date(deletion).toString()}.`)
 
         delinquencyConfig.warning_shown = true
       }
 
       // eslint-disable-next-line complexity
       static async request<T>(url: string, opts: APIClient.Options = {}, retries = 3): Promise<APIHTTPClient<T>> {
-        opts.headers = opts.headers || {}
+        opts.headers ||= {}
         const currentRequestId = RequestId.create() && RequestId.headerValue
 
         // Accumulation of requestIds in the header
@@ -184,7 +183,7 @@ export class APIClient {
         }
 
         let auth: string | undefined
-        if (!Object.keys(opts.headers).some(h => h.toLowerCase() === 'authorization')) {
+        if (Object.keys(opts.headers).every(h => h.toLowerCase() !== 'authorization')) {
           // Handle both relative and absolute URLs for validation
           let targetUrl: URL
           try {
@@ -196,7 +195,7 @@ export class APIClient {
           }
 
           const isHerokuApi = ALLOWED_HEROKU_DOMAINS.some(domain => targetUrl.hostname.endsWith(`.${domain}`) || targetUrl.hostname === domain)
-          const isLocalhost = LOCALHOST_DOMAINS.includes(targetUrl.hostname as (typeof LOCALHOST_DOMAINS)[number])
+          const isLocalhost = LOCALHOST_DOMAINS.includes(targetUrl.hostname)
 
           if (isHerokuApi || isLocalhost) {
             auth = await self.getAuth()
@@ -216,14 +215,14 @@ export class APIClient {
             particleboardClient.auth = auth ?? await self.getAuth()
             const settledResponses = await Promise.allSettled([
               super.request<T>(url, opts),
-              particleboardClient.get<IDelinquencyInfo>(delinquencyConfig.fetch_url as string),
+              particleboardClient.get<IDelinquencyInfo>(delinquencyConfig.fetch_url!),
             ])
 
             // Platform API request
             if (settledResponses[0].status === 'fulfilled')
               response = settledResponses[0].value
             else
-              throw settledResponses[0].reason
+              throw settledResponses[0].reason as Error
 
             // Particleboard request (ignore errors)
             if (settledResponses[1].status === 'fulfilled') {
@@ -244,10 +243,11 @@ export class APIClient {
           if (retries > 0) {
             if (opts.retryAuth !== false && error.http.statusCode === 401) {
               if (process.env.HEROKU_API_KEY) {
+                // eslint-disable-next-line preserve-caught-error -- deliberately omit the cause: `error` is an HTTPError whose request retains the Authorization header (the bearer token), and this error surfaces to logs/telemetry where it must not leak
                 throw new Error('The token provided to HEROKU_API_KEY is invalid. Please double-check that you have the correct token, or run `heroku login` without HEROKU_API_KEY set.')
               }
 
-              if (!self.authPromise) self.authPromise = self.login()
+              self.authPromise ||= self.login()
               await self.authPromise
               const retryAuth = await self.getAuth()
               opts.headers.authorization = `Bearer ${retryAuth}`
@@ -294,16 +294,14 @@ export class APIClient {
       ): Promise<APIHTTPClient<any>> {
         const app = err.body.app ? err.body.app.name : null
         if (!app || !options.preauth) {
-          opts.headers = opts.headers || {}
+          opts.headers ||= {}
           opts.headers['Heroku-Two-Factor-Code'] = await self.twoFactorPrompt()
           return this.request(url, opts, retries)
         }
 
         // if multiple requests are run in parallel for the same app, we should
         // only preauth for the first so save the fact we already preauthed
-        if (!self.preauthPromises[app]) {
-          self.preauthPromises[app] = self.twoFactorPrompt().then((factor: any) => self.preauth(app, factor))
-        }
+        self.preauthPromises[app] ||= self.twoFactorPrompt().then((factor: any) => self.preauth(app, factor))
 
         await self.preauthPromises[app]
         return this.request(url, opts, retries)
@@ -332,18 +330,16 @@ export class APIClient {
   }
 
   get twoFactorMutex(): Mutex<string> {
-    if (!this._twoFactorMutex) {
-      this._twoFactorMutex = new Mutex()
-    }
+    this._twoFactorMutex ||= new Mutex()
 
     return this._twoFactorMutex
   }
 
-  delete<T>(url: string, options: APIClient.Options = {}) {
+  async delete<T>(url: string, options: APIClient.Options = {}) {
     return this.http.delete<T>(url, options)
   }
 
-  get<T>(url: string, options: APIClient.Options = {}) {
+  async get<T>(url: string, options: APIClient.Options = {}) {
     return this.http.get<T>(url, options)
   }
 
@@ -406,11 +402,11 @@ export class APIClient {
     return this._storedAuthPromise
   }
 
-  login(opts: Login.Options = {}): Promise<void> {
-    return this.serializeAuthLifecycle(() => this._login.login(opts))
+  async login(opts: Login.Options = {}): Promise<void> {
+    return this.serializeAuthLifecycle(async () => this._login.login(opts))
   }
 
-  logout(): Promise<void> {
+  async logout(): Promise<void> {
     return this.serializeAuthLifecycle(async () => {
       const entry = await this.getAuthEntry()
       const generation = this._authResolutionGeneration
@@ -423,8 +419,8 @@ export class APIClient {
             removeAuth(undefined, [vars.apiHost, vars.httpGitHost], credentialService(), entry.token),
           ])
           const localFailure = results.slice(1).find(result => result.status === 'rejected')
-          if (localFailure?.status === 'rejected') throw localFailure.reason
-          if (results[0].status === 'rejected') throw results[0].reason
+          if (localFailure?.status === 'rejected') throw localFailure.reason as Error
+          if (results[0].status === 'rejected') throw results[0].reason as Error
         }
       } catch (error) {
         if (error instanceof CLIError) warn(error)
@@ -444,25 +440,25 @@ export class APIClient {
     })
   }
 
-  patch<T>(url: string, options: APIClient.Options = {}) {
+  async patch<T>(url: string, options: APIClient.Options = {}) {
     return this.http.patch<T>(url, options)
   }
 
-  post<T>(url: string, options: APIClient.Options = {}) {
+  async post<T>(url: string, options: APIClient.Options = {}) {
     return this.http.post<T>(url, options)
   }
 
-  preauth(app: string, factor: string) {
+  async preauth(app: string, factor: string) {
     return this.put(`/apps/${app}/pre-authorizations`, {
       headers: {'Heroku-Two-Factor-Code': factor},
     })
   }
 
-  put<T>(url: string, options: APIClient.Options = {}) {
+  async put<T>(url: string, options: APIClient.Options = {}) {
     return this.http.put<T>(url, options)
   }
 
-  request<T>(url: string, options: APIClient.Options = {}) {
+  async request<T>(url: string, options: APIClient.Options = {}) {
     return this.http.request<T>(url, options)
   }
 
@@ -473,13 +469,13 @@ export class APIClient {
     this.resetStoredAuthResolution()
   }
 
-  stream(url: string, options: APIClient.Options = {}) {
+  async stream(url: string, options: APIClient.Options = {}) {
     return this.http.stream(url, options)
   }
 
-  twoFactorPrompt() {
+  async twoFactorPrompt() {
     if (!process.stdin.isTTY) {
-      return Promise.reject(new Error('Two-factor authentication requires an interactive terminal.'))
+      throw new Error('Two-factor authentication requires an interactive terminal.')
     }
 
     yubikey.enable()
@@ -509,15 +505,13 @@ export class APIClient {
   private isMissingCredentialError(error: unknown): boolean {
     if (error instanceof NativeCredentialNotFoundError) return true
     if (!(error instanceof Error)) return false
-    return error.message === 'No auth found'
-      || error.message === `No auth found for ${vars.apiHost}`
-      || error.message === 'Netrc credential does not match the requested account for host'
+    return [`No auth found for ${vars.apiHost}`, 'Netrc credential does not match the requested account for host', 'No auth found'].includes(error.message)
   }
 
   private async loginStateExists(): Promise<boolean> {
     if (!this.config.dataDir) return false
     try {
-      await access(join(this.config.dataDir, 'login.json'))
+      await access(path.join(this.config.dataDir, 'login.json'))
       return true
     } catch {
       return false
@@ -541,7 +535,7 @@ export class APIClient {
     loginStatePresent: boolean,
     loginStateRevision: LoginStateRevision | undefined,
   ): void {
-    if (!this.config.dataDir || !loginStatePresent || !loginStateRevision) return
+    if (!loginStatePresent || !loginStateRevision || !this.config.dataDir) return
     const cleanup = async () => {
       await deleteLoginStateIf(this.config.dataDir, loginStateRevision, current => {
         const stateMatches = account === undefined ? current === undefined : current?.account === account
@@ -554,7 +548,7 @@ export class APIClient {
     this.serializeAuthLifecycle(cleanup).catch(() => {})
   }
 
-  private serializeAuthLifecycle<T>(operation: () => Promise<T>): Promise<T> {
+  private async serializeAuthLifecycle<T>(operation: () => Promise<T>): Promise<T> {
     const result = this._authLifecycle.then(operation, operation)
     this._authLifecycle = result.then(() => {}, () => {})
     return result
