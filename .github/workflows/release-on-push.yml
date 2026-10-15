@@ -55,7 +55,7 @@ jobs:
           repository: heroku/npm-release-workflows
           token: ${{ steps.helper-token.outputs.token }}
           path: workflows-repo
-          ref: 9cc6da3718f77f2abce513df70298d1ec821e516
+          ref: main
           persist-credentials: false
 
       - name: Create GitHub Release
