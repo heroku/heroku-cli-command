@@ -74,10 +74,23 @@ export class Vars {
   }
 
   private isValidHerokuHost(host: string): boolean {
-    // Remove protocol if present
-    const cleanHost = host.replace(/^https?:\/\//, '')
+    // Match against the parsed hostname (no scheme, port, path, or userinfo) so
+    // comparisons are exact. A substring test accepts hostile values such as
+    // `localhost.attacker.example` or the `evil.com` in `api.heroku.com@evil.com`,
+    // which would then be handed the CLI auth token.
+    const hostname = this.parseHostname(host)
+    if (!hostname) return false
 
-    return ALLOWED_HEROKU_DOMAINS.some(domain => cleanHost.endsWith(`.${domain}`) || cleanHost === domain) || LOCALHOST_DOMAINS.some(domain => cleanHost.includes(domain))
+    return ALLOWED_HEROKU_DOMAINS.some(domain => hostname === domain || hostname.endsWith(`.${domain}`)) || LOCALHOST_DOMAINS.includes(hostname)
+  }
+
+  private parseHostname(host: string): string | undefined {
+    try {
+      const withScheme = /^https?:\/\//i.test(host) ? host : `https://${host}`
+      return new URL(withScheme).hostname
+    } catch {
+      return undefined
+    }
   }
 }
 

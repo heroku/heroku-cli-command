@@ -44,6 +44,31 @@ describe('vars', () => {
     expect(vars.apiUrl).to.equal('https://api.heroku.com')
   })
 
+  it('rejects a look-alike loopback host that only contains "localhost"', () => {
+    // Regression: a substring match accepted `localhost.attacker.example`, which
+    // resolves to https://api.localhost.attacker.example — an attacker-controlled
+    // host that would then be handed the CLI auth token. It must be rejected and
+    // fall back to the default so no token is sent off-host.
+    process.env.HEROKU_HOST = 'localhost.attacker.example'
+    expect(vars.host).to.equal('heroku.com')
+    expect(vars.apiHost).to.equal('api.heroku.com')
+    expect(vars.apiUrl).to.equal('https://api.heroku.com')
+  })
+
+  it('rejects a host that embeds a heroku domain in userinfo', () => {
+    // `api.heroku.com@evil.com` parses to the host `evil.com`; a scheme-stripped
+    // substring test would have let it through.
+    process.env.HEROKU_HOST = 'https://api.heroku.com@evil.com'
+    expect(vars.host).to.equal('heroku.com')
+    expect(vars.apiUrl).to.equal('https://api.heroku.com')
+  })
+
+  it('accepts genuine loopback hosts', () => {
+    process.env.HEROKU_HOST = 'http://localhost:5000'
+    expect(vars.host).to.equal('http://localhost:5000')
+    expect(vars.apiUrl).to.equal('http://localhost:5000')
+  })
+
   it('respects legitimate HEROKU_HOST as url', () => {
     // Test with a valid heroku.com subdomain URL
     process.env.HEROKU_HOST = 'https://staging.heroku.com'

@@ -67,6 +67,8 @@ const expectedCompatibilityPaths = new Set([
   'lib/credential-manager-core/lib/types.js',
 ])
 const intentionalAdditions = new Set([
+  'lib/completion-types.d.ts',
+  'lib/completion-types.js',
   'lib/credential-manager-core/lib/credential-manager-adapter.d.ts',
   'lib/credential-manager-core/lib/credential-manager-adapter.js',
   'lib/credential-manager-login-adapters.d.ts',
@@ -74,7 +76,15 @@ const intentionalAdditions = new Set([
   'lib/login-state-coordinator.d.ts',
   'lib/login-state-coordinator.js',
 ])
-const intentionalPackageAdditions = new Set(['@heroku/heroku-credential-manager'])
+const intentionalPackageAdditions = new Set([
+  '@heroku/heroku-credential-manager',
+  // Completion value sources call the platform API: @heroku/sdk for the account/app
+  // list completions, @heroku/heroku-fetch + @heroku/types for the direct /stacks
+  // fetch that works around the SDK's app-scoped stacks route (see src/completions.ts).
+  '@heroku/heroku-fetch',
+  '@heroku/sdk',
+  '@heroku/types',
+])
 // Dependencies intentionally dropped versus the authoritative baseline. yargs-parser
 // and yargs-unparser were only used by the removed allowArbitraryFlags parse override.
 const intentionalPackageRemovals = new Set(['yargs-parser', 'yargs-unparser'])
