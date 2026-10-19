@@ -1,4 +1,4 @@
-import type {CredentialStore} from '@heroku/heroku-credential-manager'
+import type {CredentialErrorContext} from '@heroku/heroku-credential-manager'
 import type {ErrorEvent} from '@sentry/node'
 
 import {
@@ -88,11 +88,9 @@ function ensureCredentialSentryInitialized(): void {
   })
 }
 
-export type CredentialSentryOperation = 'getAuth' | 'listKeychainAccounts' | 'removeAuth' | 'saveAuth'
-
 export async function reportCredentialStoreError(
   error: unknown,
-  context: {credentialStore: CredentialStore; operation: CredentialSentryOperation},
+  context: CredentialErrorContext,
 ): Promise<void> {
   if (!shouldReportCredentialErrorsToSentry()) {
     return
@@ -107,10 +105,12 @@ export async function reportCredentialStoreError(
         credential_store: context.credentialStore,
       },
     })
+    // Flush pending events but keep the client alive so a second credential
+    // failure in the same process is still reported. Closing the client here
+    // left it registered-but-disabled, which the getClient() guard in
+    // ensureCredentialSentryInitialized() then mistook for a live client,
+    // dropping every subsequent report.
     await credentialSentrySdk.flush(2000)
-    await credentialSentrySdk.getClient()?.close()
-    // Clear the cached client so it can be re-initialized on the next error
-    sentryClient = undefined
   } catch {
     // avoid impacting credential flows if Sentry fails
   }

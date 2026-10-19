@@ -1,3 +1,5 @@
+import type {AddressInfo} from 'node:net'
+
 import {
   type HerokuApiResponse,
   Login,
@@ -9,6 +11,7 @@ import {Config} from '@oclif/core/config'
 import * as chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 import nock from 'nock'
+import {createServer} from 'node:http'
 import path from 'node:path'
 import {fileURLToPath} from 'node:url'
 import * as sinon from 'sinon'
@@ -431,29 +434,106 @@ describe('credential manager login adapters', () => {
       })).to.be.rejectedWith(TypeError)
     })
 
-    it('passes an undici proxy dispatcher to fetch only when a proxy env var is set', async () => {
-      const proxyKeys = ['HTTP_PROXY', 'HTTPS_PROXY', 'NO_PROXY', 'http_proxy', 'https_proxy', 'no_proxy'] as const
-      const saved = Object.fromEntries(proxyKeys.map(key => [key, process.env[key]]))
-      // Native fetch is stubbed so this test asserts only what the adapter hands
-      // to fetch (the dispatcher option), independent of any real proxy server.
-      // eslint-disable-next-line n/no-unsupported-features/node-builtins
-      const fetchStub = sinon.stub(globalThis, 'fetch').resolves(new Response('{}', {status: 200}))
-      try {
-        for (const key of proxyKeys) Reflect.deleteProperty(process.env, key)
-        await createCredentialManagerFetchAdapter()('https://api.heroku.com/no-proxy', {redirect: 'error'})
-        expect(fetchStub.lastCall.args[1]).to.not.have.property('dispatcher')
+    const proxyEnvKeys = ['HTTP_PROXY', 'HTTPS_PROXY', 'NO_PROXY', 'http_proxy', 'https_proxy', 'no_proxy'] as const
 
-        process.env.HTTPS_PROXY = 'http://proxy.example.test:8080'
-        await createCredentialManagerFetchAdapter()('https://api.heroku.com/proxied', {redirect: 'error'})
-        const proxiedInit = fetchStub.lastCall.args[1] as Record<string, unknown>
-        expect(proxiedInit).to.have.property('dispatcher')
-        expect((proxiedInit.dispatcher as object).constructor.name).to.equal('EnvHttpProxyAgent')
-      } finally {
-        fetchStub.restore()
-        for (const key of proxyKeys) {
+    const clearProxyEnv = () => {
+      const saved = Object.fromEntries(proxyEnvKeys.map(key => [key, process.env[key]]))
+      for (const key of proxyEnvKeys) Reflect.deleteProperty(process.env, key)
+      return () => {
+        for (const key of proxyEnvKeys) {
           if (saved[key] === undefined) Reflect.deleteProperty(process.env, key)
           else process.env[key] = saved[key]
         }
+      }
+    }
+
+    it('uses native fetch with no dispatcher when no proxy env var is set', async () => {
+      const restoreProxyEnv = clearProxyEnv()
+      // eslint-disable-next-line n/no-unsupported-features/node-builtins
+      const fetchStub = sinon.stub(globalThis, 'fetch').resolves(new Response('{}', {status: 200}))
+      try {
+        await createCredentialManagerFetchAdapter()('https://api.heroku.com/no-proxy', {redirect: 'error'})
+        expect(fetchStub.lastCall.args[1]).to.not.have.property('dispatcher')
+      } finally {
+        fetchStub.restore()
+        restoreProxyEnv()
+      }
+    })
+
+    it('drives a real proxied GET through the installed undici (regression: cross-undici dispatcher)', async () => {
+      const restoreProxyEnv = clearProxyEnv()
+      nock.enableNetConnect()
+      let proxiedUrl: string | undefined
+      const proxy = createServer((req, res) => {
+        proxiedUrl = req.url
+        res.writeHead(200, {'content-type': 'application/json'})
+        res.end(JSON.stringify({proxied: true}))
+      })
+      await new Promise<void>(resolve => {
+        proxy.listen(0, '127.0.0.1', () => {
+          resolve();
+        })
+      })
+      try {
+        process.env.HTTP_PROXY = `http://127.0.0.1:${(proxy.address() as AddressInfo).port}`
+        // Before the fix this threw `InvalidArgumentError: invalid onRequestStart
+        // method`: the installed undici's EnvHttpProxyAgent was handed to Node's
+        // built-in (different-copy) fetch, which can't drive it.
+        const response = await createCredentialManagerFetchAdapter()('http://api.heroku.example/account', {redirect: 'error'})
+        expect(response.status).to.equal(200)
+        expect(await response.json()).to.deep.equal({proxied: true})
+        expect(proxiedUrl).to.equal('http://api.heroku.example/account')
+      } finally {
+        await new Promise<void>(resolve => {
+          proxy.close(() => {
+            resolve();
+          })
+        })
+        restoreProxyEnv()
+      }
+    })
+
+    it('proxies a body-bearing Request by decomposing it for the installed undici', async () => {
+      const restoreProxyEnv = clearProxyEnv()
+      nock.enableNetConnect()
+      let received: {body: string; method?: string; url?: string} = {body: ''}
+      const proxy = createServer((req, res) => {
+        const chunks: Buffer[] = []
+        req.on('data', chunk => {
+          chunks.push(chunk as Buffer)
+        })
+        req.on('end', () => {
+          received = {body: Buffer.concat(chunks).toString(), method: req.method, url: req.url}
+          res.writeHead(200, {'content-type': 'application/json'})
+          res.end(JSON.stringify({ok: true}))
+        })
+      })
+      await new Promise<void>(resolve => {
+        proxy.listen(0, '127.0.0.1', () => {
+          resolve();
+        })
+      })
+      try {
+        process.env.HTTP_PROXY = `http://127.0.0.1:${(proxy.address() as AddressInfo).port}`
+        // eslint-disable-next-line n/no-unsupported-features/node-builtins
+        const request = new Request('http://api.heroku.example/oauth/authorizations', {
+          body: JSON.stringify({scope: ['global']}),
+          headers: {authorization: 'Basic abc', 'content-type': 'application/json'},
+          method: 'POST',
+          redirect: 'error',
+        })
+        const response = await createCredentialManagerFetchAdapter()(request)
+        expect(response.status).to.equal(200)
+        expect(received.method).to.equal('POST')
+        expect(received.url).to.equal('http://api.heroku.example/oauth/authorizations')
+        expect(JSON.parse(received.body)).to.deep.equal({scope: ['global']})
+      } finally {
+        await new Promise<void>(resolve => {
+          proxy.close(() => {
+            resolve();
+          })
+        })
+        restoreProxyEnv()
       }
     })
 
