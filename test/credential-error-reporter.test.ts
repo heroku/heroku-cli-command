@@ -1,3 +1,4 @@
+import {CredentialStore} from '@heroku/heroku-credential-manager'
 import {expect, use} from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 import {restore, stub} from 'sinon'
@@ -6,12 +7,11 @@ import {
   credentialSentrySdk,
   reportCredentialStoreError,
   shouldReportCredentialErrorsToSentry,
-} from '../../../src/credential-manager-core/lib/cli-command-telemetry.js'
-import {CredentialStore} from '../../../src/credential-manager-core/lib/credential-storage-selector.js'
+} from '../src/credential-error-reporter.js'
 
 use(chaiAsPromised)
 
-describe('cli-command-telemetry', function () {
+describe('credential-error-reporter', function () {
   afterEach(function () {
     restore()
     delete process.env.CI
