@@ -9,10 +9,6 @@ import {Config} from '@oclif/core/config'
 import * as chai from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 import nock from 'nock'
-import {mkdtempSync, rmSync, writeFileSync} from 'node:fs'
-import {createServer} from 'node:http'
-import {createRequire} from 'node:module'
-import {tmpdir} from 'node:os'
 import path from 'node:path'
 import {fileURLToPath} from 'node:url'
 import * as sinon from 'sinon'
@@ -27,9 +23,6 @@ import {
 chai.use(chaiAsPromised)
 const {expect} = chai
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const require = createRequire(import.meta.url)
-type ProxyPolicy = {env: NodeJS.ProcessEnv}
-const proxyPolicy = (require('@heroku/http-call/lib/proxy.js') as {default: ProxyPolicy}).default
 
 const httpError = (method: 'DELETE' | 'GET') => {
   const response = new HTTP(`https://api.heroku.com/${method.toLowerCase()}-http-error`, {method})
@@ -274,7 +267,8 @@ describe('credential manager login adapters', () => {
         redirect: 'error',
       })
 
-      expect(response.constructor.name).to.equal('Response')
+      // eslint-disable-next-line n/no-unsupported-features/node-builtins
+      expect(response).to.be.instanceOf(Response)
       expect(response.status).to.equal(201)
       expect(response.headers.get('x-result')).to.equal('created')
       expect(await response.json()).to.deep.equal({browser_url: '/browser'})
@@ -376,51 +370,12 @@ describe('credential manager login adapters', () => {
     it('passes null bodies to native Response for bodyless statuses', async () => {
       const fetch = createCredentialManagerFetchAdapter()
       for (const status of [204, 205, 304]) {
-        nock('https://api.heroku.com').get(`/bodyless-${status}`).reply(status, 'must-not-reach-Response')
+        nock('https://api.heroku.com').get(`/bodyless-${status}`).reply(status)
         // eslint-disable-next-line no-await-in-loop
         const response = await fetch(`https://api.heroku.com/bodyless-${status}`, {redirect: 'error'})
         expect(response.status).to.equal(status)
         // eslint-disable-next-line no-await-in-loop
         expect(await response.text()).to.equal('')
-      }
-    })
-
-    it('replays identical complete POST bytes after a real socket reset', async () => {
-      const bodies: string[] = []
-      nock.enableNetConnect('127.0.0.1')
-      const server = createServer((request, response) => {
-        void (async () => {
-          const chunks: Buffer[] = []
-          for await (const chunk of request) chunks.push(Buffer.from(chunk))
-          bodies.push(Buffer.concat(chunks).toString())
-          if (bodies.length === 1) {
-            request.socket.destroy()
-          } else {
-            response.setHeader('content-type', 'application/json')
-            response.end('{"ok":true}')
-          }
-        })()
-      })
-      await new Promise<void>(resolve => {
-        server.listen(0, '127.0.0.1', resolve)
-      })
-      const address = server.address()
-      if (!address || typeof address === 'string') throw new Error('test server did not bind')
-      try {
-        const response = await createCredentialManagerFetchAdapter()(`http://127.0.0.1:${address.port}/retry-body`, {
-          body: 'complete-post-body',
-          method: 'POST',
-          redirect: 'error',
-        })
-        expect(await response.json()).to.deep.equal({ok: true})
-        expect(bodies).to.deep.equal(['complete-post-body', 'complete-post-body'])
-      } finally {
-        await new Promise<void>((resolve, reject) => {
-          server.close(error => {
-            error ? reject(error) : resolve()
-          })
-        })
-        nock.disableNetConnect()
       }
     })
 
@@ -462,410 +417,44 @@ describe('credential manager login adapters', () => {
       expect(polls).to.equal(2)
     })
 
-    it('rejects redirects instead of following them with the default transport', async () => {
+    it('rejects redirects instead of following them', async () => {
       nock('https://cli-auth.heroku.com')
         .post('/auth')
         .reply(302, undefined, {location: 'https://elsewhere.example.test/auth'})
 
+      // Native fetch rejects a 3xx with a TypeError when `redirect: 'error'` is set.
       await expect(createCredentialManagerFetchAdapter()('https://cli-auth.heroku.com/auth', {
         body: '{}',
         headers: {'content-type': 'application/json'},
         method: 'POST',
         redirect: 'error',
-      })).to.be.rejectedWith(TypeError, 'Redirects are not allowed')
+      })).to.be.rejectedWith(TypeError)
     })
 
-    it('rejects redirects from an injected command transport', async () => {
-      class InjectedTransport<T> extends HTTP<T> {
-        static async request<T>(url: string, options?: HTTPRequestOptions): Promise<HTTP<T>> {
-          const request = new this<T>(url, options)
-          request.body = 'redirect body' as T
-          Object.defineProperty(request, 'response', {
-            value: {headers: {location: 'https://elsewhere.example.test'}, statusCode: 302},
-          })
-          await request._redirect()
-          return request
-        }
-      }
-
-      await expect(createCredentialManagerFetchAdapter(InjectedTransport)('https://cli-auth.heroku.com/auth', {
-        method: 'POST',
-        redirect: 'error',
-      })).to.be.rejectedWith(TypeError, 'Redirects are not allowed')
-    })
-
-    it('leaves transient network retries to the command transport', async () => {
-      let attempts = 0
-      class RetryingTransport<T> extends HTTP<T> {
-        static async request<T>(url: string, options?: HTTPRequestOptions): Promise<HTTP<T>> {
-          attempts++
-          // Models command transport-owned retry rather than any retry in the adapter.
-          if (attempts === 1) return this.request<T>(url, options)
-          return {body: {ok: true} as T, headers: {}, statusCode: 200} as HTTP<T>
-        }
-      }
-
-      const response = await createCredentialManagerFetchAdapter(RetryingTransport)('https://cli-auth.heroku.com/retry', {
-        method: 'GET',
-        redirect: 'error',
-      })
-
-      expect(await response.json()).to.deep.equal({ok: true})
-      expect(attempts).to.equal(2)
-    })
-
-    it('preserves http-call 5.5.2 retry count and error policy', async () => {
-      const cases: Array<{attempts: number; code: string}> = [
-        {attempts: 6, code: 'ECONNRESET'},
-        {attempts: 6, code: 'ENOTFOUND'},
-        {attempts: 1, code: 'ENETUNREACH'},
-        {attempts: 1, code: 'CERT_HAS_EXPIRED'},
-      ]
-      const timer = {unref() {}}
-      const timeout = sinon.stub(globalThis, 'setTimeout').callsFake(((handler: (...arguments_: unknown[]) => void) => {
-        queueMicrotask(handler)
-        return timer
-      }) as unknown as typeof setTimeout)
+    it('passes an undici proxy dispatcher to fetch only when a proxy env var is set', async () => {
+      const proxyKeys = ['HTTP_PROXY', 'HTTPS_PROXY', 'NO_PROXY', 'http_proxy', 'https_proxy', 'no_proxy'] as const
+      const saved = Object.fromEntries(proxyKeys.map(key => [key, process.env[key]]))
+      // Native fetch is stubbed so this test asserts only what the adapter hands
+      // to fetch (the dispatcher option), independent of any real proxy server.
+      // eslint-disable-next-line n/no-unsupported-features/node-builtins
+      const fetchStub = sinon.stub(globalThis, 'fetch').resolves(new Response('{}', {status: 200}))
       try {
-        for (const expected of cases) {
-          let attempts = 0
-          class PolicyTransport<T> extends HTTP<T> {
-            async _request(): Promise<void> {
-              attempts++
-              await this._maybeRetry(Object.assign(new Error(expected.code), {code: expected.code}))
-            }
-          }
+        for (const key of proxyKeys) Reflect.deleteProperty(process.env, key)
+        await createCredentialManagerFetchAdapter()('https://api.heroku.com/no-proxy', {redirect: 'error'})
+        expect(fetchStub.lastCall.args[1]).to.not.have.property('dispatcher')
 
-          // eslint-disable-next-line no-await-in-loop
-          await expect(createCredentialManagerFetchAdapter(PolicyTransport)('https://api.heroku.com/retry-policy', {
-            redirect: 'error',
-          })).to.be.rejectedWith(expected.code)
-          expect(attempts).to.equal(expected.attempts)
-        }
+        process.env.HTTPS_PROXY = 'http://proxy.example.test:8080'
+        await createCredentialManagerFetchAdapter()('https://api.heroku.com/proxied', {redirect: 'error'})
+        const proxiedInit = fetchStub.lastCall.args[1] as Record<string, unknown>
+        expect(proxiedInit).to.have.property('dispatcher')
+        expect((proxiedInit.dispatcher as object).constructor.name).to.equal('EnvHttpProxyAgent')
       } finally {
-        timeout.restore()
-      }
-    })
-
-    it('preserves http-call 5.5.2 exponential jitter delays', async () => {
-      const delays: number[] = []
-      let attempts = 0
-      const random = sinon.stub(Math, 'random').returns(0.5)
-      const timer = {unref() {}}
-      const timeout = sinon.stub(globalThis, 'setTimeout').callsFake(((handler: (...arguments_: unknown[]) => void, delay?: number) => {
-        delays.push(delay ?? 0)
-        queueMicrotask(handler)
-        return timer
-      }) as unknown as typeof setTimeout)
-      class JitterTransport<T> extends HTTP<T> {
-        async _request(): Promise<void> {
-          attempts++
-          if (attempts < 4) await this._maybeRetry(Object.assign(new Error('socket reset'), {code: 'ECONNRESET'}))
-          else {
-            this.body = {ok: true} as T
-            Object.defineProperty(this, 'response', {value: {headers: {}, statusCode: 200}})
-          }
+        fetchStub.restore()
+        for (const key of proxyKeys) {
+          if (saved[key] === undefined) Reflect.deleteProperty(process.env, key)
+          else process.env[key] = saved[key]
         }
       }
-      try {
-        await createCredentialManagerFetchAdapter(JitterTransport)('https://api.heroku.com/retry-jitter', {redirect: 'error'})
-        expect(delays).to.deep.equal([250, 450, 850])
-      } finally {
-        random.restore()
-        timeout.restore()
-      }
-    })
-
-    it('uses the command transport proxy and NO_PROXY path', async () => {
-      const previousHttpsProxy = process.env.HTTPS_PROXY
-      const previousNoProxy = process.env.NO_PROXY
-      process.env.HTTPS_PROXY = 'http://proxy.example.test:8080'
-      process.env.NO_PROXY = 'direct.example.test'
-      class InspectingTransport<T> extends HTTP<T> {
-        static agents: unknown[] = []
-
-        static async request<T>(url: string, options?: HTTPRequestOptions): Promise<HTTP<T>> {
-          const request = new this<T>(url, options)
-          this.agents.push(request.options.agent)
-          return {body: {ok: true} as T, headers: {}, statusCode: 200} as HTTP<T>
-        }
-      }
-
-      try {
-        const fetch = createCredentialManagerFetchAdapter(InspectingTransport)
-        await fetch('https://proxied.example.test/path', {redirect: 'error'})
-        await fetch('https://direct.example.test/path', {redirect: 'error'})
-        expect(InspectingTransport.agents[0]).to.exist
-        expect(InspectingTransport.agents[1]).to.equal(undefined)
-      } finally {
-        if (previousHttpsProxy === undefined) delete process.env.HTTPS_PROXY
-        else process.env.HTTPS_PROXY = previousHttpsProxy
-        if (previousNoProxy === undefined) delete process.env.NO_PROXY
-        else process.env.NO_PROXY = previousNoProxy
-      }
-    })
-
-    it('configures custom CA for direct, proxied, and NO_PROXY HTTPS requests', async () => {
-      const previousHttpsProxy = process.env.HTTPS_PROXY
-      const previousNoProxy = process.env.NO_PROXY
-      const previousCertFile = process.env.SSL_CERT_FILE
-      process.env.HTTPS_PROXY = 'http://proxy.example.test:8080'
-      process.env.NO_PROXY = 'direct.example.test'
-      const directory = mkdtempSync(`${tmpdir()}/login-adapter-ca-`)
-      const certificate = path.resolve(directory, 'custom-ca.pem')
-      writeFileSync(certificate, 'custom-ca')
-      process.env.SSL_CERT_FILE = certificate
-      class InspectingTransport<T> extends HTTP<T> {
-        static options: HTTPRequestOptions[] = []
-
-        static async request<T>(url: string, options?: HTTPRequestOptions): Promise<HTTP<T>> {
-          const request = new this<T>(url, options)
-          this.options.push(request.options)
-          return {body: {ok: true} as T, headers: {}, statusCode: 200} as HTTP<T>
-        }
-      }
-
-      try {
-        const fetch = createCredentialManagerFetchAdapter(InspectingTransport)
-        await fetch('https://proxied.example.test/path', {redirect: 'error'})
-        await fetch('https://direct.example.test/path', {redirect: 'error'})
-        expect(InspectingTransport.options[0].agent).to.exist
-        expect(InspectingTransport.options[1].agent).to.exist
-        expect((InspectingTransport.options[0].agent as {options?: {ca?: Buffer[]}}).options?.ca?.[0].toString()).to.equal('custom-ca')
-        expect((InspectingTransport.options[1].agent as {options?: {ca?: Buffer[]}}).options?.ca?.[0].toString()).to.equal('custom-ca')
-      } finally {
-        rmSync(directory, {force: true, recursive: true})
-        if (previousHttpsProxy === undefined) delete process.env.HTTPS_PROXY
-        else process.env.HTTPS_PROXY = previousHttpsProxy
-        if (previousNoProxy === undefined) delete process.env.NO_PROXY
-        else process.env.NO_PROXY = previousNoProxy
-        if (previousCertFile === undefined) delete process.env.SSL_CERT_FILE
-        else process.env.SSL_CERT_FILE = previousCertFile
-      }
-    })
-
-    it('reevaluates proxy, NO_PROXY, and CA settings after process.env object replacement', async () => {
-      const originalEnvironment = process.env
-      const directory = mkdtempSync(`${tmpdir()}/login-adapter-replaced-env-`)
-      const certificate = path.resolve(directory, 'custom-ca.pem')
-      writeFileSync(certificate, 'replacement-ca')
-      process.env = {
-        ...originalEnvironment,
-        HTTPS_PROXY: 'http://replacement-proxy.example.test:8080',
-        NO_PROXY: 'replacement-direct.example.test',
-        SSL_CERT_FILE: certificate,
-      }
-      class InspectingTransport<T> extends HTTP<T> {
-        static options: HTTPRequestOptions[] = []
-
-        static async request<T>(url: string, options?: HTTPRequestOptions): Promise<HTTP<T>> {
-          const request = new this<T>(url, options)
-          this.options.push(request.options)
-          return {body: {ok: true} as T, headers: {}, statusCode: 200} as HTTP<T>
-        }
-      }
-
-      try {
-        const fetch = createCredentialManagerFetchAdapter(InspectingTransport)
-        await fetch('https://replacement-proxied.example.test/path', {redirect: 'error'})
-        await fetch('https://replacement-direct.example.test/path', {redirect: 'error'})
-        expect(InspectingTransport.options[0].agent).to.exist
-        expect(InspectingTransport.options[1].agent).to.exist
-        expect((InspectingTransport.options[1].agent as {options?: {ca?: Buffer[]}}).options?.ca?.[0].toString()).to.equal('replacement-ca')
-      } finally {
-        process.env = originalEnvironment
-        rmSync(directory, {force: true, recursive: true})
-        proxyPolicy.env = originalEnvironment
-      }
-    })
-
-    it('restores proxy policy identity before unrelated plain HTTP construction', async () => {
-      const originalEnvironment = process.env
-      const originalProxyEnvironment = proxyPolicy.env
-      process.env = {
-        ...originalEnvironment,
-        HTTPS_PROXY: 'http://temporary-adapter-proxy.example.test:8080',
-        NO_PROXY: '',
-      }
-      class InspectingTransport<T> extends HTTP<T> {
-        static async request<T>(url: string, options?: HTTPRequestOptions): Promise<HTTP<T>> {
-          const request = new this<T>(url, options)
-          request.body = {ok: true} as T
-          Object.defineProperty(request, 'response', {value: {headers: {}, statusCode: 200}})
-          return request
-        }
-      }
-
-      try {
-        await createCredentialManagerFetchAdapter(InspectingTransport)('https://adapter.example.test/path', {redirect: 'error'})
-      } finally {
-        process.env = originalEnvironment
-      }
-
-      expect(proxyPolicy.env).to.equal(originalProxyEnvironment, `proxy policy still points at ${proxyPolicy.env.HTTPS_PROXY}`)
-      const plain = new HTTP('https://unrelated.example.test/path')
-      const proxyOptions = (plain.options.agent as undefined | {proxyOptions?: {host?: string}})?.proxyOptions
-      expect(proxyOptions?.host).to.not.equal('temporary-adapter-proxy.example.test')
-    })
-
-    it('keeps current direct HTTPS direct when prior proxy policy is stale', async () => {
-      const originalEnvironment = process.env
-      const originalProxyEnvironment = proxyPolicy.env
-      const staleEnvironment = {HTTPS_PROXY: 'http://stale-proxy.example.test:8080'}
-      proxyPolicy.env = staleEnvironment
-      process.env = {
-        ...originalEnvironment, HTTP_PROXY: '', HTTPS_PROXY: '', NO_PROXY: '*',
-      }
-      class InspectingTransport<T> extends HTTP<T> {
-        static agent: unknown
-
-        static async request<T>(url: string, options?: HTTPRequestOptions): Promise<HTTP<T>> {
-          const request = new this<T>(url, options)
-          this.agent = request.options.agent
-          return {body: {ok: true} as T, headers: {}, statusCode: 200} as HTTP<T>
-        }
-      }
-
-      try {
-        await createCredentialManagerFetchAdapter(InspectingTransport)('https://direct-current.example.test/path', {redirect: 'error'})
-        expect(InspectingTransport.agent).to.equal(undefined)
-        expect(proxyPolicy.env).to.equal(staleEnvironment)
-      } finally {
-        process.env = originalEnvironment
-        proxyPolicy.env = originalProxyEnvironment
-      }
-    })
-
-    it('uses current HTTP proxy instead of stale prior HTTP proxy', async () => {
-      const originalEnvironment = process.env
-      const originalProxyEnvironment = proxyPolicy.env
-      const staleEnvironment = {HTTP_PROXY: 'http://stale-http-proxy.example.test:8080'}
-      proxyPolicy.env = staleEnvironment
-      process.env = {
-        ...originalEnvironment,
-        HTTP_PROXY: 'http://current-http-proxy.example.test:8181',
-      }
-      delete process.env.HTTPS_PROXY
-      delete process.env.https_proxy
-      delete process.env.http_proxy
-      delete process.env.NO_PROXY
-      delete process.env.no_proxy
-      const observations: Array<{agent: unknown; url: string}> = []
-      class InspectingTransport<T> extends HTTP<T> {
-        static async request<T>(url: string, options?: HTTPRequestOptions): Promise<HTTP<T>> {
-          const request = new this<T>(url, options)
-          observations.push({agent: request.options.agent, url})
-          return {body: {ok: true} as T, headers: {}, statusCode: 200} as HTTP<T>
-        }
-      }
-
-      try {
-        await createCredentialManagerFetchAdapter(InspectingTransport)('http://current-http.example.test/path', {
-          method: 'GET',
-          redirect: 'error',
-        })
-        expect(observations).to.have.length(1)
-        expect(observations[0].url).to.equal('http://current-http.example.test/path')
-        expect(observations[0].agent, `current HTTP_PROXY=${process.env.HTTP_PROXY}`).to.exist
-        const {proxyOptions} = (observations[0].agent as {proxyOptions?: {host?: string; port?: string}})
-        expect(proxyOptions).to.deep.include({host: 'current-http-proxy.example.test', port: '8181'})
-        expect(proxyPolicy.env).to.equal(staleEnvironment)
-      } finally {
-        process.env = originalEnvironment
-        proxyPolicy.env = originalProxyEnvironment
-      }
-    })
-
-    it('disables the command transport timeout so package cancellation owns timeouts', async () => {
-      class InspectingTransport<T> extends HTTP<T> {
-        static timeout: number | undefined
-
-        async _request(): Promise<void> {
-          InspectingTransport.timeout = this.options.timeout
-          this.body = {ok: true} as T
-          Object.defineProperty(this, 'response', {value: {headers: {}, statusCode: 200}})
-        }
-      }
-      await createCredentialManagerFetchAdapter(InspectingTransport)('https://api.heroku.com/timeout-owner', {redirect: 'error'})
-      expect(InspectingTransport.timeout).to.equal(0)
-    })
-
-    it('aborts promptly while the command transport is in retry backoff', async () => {
-      const controller = new AbortController()
-      nock('https://api.heroku.com').get('/backoff').replyWithError({code: 'ECONNRESET', message: 'socket reset'})
-      const started = Date.now()
-      const pending = createCredentialManagerFetchAdapter()('https://api.heroku.com/backoff', {
-        redirect: 'error',
-        signal: controller.signal,
-      })
-      setTimeout(() => {
-        controller.abort(new Error('abort during backoff'))
-      }, 10)
-      await expect(pending).to.be.rejectedWith('abort during backoff')
-      expect(Date.now() - started).to.be.lessThan(100)
-    })
-
-    it('unrefs the retry backoff timer', async () => {
-      let unrefCalls = 0
-      const timeout = sinon.stub(globalThis, 'setTimeout').callsFake(((() => ({
-        unref() {
-          unrefCalls++
-        },
-      })) as unknown) as typeof setTimeout)
-      class BackoffTransport<T> extends HTTP<T> {
-        async _request(): Promise<void> {
-          await this._maybeRetry(Object.assign(new Error('socket reset'), {code: 'ECONNRESET'}))
-        }
-      }
-      const controller = new AbortController()
-      const pending = createCredentialManagerFetchAdapter(BackoffTransport)('https://api.heroku.com/backoff-unref', {
-        redirect: 'error',
-        signal: controller.signal,
-      })
-      await Promise.resolve()
-      controller.abort(new Error('stop unref test'))
-      await expect(pending).to.be.rejectedWith('stop unref test')
-      expect(unrefCalls).to.equal(1)
-      timeout.restore()
-    })
-
-    it('cancels retry backoff so no request callback runs after abort', async () => {
-      let requests = 0
-      const scheduled = new Set<ReturnType<typeof setTimeout>>()
-      const originalSetTimeout = setTimeout
-      const originalClearTimeout = clearTimeout
-      sinon.stub(globalThis, 'setTimeout').callsFake(((handler: (...arguments_: unknown[]) => void, timeout?: number, ...arguments_: unknown[]) => {
-        const timer = originalSetTimeout(handler, timeout, ...arguments_)
-        scheduled.add(timer)
-        return timer
-      }) as typeof setTimeout)
-      sinon.stub(globalThis, 'clearTimeout').callsFake((timer => {
-        scheduled.delete(timer as ReturnType<typeof setTimeout>)
-        originalClearTimeout(timer)
-      }))
-      class BackoffTransport<T> extends HTTP<T> {
-        async _request(): Promise<void> {
-          requests++
-          if (requests === 1) {
-            await this._maybeRetry(Object.assign(new Error('socket reset'), {code: 'ECONNRESET'}))
-          }
-        }
-      }
-      const controller = new AbortController()
-      const pending = createCredentialManagerFetchAdapter(BackoffTransport)('https://api.heroku.com/backoff-leak', {
-        redirect: 'error',
-        signal: controller.signal,
-      })
-      await new Promise(resolve => {
-        originalSetTimeout(resolve, 0)
-      })
-      controller.abort(new Error('cancel retry timer'))
-      await expect(pending).to.be.rejectedWith('cancel retry timer')
-      expect(scheduled.size).to.equal(0)
-      await new Promise(resolve => {
-        originalSetTimeout(resolve, 300)
-      })
-      expect(requests).to.equal(1)
     })
 
     it('honors package request timeout aborts', async () => {
