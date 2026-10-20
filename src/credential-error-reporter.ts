@@ -81,6 +81,15 @@ function ensureCredentialSentryInitialized(): void {
         scrubber.scrub(event as unknown as Record<string, unknown>).data
       return scrubbed as unknown as ErrorEvent
     },
+    // Report only the credential errors we explicitly capture. The default
+    // integrations install process-global uncaught-exception / unhandled-
+    // rejection handlers and console/http breadcrumbs; since this is the global
+    // client and we keep it open after the first credential failure (see
+    // reportCredentialStoreError), those would otherwise route any later
+    // unrelated host crash to the credential DSN and attach breadcrumbs (e.g.
+    // console output or HTTP activity carrying config values) that this
+    // scrubber wasn't built for.
+    defaultIntegrations: false,
     dsn: DSN,
     environment: isDev ? 'development' : 'production',
     release: `@heroku-cli/command@${readPackageVersion()}`,
