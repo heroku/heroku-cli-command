@@ -1,7 +1,12 @@
 import {Config} from '@oclif/core'
 import {expect} from 'chai'
 import {execFileSync} from 'node:child_process'
-import {mkdtempSync, rmSync, writeFileSync} from 'node:fs'
+import {
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import {tmpdir} from 'node:os'
 import path from 'node:path'
 import {fileURLToPath} from 'node:url'
@@ -296,5 +301,17 @@ describe('autocomplete completion sources', function () {
     for (const [id, completion] of Object.entries(completionCatalog)) {
       expect(completion.options, `${id} must expose options`).to.be.a('function')
     }
+  })
+
+  it('this package publishes without an `exports` map so the catalog resolves to one module instance', function () {
+    // The host CLI keys completion behavior off the reference identity of the
+    // `completionCatalog` singletons: an entry must be the SAME object the host
+    // sees however it imports this package. That holds only while package.json
+    // has NO `exports` field — without one, the root barrel and any deep import
+    // co-resolve to a single ESM instance; an `exports` map would fork them into
+    // two instances and break identity. See the note in src/index.ts.
+    const manifestPath = path.resolve(__dirname, '..', '..', 'package.json')
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as Record<string, unknown>
+    expect(manifest).to.not.have.property('exports')
   })
 })

@@ -9,4 +9,6 @@ export const team = Flags.custom({
     if (org) return org
   },
   description: 'team to use',
+  // the default depends on the local environment, so keep it out of generated docs and manifests
+  noCacheDefault: true,
 })

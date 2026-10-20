@@ -48,6 +48,8 @@ export const app = Flags.custom({
 
   description: 'app to run command against',
   env: 'HEROKU_APP',
+  // the default depends on the local environment, so keep it out of generated docs and manifests
+  noCacheDefault: true,
 })
 
 export const remote = Flags.custom({

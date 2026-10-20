@@ -1,11 +1,10 @@
-import {access} from 'node:fs/promises'
-import path from 'node:path'
-
 import {
   deleteLoginState,
   readLoginState,
   writeLoginState,
-} from './credential-manager-core/lib/login-state.js'
+} from '@heroku/heroku-credential-manager'
+import {access} from 'node:fs/promises'
+import path from 'node:path'
 
 type LoginState = Awaited<ReturnType<typeof readLoginState>>
 
