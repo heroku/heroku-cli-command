@@ -1,6 +1,7 @@
 import type {Config} from '@oclif/core/interfaces'
 import type {ChildProcess} from 'node:child_process'
 
+import {getStorageConfig, readLoginState} from '@heroku/heroku-credential-manager'
 import {
   Login as CredentialManagerLogin,
   type LoginOptions as CredentialManagerLoginOptions,
@@ -17,10 +18,6 @@ import os from 'node:os'
 import * as readline from 'node:readline'
 
 import {type APIClient, HerokuAPIError, type IHerokuAPIErrorOptions} from './api-client.js'
-import {getStorageConfig} from './credential-manager-core/lib/credential-storage-selector.js'
-import {
-  readLoginState,
-} from './credential-manager-core/lib/login-state.js'
 import {
   createCredentialManagerFetchAdapter,
   createCredentialManagerPlatformAdapter,

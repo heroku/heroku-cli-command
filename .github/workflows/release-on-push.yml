@@ -42,6 +42,7 @@ jobs:
           repositories: heroku-cli-command
           permission-contents: write
           permission-pull-requests: write
+
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:

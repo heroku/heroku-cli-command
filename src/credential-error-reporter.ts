@@ -1,3 +1,4 @@
+import type {CredentialErrorContext} from '@heroku/heroku-credential-manager'
 import type {ErrorEvent} from '@sentry/node'
 
 import {
@@ -9,13 +10,11 @@ import {
 } from '@heroku/js-blanket'
 import * as Sentry from '@sentry/node'
 import {readFileSync} from 'node:fs'
-import {dirname, join} from 'node:path'
+import path from 'node:path'
 import {fileURLToPath} from 'node:url'
 
-import type {CredentialStore} from './credential-storage-selector.js'
-
-const DSN
-  = 'https://4eb3812769d649a09ae76ef3fcd03dbb@o4508609692368896.ingest.us.sentry.io/4511095245832192'
+const DSN =
+  'https://4eb3812769d649a09ae76ef3fcd03dbb@o4508609692368896.ingest.us.sentry.io/4511095245832192'
 
 const scrubber = new Scrubber({
   fields: [...HEROKU_FIELDS, ...GDPR_FIELDS, ...PCI_FIELDS],
@@ -38,8 +37,8 @@ function readPackageVersion(): string {
     return releaseCache
   }
 
-  const dir = dirname(fileURLToPath(import.meta.url))
-  const pkgPath = join(dir, '../../../../package.json')
+  const dir = path.dirname(fileURLToPath(import.meta.url))
+  const pkgPath = path.join(dir, '../package.json')
   const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as {version?: string}
   releaseCache = pkg.version ?? 'unknown'
   return releaseCache
@@ -78,10 +77,19 @@ function ensureCredentialSentryInitialized(): void {
 
   sentryClient = credentialSentrySdk.init({
     beforeSend(event) {
-      const scrubbed
-        = scrubber.scrub(event as unknown as Record<string, unknown>).data
+      const scrubbed =
+        scrubber.scrub(event as unknown as Record<string, unknown>).data
       return scrubbed as unknown as ErrorEvent
     },
+    // Report only the credential errors we explicitly capture. The default
+    // integrations install process-global uncaught-exception / unhandled-
+    // rejection handlers and console/http breadcrumbs; since this is the global
+    // client and we keep it open after the first credential failure (see
+    // reportCredentialStoreError), those would otherwise route any later
+    // unrelated host crash to the credential DSN and attach breadcrumbs (e.g.
+    // console output or HTTP activity carrying config values) that this
+    // scrubber wasn't built for.
+    defaultIntegrations: false,
     dsn: DSN,
     environment: isDev ? 'development' : 'production',
     release: `@heroku-cli/command@${readPackageVersion()}`,
@@ -89,11 +97,9 @@ function ensureCredentialSentryInitialized(): void {
   })
 }
 
-export type CredentialSentryOperation = 'getAuth' | 'listKeychainAccounts' | 'removeAuth' | 'saveAuth'
-
 export async function reportCredentialStoreError(
   error: unknown,
-  context: {credentialStore: CredentialStore; operation: CredentialSentryOperation},
+  context: CredentialErrorContext,
 ): Promise<void> {
   if (!shouldReportCredentialErrorsToSentry()) {
     return
@@ -108,10 +114,12 @@ export async function reportCredentialStoreError(
         credential_store: context.credentialStore,
       },
     })
+    // Flush pending events but keep the client alive so a second credential
+    // failure in the same process is still reported. Closing the client here
+    // left it registered-but-disabled, which the getClient() guard in
+    // ensureCredentialSentryInitialized() then mistook for a live client,
+    // dropping every subsequent report.
     await credentialSentrySdk.flush(2000)
-    await credentialSentrySdk.getClient()?.close()
-    // Clear the cached client so it can be re-initialized on the next error
-    sentryClient = undefined
   } catch {
     // avoid impacting credential flows if Sentry fails
   }
