@@ -373,7 +373,10 @@ describe('credential manager login adapters', () => {
     it('passes null bodies to native Response for bodyless statuses', async () => {
       const fetch = createCredentialManagerFetchAdapter()
       for (const status of [204, 205, 304]) {
-        nock('https://api.heroku.com').get(`/bodyless-${status}`).reply(status)
+        // Reply with a body the server must not send on a bodyless status: the
+        // empty-text assertion below only proves the adapter drops it if there
+        // was a body on the wire to drop.
+        nock('https://api.heroku.com').get(`/bodyless-${status}`).reply(status, 'must-not-reach-body')
         // eslint-disable-next-line no-await-in-loop
         const response = await fetch(`https://api.heroku.com/bodyless-${status}`, {redirect: 'error'})
         expect(response.status).to.equal(status)
@@ -421,17 +424,65 @@ describe('credential manager login adapters', () => {
     })
 
     it('rejects redirects instead of following them', async () => {
-      nock('https://cli-auth.heroku.com')
-        .post('/auth')
-        .reply(302, undefined, {location: 'https://elsewhere.example.test/auth'})
+      const restoreProxyEnv = clearProxyEnv()
+      nock.enableNetConnect()
+      // Real servers rather than nock: nock neither reproduces undici's redirect
+      // error shape nor actually follows redirects, so it can't tell a refused
+      // redirect from a followed one. A redirect target that returns 200 makes the
+      // two outcomes diverge — a refused redirect rejects, a followed one resolves
+      // (and trips followedHit).
+      let followedHit = false
+      const target = createServer((_req, res) => {
+        followedHit = true
+        res.writeHead(200, {'content-type': 'application/json'})
+        res.end('{}')
+      })
+      const redirector = createServer((_req, res) => {
+        res.writeHead(302, {location: `http://127.0.0.1:${(target.address() as AddressInfo).port}/landing`})
+        res.end()
+      })
+      await new Promise<void>(resolve => {
+        target.listen(0, '127.0.0.1', () => {
+          resolve();
+        })
+      })
+      await new Promise<void>(resolve => {
+        redirector.listen(0, '127.0.0.1', () => {
+          resolve();
+        })
+      })
+      try {
+        // With `redirect: 'error'`, undici rejects with TypeError('fetch failed')
+        // whose `cause` is 'unexpected redirect'. Asserting the cause — not a bare
+        // TypeError — is what makes this discriminating: fetch reports every
+        // network failure as TypeError, so a followed redirect whose follow-up
+        // failed would look identical otherwise.
+        const error = await createCredentialManagerFetchAdapter()(`http://127.0.0.1:${(redirector.address() as AddressInfo).port}/auth`, {
+          body: '{}',
+          headers: {'content-type': 'application/json'},
+          method: 'POST',
+          redirect: 'error',
+        }).then(
+          () => expect.fail('expected the redirect to be rejected, but the request resolved'),
+          (error_: unknown) => error_,
+        )
 
-      // Native fetch rejects a 3xx with a TypeError when `redirect: 'error'` is set.
-      await expect(createCredentialManagerFetchAdapter()('https://cli-auth.heroku.com/auth', {
-        body: '{}',
-        headers: {'content-type': 'application/json'},
-        method: 'POST',
-        redirect: 'error',
-      })).to.be.rejectedWith(TypeError)
+        expect(error).to.be.instanceOf(TypeError)
+        expect((error as {cause?: {message?: string}}).cause?.message).to.match(/redirect/i)
+        expect(followedHit).to.equal(false)
+      } finally {
+        await new Promise<void>(resolve => {
+          target.close(() => {
+            resolve();
+          })
+        })
+        await new Promise<void>(resolve => {
+          redirector.close(() => {
+            resolve();
+          })
+        })
+        restoreProxyEnv()
+      }
     })
 
     const proxyEnvKeys = ['HTTP_PROXY', 'HTTPS_PROXY', 'NO_PROXY', 'http_proxy', 'https_proxy', 'no_proxy'] as const
