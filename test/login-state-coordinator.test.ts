@@ -1,10 +1,10 @@
+import {readLoginState} from '@heroku/heroku-credential-manager'
 import {expect} from 'chai'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import * as sinon from 'sinon'
 
-import {readLoginState} from '../src/credential-manager-core/lib/login-state.js'
 import {
   deleteLoginStateCoordinated,
   deleteLoginStateIf,

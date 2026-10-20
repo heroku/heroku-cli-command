@@ -1,6 +1,6 @@
 import type {Config} from '@oclif/core/interfaces'
 
-import {NativeCredentialNotFoundError} from '@heroku/heroku-credential-manager'
+import {getStorageConfig, NativeCredentialNotFoundError, readLoginState} from '@heroku/heroku-credential-manager'
 import {HTTP, HTTPError, type HTTPRequestOptions} from '@heroku/http-call'
 import {CLIError, warn} from '@oclif/core/errors'
 import {ux} from '@oclif/core/ux'
@@ -8,8 +8,6 @@ import debug from 'debug'
 import {access} from 'node:fs/promises'
 import path from 'node:path'
 
-import {getStorageConfig} from './credential-manager-core/lib/credential-storage-selector.js'
-import {readLoginState} from './credential-manager-core/lib/login-state.js'
 import {type AuthEntry, getAuth as getStoredAuth, removeAuth} from './credential-manager.js'
 import {
   deleteLoginStateIf,

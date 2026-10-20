@@ -1,3 +1,4 @@
+import {CredentialStore} from '@heroku/heroku-credential-manager'
 import {expect, use} from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 import {restore, stub} from 'sinon'
@@ -6,12 +7,11 @@ import {
   credentialSentrySdk,
   reportCredentialStoreError,
   shouldReportCredentialErrorsToSentry,
-} from '../../../src/credential-manager-core/lib/cli-command-telemetry.js'
-import {CredentialStore} from '../../../src/credential-manager-core/lib/credential-storage-selector.js'
+} from '../src/credential-error-reporter.js'
 
 use(chaiAsPromised)
 
-describe('cli-command-telemetry', function () {
+describe('credential-error-reporter', function () {
   afterEach(function () {
     restore()
     delete process.env.CI
@@ -105,7 +105,7 @@ describe('cli-command-telemetry', function () {
       })
     })
 
-    it('calls close on Sentry client after flush', async function () {
+    it('flushes but keeps the Sentry client open so later errors still report', async function () {
       delete process.env.CI
       process.env.NODE_ENV = 'development'
       delete process.env.IS_HEROKU_TEST_ENV
@@ -115,7 +115,7 @@ describe('cli-command-telemetry', function () {
       stub(credentialSentrySdk, 'getClient').returns({close: closeStub} as unknown as NonNullable<ReturnType<typeof credentialSentrySdk.getClient>>)
       stub(credentialSentrySdk, 'init')
       stub(credentialSentrySdk, 'captureException')
-      stub(credentialSentrySdk, 'flush').resolves(true)
+      const flushStub = stub(credentialSentrySdk, 'flush').resolves(true)
 
       const err = new Error('Test error')
       await reportCredentialStoreError(err, {
@@ -123,7 +123,10 @@ describe('cli-command-telemetry', function () {
         operation: 'saveAuth',
       })
 
-      expect(closeStub.calledOnce).to.equal(true)
+      expect(flushStub.calledOnce).to.equal(true)
+      // Closing the client left it registered-but-disabled, which blocked every
+      // subsequent report; it must stay open.
+      expect(closeStub.called).to.equal(false)
     })
 
     it('can report multiple errors in sequence', async function () {
@@ -136,7 +139,7 @@ describe('cli-command-telemetry', function () {
       stub(credentialSentrySdk, 'getClient').returns({close: closeStub} as unknown as NonNullable<ReturnType<typeof credentialSentrySdk.getClient>>)
       stub(credentialSentrySdk, 'init')
       const captureStub = stub(credentialSentrySdk, 'captureException')
-      stub(credentialSentrySdk, 'flush').resolves(true)
+      const flushStub = stub(credentialSentrySdk, 'flush').resolves(true)
 
       const err1 = new Error('First error')
       await reportCredentialStoreError(err1, {
@@ -150,13 +153,12 @@ describe('cli-command-telemetry', function () {
         operation: 'saveAuth',
       })
 
-      // Both errors should be captured
+      // Both errors should be captured and flushed, with the client kept open.
       expect(captureStub.calledTwice).to.equal(true)
       expect(captureStub.firstCall.args[0]).to.equal(err1)
       expect(captureStub.secondCall.args[0]).to.equal(err2)
-
-      // Close should be called for each error
-      expect(closeStub.calledTwice).to.equal(true)
+      expect(flushStub.calledTwice).to.equal(true)
+      expect(closeStub.called).to.equal(false)
     })
   })
 })

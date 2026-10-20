@@ -1,4 +1,5 @@
-import * as real from '../../src/credential-manager-core/lib/credential-manager-adapter.js'
+import * as real from '@heroku/heroku-credential-manager'
+
 import {setCredentialManagerProvider} from '../../src/credential-manager.js'
 
 const DEFAULT_TOKEN = 'mypass'
