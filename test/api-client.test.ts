@@ -1,3 +1,4 @@
+import {readLoginState, writeLoginState} from '@heroku/heroku-credential-manager'
 import {Config} from '@oclif/core/config'
 import {ux} from '@oclif/core/ux'
 import {expect as chaiExpect, use} from 'chai'
@@ -13,7 +14,6 @@ import * as sinon from 'sinon'
 import {stderr} from 'stdout-stderr'
 
 import {Command as CommandBase} from '../src/command.js'
-import {readLoginState, writeLoginState} from '../src/credential-manager-core/lib/login-state.js'
 import {setCredentialManagerProvider} from '../src/credential-manager.js'
 import {writeLoginStateCoordinated} from '../src/login-state-coordinator.js'
 import {prompter} from '../src/prompter.js'

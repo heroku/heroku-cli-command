@@ -7,7 +7,7 @@ import {
   getAuth as realGetAuth,
   removeAuth as realRemoveAuth,
   saveAuth as realSaveAuth,
-} from './credential-manager-core/lib/credential-manager-adapter.js'
+} from '@heroku/heroku-credential-manager'
 
 /** Backward-compatible shape used by command consumers before storage extraction. */
 export type AuthEntry = {
