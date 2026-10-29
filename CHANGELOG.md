@@ -10,6 +10,18 @@ With this major version release we will be improving the security by storing aut
 
 * remove dual write for credential storage ([#389](https://github.com/heroku/heroku-cli-command/issues/389)) ([e50b5be](https://github.com/heroku/heroku-cli-command/commit/e50b5be106f7997d85f7a5a53ff06ff1eadecb9c))
 
+## [13.2.5](https://github.com/heroku/heroku-cli-command/compare/command-v13.2.4...command-v13.2.5) (2026-10-29)
+
+
+### Bug Fixes
+
+* keep env-derived flag defaults out of generated docs and manifests ([#433](https://github.com/heroku/heroku-cli-command/issues/433)) ([b43bc62](https://github.com/heroku/heroku-cli-command/commit/b43bc62b526dae9d9be3ff4575f28f2f7114d202))
+
+
+### Dependencies
+
+* bump source-map-js from 1.2.1 to 1.2.2 ([#430](https://github.com/heroku/heroku-cli-command/issues/430)) ([f9fbb47](https://github.com/heroku/heroku-cli-command/commit/f9fbb47bd50962dd0c0f6a052cfdcb0052e0c35d))
+
 ## [13.2.4](https://github.com/heroku/heroku-cli-command/compare/command-v13.2.3...command-v13.2.4) (2026-10-06)
 
 
