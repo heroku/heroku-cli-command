@@ -8,12 +8,35 @@ import {MacOSHandler} from '../../src/credential-manager-core/credential-handler
 import {NetrcHandler} from '../../src/credential-manager-core/credential-handlers/netrc-handler.js'
 import {WindowsHandler} from '../../src/credential-manager-core/credential-handlers/windows-handler.js'
 import * as credentialManager from '../../src/credential-manager-core/index.js'
+import {credentialSentrySdk} from '../../src/credential-manager-core/lib/cli-command-telemetry.js'
 import {CredentialStore} from '../../src/credential-manager-core/lib/credential-storage-selector.js'
 import {unwrap} from '../helpers/unwrap.js'
 
 use(chaiAsPromised)
 
 describe('credential-manager', function () {
+  function stubCredentialTelemetry() {
+    process.env.NODE_ENV = 'production'
+    delete process.env.CI
+    delete process.env.IS_HEROKU_TEST_ENV
+    delete process.env.DISABLE_TELEMETRY
+
+    const client = {close: sinon.stub().resolves()}
+    const initStub = sinon.stub(credentialSentrySdk, 'init').returns(client as never)
+    const captureExceptionStub = sinon.stub(credentialSentrySdk, 'captureException')
+    const flushStub = sinon.stub(credentialSentrySdk, 'flush').resolves(true)
+    const getClientStub = sinon.stub(credentialSentrySdk, 'getClient')
+      .onSecondCall().returns(client as never)
+
+    return {
+      captureExceptionStub,
+      client,
+      flushStub,
+      getClientStub,
+      initStub,
+    }
+  }
+
   // default to use macOS platform for testing
   beforeEach(function () {
     sinon.stub(process, 'platform').value('darwin')
@@ -104,6 +127,32 @@ describe('credential-manager', function () {
       expect(netrcStub.notCalled).to.be.true
     })
 
+    it('should fall back to netrc when credential store returns undefined', async function () {
+      const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuth').returns(undefined as never)
+      const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
+        .resolves({login: 'user@example.com', password: 'netrc-token'})
+      const {captureExceptionStub, initStub} = stubCredentialTelemetry()
+
+      const auth = await credentialManager.getAuth('user@example.com', 'api.heroku.com')
+
+      expect(macosStub.calledOnce).to.be.true
+      expect(netrcStub.calledOnce).to.be.true
+      expect(initStub.notCalled).to.be.true
+      expect(captureExceptionStub.notCalled).to.be.true
+      expect(auth).to.deep.equal({account: 'user@example.com', token: 'netrc-token'})
+    })
+
+    it('should reject when credential store returns undefined and netrc has no auth', async function () {
+      const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuth').returns(undefined as never)
+      const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
+        .rejects(new Error('No auth found for api.heroku.com'))
+
+      await expect(credentialManager.getAuth('user@example.com', 'api.heroku.com'))
+        .to.be.rejectedWith(Error, 'No auth found for api.heroku.com')
+      expect(macosStub.calledOnce).to.be.true
+      expect(netrcStub.calledOnce).to.be.true
+    })
+
     it('should retrieve from netrc-only when HEROKU_NETRC_WRITE is true', async function () {
       process.env.HEROKU_NETRC_WRITE = 'TRUE'
       const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuth')
@@ -118,14 +167,29 @@ describe('credential-manager', function () {
     })
 
     it('should fall back to netrc if credential store fails', async function () {
-      const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuth').throws(new Error('Keychain error'))
+      const nativeError = new Error('Keychain error')
+      const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuth').throws(nativeError)
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
       netrcStub.resolves({login: 'user@example.com', password: 'netrc-token'})
+      const {captureExceptionStub, client, flushStub, getClientStub, initStub} = stubCredentialTelemetry()
 
       const auth = await credentialManager.getAuth('user@example.com', 'api.heroku.com')
 
       expect(macosStub.calledOnce).to.be.true
       expect(netrcStub.calledOnce).to.be.true
+      expect(initStub.calledOnce).to.be.true
+      expect(captureExceptionStub.calledOnce).to.be.true
+      expect(captureExceptionStub.firstCall.args[0]).to.equal(nativeError)
+      expect(captureExceptionStub.firstCall.args[1]).to.deep.equal({
+        tags: {
+          component: 'heroku-cli-command',
+          credential_operation: 'getAuth',
+          credential_store: CredentialStore.MacOSKeychain,
+        },
+      })
+      expect(flushStub.calledOnceWith(2000)).to.be.true
+      expect(getClientStub.calledTwice).to.be.true
+      expect(client.close.calledOnce).to.be.true
       expect(netrcStub.firstCall.args[0]).to.equal('api.heroku.com')
       expect(auth).to.deep.equal({account: 'user@example.com', token: 'netrc-token'})
     })

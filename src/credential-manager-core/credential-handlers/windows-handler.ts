@@ -3,6 +3,8 @@ import childProcess from 'node:child_process'
 
 import {KeychainAuthEntry} from '../lib/types.js'
 
+const MISSING_CREDENTIAL_EXIT_CODE = 44
+
 /**
  * Handles credential storage and retrieval using the Windows Credential Manager.
  * Uses PowerShell commands to interact with the Windows.Security.Credentials.PasswordVault API.
@@ -19,20 +21,28 @@ export class WindowsHandler {
    * Retrieves the authentication token from Windows Credential Manager.
    * @param account - The account login to use (e.g. 'test@example.com')
    * @param service - The service name to use
-   * @returns The stored authentication token.
-   * @throws Error if the token is not found or retrieval fails.
+   * @returns The stored authentication token, or undefined if it is not found.
+   * @throws Error if retrieval fails.
    */
-  public getAuth(account: string, service: string): string {
+  public getAuth(account: string, service: string): string | undefined {
     try {
       const psCommand = `
       $ErrorActionPreference = 'Stop'
       [void][Windows.Security.Credentials.PasswordVault,Windows.Security.Credentials,ContentType=WindowsRuntime]
       $vault = New-Object Windows.Security.Credentials.PasswordVault
-      $credential = $vault.Retrieve("${service}", "${account}")
+      try {
+        $credential = $vault.Retrieve("${service}", "${account}")
+      } catch {
+        if ($_.Exception.HResult -eq -2147023728) {
+          exit ${MISSING_CREDENTIAL_EXIT_CODE}
+        }
+
+        throw
+      }
       $credential.Password
     `
 
-      const output = childProcess.execSync(psCommand, {encoding: 'utf8', shell: 'powershell', stdio: ['pipe', 'pipe', 'ignore']})
+      const output = childProcess.execSync(psCommand, {encoding: 'utf8', shell: 'powershell', stdio: ['pipe', 'pipe', 'pipe']})
       const token = output.trim()
 
       if (!token) {
@@ -41,7 +51,12 @@ export class WindowsHandler {
 
       return token
     } catch (error) {
-      const {message} = error as Error
+      const execError = error as Error & {status?: number; stderr?: Buffer | string}
+      if (execError.status === MISSING_CREDENTIAL_EXIT_CODE) {
+        return undefined
+      }
+
+      const message = [execError.message, execError.stderr?.toString()].filter(Boolean).join('\n')
       throw new Error(`Failed to retrieve token from Windows Credential Manager: ${this.scrubError(message)}`)
     }
   }

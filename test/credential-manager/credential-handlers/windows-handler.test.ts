@@ -26,13 +26,51 @@ describe('WindowsHandler', function () {
     })
 
     it('should throw an error when token is empty', function () {
-      execSyncStub.returns('')
+      execSyncStub.returns(' \n ')
       expect(() => handler.getAuth('test@example.com', 'heroku-cli')).to.throw('Failed to retrieve token from Windows Credential Manager: Token not found')
+    })
+
+    it('should return undefined only for the dedicated missing-credential exit code', function () {
+      const err = Object.assign(new Error('Command failed'), {status: 44})
+      execSyncStub.throws(err)
+
+      expect(handler.getAuth('missing@example.com', 'heroku-cli')).to.be.undefined
+      expect(execSyncStub.args[0][0]).to.contain('$_.Exception.HResult -eq -2147023728')
+      expect(execSyncStub.args[0][0]).to.contain('exit 44')
     })
 
     it('should throw an error when retrieval fails', function () {
       execSyncStub.throws(new Error('Permission denied'))
       expect(() => handler.getAuth('test@example.com', 'heroku-cli')).to.throw('Failed to retrieve token from Windows Credential Manager: Permission denied')
+    })
+
+    it('should wrap unrelated errors containing missing-credential phrases', function () {
+      const err = new Error('Unrelated PowerShell failure: element not found; diagnostic code 0x80070490')
+      execSyncStub.throws(err)
+
+      expect(() => handler.getAuth('test@example.com', 'heroku-cli'))
+        .to.throw('Failed to retrieve token from Windows Credential Manager: Unrelated PowerShell failure: element not found; diagnostic code 0x80070490')
+    })
+
+    it('should wrap and scrub genuine retrieval failures reported on stderr', function () {
+      const err = Object.assign(new Error('Command failed: Retrieve("heroku-cli", "test@example.com")'), {
+        stderr: Buffer.from('Access denied retrieving Retrieve("heroku-cli", "test@example.com")'),
+      })
+      execSyncStub.throws(err)
+
+      let thrown: unknown
+      try {
+        handler.getAuth('test@example.com', 'heroku-cli')
+      } catch (error) {
+        thrown = error
+      }
+
+      expect(thrown).to.be.instanceOf(Error)
+      const {message} = thrown as Error
+      expect(message).to.include('Failed to retrieve token from Windows Credential Manager:')
+      expect(message).to.include('Access denied')
+      expect(message).to.include('[SCRUBBED]')
+      expect(message).to.not.include('test@example.com')
     })
 
     it('should scrub sensitive data from error messages', function () {

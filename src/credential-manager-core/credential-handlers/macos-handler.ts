@@ -19,10 +19,10 @@ export class MacOSHandler {
    * Retrieves the authentication token from macOS Keychain.
    * @param account - The account login to use (e.g. 'test@example.com')
    * @param service - The service name to use
-   * @returns The stored authentication token.
-   * @throws Error if the token is not found or retrieval fails.
+   * @returns The stored authentication token, or undefined if it is not found.
+   * @throws Error if retrieval fails.
    */
-  public getAuth(account: string, service: string): string {
+  public getAuth(account: string, service: string): string | undefined {
     try {
       const output = childProcess.execSync(
         `security find-generic-password -a "${account}" -s "${service}" -w`,
@@ -39,7 +39,12 @@ export class MacOSHandler {
 
       return token
     } catch (error) {
-      const {message} = error as Error
+      const execError = error as Error & {status?: number}
+      if (execError.status === 44) {
+        return undefined
+      }
+
+      const {message} = execError
       throw new Error(`Failed to retrieve token from macOS Keychain: ${this.scrubError(message)}`)
     }
   }
