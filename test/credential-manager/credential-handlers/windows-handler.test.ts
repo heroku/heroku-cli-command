@@ -27,7 +27,7 @@ describe('WindowsHandler', function () {
 
     it('should throw an error when token is empty', function () {
       execSyncStub.returns(' \n ')
-      expect(() => handler.getAuth('test@example.com', 'heroku-cli')).to.throw('Failed to retrieve token from Windows Credential Manager: Token not found')
+      expect(() => handler.getAuth('test@example.com', 'heroku-cli')).to.throw('Failed to retrieve credential: Token not found')
     })
 
     it('should return undefined only for the dedicated missing-credential exit code', function () {
@@ -41,18 +41,18 @@ describe('WindowsHandler', function () {
 
     it('should throw an error when retrieval fails', function () {
       execSyncStub.throws(new Error('Permission denied'))
-      expect(() => handler.getAuth('test@example.com', 'heroku-cli')).to.throw('Failed to retrieve token from Windows Credential Manager: Permission denied')
+      expect(() => handler.getAuth('test@example.com', 'heroku-cli')).to.throw('Failed to retrieve credential: Permission denied')
     })
 
-    it('should wrap unrelated errors containing missing-credential phrases', function () {
+    it('should omit untrusted details from unrelated errors containing missing-credential phrases', function () {
       const err = new Error('Unrelated PowerShell failure: element not found; diagnostic code 0x80070490')
       execSyncStub.throws(err)
 
       expect(() => handler.getAuth('test@example.com', 'heroku-cli'))
-        .to.throw('Failed to retrieve token from Windows Credential Manager: Unrelated PowerShell failure: element not found; diagnostic code 0x80070490')
+        .to.throw(/^Failed to retrieve credential:$/)
     })
 
-    it('should wrap and scrub genuine retrieval failures reported on stderr', function () {
+    it('should retain only safe diagnostics from retrieval failures reported on stderr', function () {
       const err = Object.assign(new Error('Command failed: Retrieve("heroku-cli", "test@example.com")'), {
         stderr: Buffer.from('Access denied retrieving Retrieve("heroku-cli", "test@example.com")'),
       })
@@ -67,10 +67,129 @@ describe('WindowsHandler', function () {
 
       expect(thrown).to.be.instanceOf(Error)
       const {message} = thrown as Error
-      expect(message).to.include('Failed to retrieve token from Windows Credential Manager:')
+      expect(message).to.include('Failed to retrieve credential:')
       expect(message).to.include('Access denied')
-      expect(message).to.include('[SCRUBBED]')
+      expect(message).to.not.include('[SCRUBBED]')
       expect(message).to.not.include('test@example.com')
+      expect(message).to.not.include('heroku-cli')
+    })
+
+    it('should redact unquoted account and service values from the combined error message', function () {
+      const account = 'opaque-account-7f3a'
+      const service = 'opaque-service-9c2b'
+      const err = Object.assign(new Error(`Command failed for ${account}`), {
+        stderr: Buffer.from(`Credential lookup failed for ${account} on ${service}: token=untrusted-secret-5d11; Access denied`),
+      })
+      execSyncStub.throws(err)
+
+      let thrown: unknown
+      try {
+        handler.getAuth(account, service)
+      } catch (error) {
+        thrown = error
+      }
+
+      expect(thrown).to.be.instanceOf(Error)
+      const {message} = thrown as Error
+      expect(message).to.include('Access denied')
+      expect(message).to.not.include('[SCRUBBED]')
+      expect(message).to.not.include(account)
+      expect(message).to.not.include(service)
+      expect(message).to.not.include('untrusted-secret-5d11')
+    })
+
+    it('should preserve useful error text when account and service are empty', function () {
+      execSyncStub.throws(new Error('Access denied'))
+
+      expect(() => handler.getAuth('', '')).to.throw('Failed to retrieve credential: Access denied')
+    })
+
+    it('should not echo a runtime service that matches the old diagnostic prefix', function () {
+      execSyncStub.throws(new Error('Access denied'))
+
+      let thrown: unknown
+      try {
+        handler.getAuth('account-1234', 'Windows')
+      } catch (error) {
+        thrown = error
+      }
+
+      expect(thrown).to.be.instanceOf(Error)
+      const {message} = thrown as Error
+      expect(message).to.equal('Failed to retrieve credential: Access denied')
+      expect(message).to.not.include('Windows')
+    })
+
+    it('should omit diagnostics when an identifier is too short to redact safely', function () {
+      execSyncStub.throws(new Error('Access denied'))
+
+      let thrown: unknown
+      try {
+        handler.getAuth('e', 'heroku-cli')
+      } catch (error) {
+        thrown = error
+      }
+
+      expect(thrown).to.be.instanceOf(Error)
+      const {message} = thrown as Error
+      expect(message).to.equal('')
+      expect(message).to.not.include('e')
+    })
+
+    it('should check the composed fixed prefix for exact runtime identifiers', function () {
+      execSyncStub.throws(new Error('Access denied'))
+
+      let thrown: unknown
+      try {
+        handler.getAuth('account-1234', 'credential')
+      } catch (error) {
+        thrown = error
+      }
+
+      expect(thrown).to.be.instanceOf(Error)
+      const {message} = thrown as Error
+      expect(message).to.equal('')
+      expect(message).to.not.include('credential')
+    })
+
+    it('should omit the marker when the account value collides with the redaction marker', function () {
+      const account = '[SCRUBBED]'
+      execSyncStub.throws(new Error(`Credential lookup failed for ${account}: Access denied`))
+
+      let thrown: unknown
+      try {
+        handler.getAuth(account, 'heroku-cli')
+      } catch (error) {
+        thrown = error
+      }
+
+      expect(thrown).to.be.instanceOf(Error)
+      const {message} = thrown as Error
+      expect(message).to.equal('Failed to retrieve credential: Access denied')
+      expect(message).to.not.include(account)
+    })
+
+    it('should not treat an arbitrary scrub marker as evidence of redaction', function () {
+      const secret = 'customer@example.com'
+      const token = 'untrusted-secret-72fd'
+      const err = Object.assign(new Error('PowerShell command failed'), {
+        stderr: Buffer.from(`[SCRUBBED] ${secret} token=${token}`),
+      })
+      execSyncStub.throws(err)
+
+      let thrown: unknown
+      try {
+        handler.getAuth(secret, 'heroku-cli')
+      } catch (error) {
+        thrown = error
+      }
+
+      expect(thrown).to.be.instanceOf(Error)
+      const {message} = thrown as Error
+      expect(message).to.equal('Failed to retrieve credential:')
+      expect(message).to.not.include(secret)
+      expect(message).to.not.include(token)
+      expect(message).to.not.include('[SCRUBBED]')
     })
 
     it('should scrub sensitive data from error messages', function () {
@@ -82,9 +201,10 @@ describe('WindowsHandler', function () {
         expect.fail('Should have thrown an error')
       } catch (error) {
         expect(error).to.be.instanceOf(Error)
-        expect((error as Error).message).to.include('Failed to retrieve token from Windows Credential Manager')
-        expect((error as Error).message).to.include('[SCRUBBED]')
+        expect((error as Error).message).to.include('Failed to retrieve credential:')
+        expect((error as Error).message).to.not.include('[SCRUBBED]')
         expect((error as Error).message).to.not.include('test@example.com')
+        expect((error as Error).message).to.not.include('heroku-cli')
       }
     })
   })

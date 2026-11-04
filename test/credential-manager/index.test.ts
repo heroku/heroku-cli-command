@@ -1,5 +1,6 @@
 import {expect, use} from 'chai'
 import chaiAsPromised from 'chai-as-promised'
+import childProcess from 'node:child_process'
 import sinon from 'sinon'
 import {stderr} from 'stdout-stderr'
 
@@ -13,6 +14,12 @@ import {CredentialStore} from '../../src/credential-manager-core/lib/credential-
 import {unwrap} from '../helpers/unwrap.js'
 
 use(chaiAsPromised)
+
+function stubNativeGetAuth(platform: 'linux' | 'win32') {
+  return platform === 'linux'
+    ? sinon.stub(LinuxHandler.prototype, 'getAuth')
+    : sinon.stub(WindowsHandler.prototype, 'getAuth')
+}
 
 describe('credential-manager', function () {
   function stubCredentialTelemetry() {
@@ -114,6 +121,122 @@ describe('credential-manager', function () {
   })
 
   describe('getAuth', function () {
+    const dispatcherPlatforms = [
+      {name: 'Linux', platform: 'linux', store: CredentialStore.LinuxSecretService},
+      {name: 'Windows', platform: 'win32', store: CredentialStore.WindowsCredentialManager},
+    ] as const
+
+    for (const {name, platform, store} of dispatcherPlatforms) {
+      describe(`${name} dispatcher`, function () {
+        beforeEach(function () {
+          Object.defineProperty(process, 'platform', {configurable: true, value: platform})
+
+          if (platform === 'linux') {
+            // Keep the native Linux backend selected independently of the test host.
+            sinon.stub(childProcess, 'execSync').returns('secret-tool' as never)
+          }
+        })
+
+        it('should fall back to netrc without reporting a native miss', async function () {
+          const nativeStub = stubNativeGetAuth(platform)
+          nativeStub.returns(undefined as never)
+          const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
+            .resolves({login: 'user@example.com', password: 'netrc-token'})
+          const {captureExceptionStub, initStub} = stubCredentialTelemetry()
+
+          const auth = await credentialManager.getAuth('user@example.com', 'api.heroku.com')
+
+          expect(nativeStub.calledOnceWith('user@example.com', 'heroku-cli')).to.be.true
+          expect(netrcStub.calledOnceWith('api.heroku.com')).to.be.true
+          expect(initStub.notCalled).to.be.true
+          expect(captureExceptionStub.notCalled).to.be.true
+          expect(auth).to.deep.equal({account: 'user@example.com', token: 'netrc-token'})
+        })
+
+        it('should reject when the native store misses and netrc has no auth', async function () {
+          const nativeStub = stubNativeGetAuth(platform)
+          nativeStub.returns(undefined as never)
+          const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
+            .rejects(new Error('No auth found for api.heroku.com'))
+          const {captureExceptionStub, initStub} = stubCredentialTelemetry()
+
+          await expect(credentialManager.getAuth('user@example.com', 'api.heroku.com'))
+            .to.be.rejectedWith(Error, 'No auth found for api.heroku.com')
+
+          expect(nativeStub.calledOnce).to.be.true
+          expect(netrcStub.calledOnce).to.be.true
+          expect(initStub.notCalled).to.be.true
+          expect(captureExceptionStub.notCalled).to.be.true
+        })
+
+        it('should report native store errors and still fall back to netrc', async function () {
+          const nativeError = new Error(`${name} credential store unavailable`)
+          const nativeStub = stubNativeGetAuth(platform)
+          nativeStub.throws(nativeError)
+          const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
+            .resolves({login: 'user@example.com', password: 'netrc-token'})
+          const {captureExceptionStub, initStub} = stubCredentialTelemetry()
+
+          const auth = await credentialManager.getAuth('user@example.com', 'api.heroku.com')
+
+          expect(nativeStub.calledOnce).to.be.true
+          expect(netrcStub.calledOnceWith('api.heroku.com')).to.be.true
+          expect(initStub.calledOnce).to.be.true
+          expect(captureExceptionStub.calledOnceWith(nativeError, {
+            tags: {
+              component: 'heroku-cli-command',
+              credential_operation: 'getAuth',
+              credential_store: store,
+            },
+          })).to.be.true
+          expect(auth).to.deep.equal({account: 'user@example.com', token: 'netrc-token'})
+        })
+
+        it('should return native credentials without consulting netrc', async function () {
+          const nativeStub = stubNativeGetAuth(platform)
+          nativeStub.returns('native-token' as never)
+          const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
+
+          const auth = await credentialManager.getAuth('user@example.com', 'api.heroku.com')
+
+          expect(nativeStub.calledOnceWith('user@example.com', 'heroku-cli')).to.be.true
+          expect(netrcStub.notCalled).to.be.true
+          expect(auth).to.deep.equal({account: 'user@example.com', token: 'native-token'})
+        })
+      })
+    }
+
+    it('should report a Linux mixed locked and unlocked match, skip lookup, and fall back', async function () {
+      Object.defineProperty(process, 'platform', {configurable: true, value: 'linux'})
+      sinon.stub(childProcess, 'execSync').returns('secret-tool' as never)
+
+      // The helper classifies mixed locked/unlocked SearchItems replies as locked-match.
+      // Stub its bridge response to exercise the real handler and dispatcher without D-Bus.
+      const helperStub = sinon.stub(childProcess, 'execFileSync').returns(JSON.stringify({status: 'locked-match'}) as never)
+      const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
+        .resolves({login: 'user@example.com', password: 'netrc-token'})
+      const {captureExceptionStub, initStub} = stubCredentialTelemetry()
+
+      const auth = await credentialManager.getAuth('user@example.com', 'api.heroku.com')
+
+      expect(helperStub.calledOnce).to.be.true
+      expect(helperStub.firstCall.args[0]).to.equal(process.execPath)
+      expect(helperStub.firstCall.args[1][0]).to.contain('linux-keyring-search.mjs')
+      expect(helperStub.firstCall.args[1]).to.not.include('lookup')
+      expect(captureExceptionStub.calledOnce).to.be.true
+      expect(captureExceptionStub.firstCall.args[0]).to.have.property('message', 'Failed to retrieve token from Linux keyring: keyring is locked')
+      expect(netrcStub.calledOnceWith('api.heroku.com')).to.be.true
+      expect(initStub.calledOnce).to.be.true
+      expect(captureExceptionStub.firstCall.args[1]).to.deep.equal({
+        tags: {
+          component: 'heroku-cli-command',
+          credential_operation: 'getAuth',
+          credential_store: CredentialStore.LinuxSecretService,
+        },
+      })
+      expect(auth).to.deep.equal({account: 'user@example.com', token: 'netrc-token'})
+    })
+
     it('should retrieve from credential store when available', async function () {
       const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuth').returns('keychain-token')
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')

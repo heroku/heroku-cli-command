@@ -65,7 +65,7 @@
   "repository": "heroku/heroku-cli-command",
   "scripts": {
     "clean": "rimraf lib",
-    "build": "npm run clean && tsc",
+    "build": "npm run clean && tsc && node scripts/copy-linux-keyring-search.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "mocha --forbid-only \"test/**/*.test.ts\" --ignore \"test/**/acceptance/**/*.test.ts\"",

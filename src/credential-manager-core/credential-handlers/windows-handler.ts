@@ -4,6 +4,13 @@ import childProcess from 'node:child_process'
 import {KeychainAuthEntry} from '../lib/types.js'
 
 const MISSING_CREDENTIAL_EXIT_CODE = 44
+const DIAGNOSTIC_REDACTION = '[SCRUBBED]'
+const MIN_REDACTABLE_IDENTIFIER_LENGTH = 4
+
+interface RedactedDiagnostic {
+  ambiguous: boolean
+  message: string
+}
 
 /**
  * Handles credential storage and retrieval using the Windows Credential Manager.
@@ -57,7 +64,14 @@ export class WindowsHandler {
       }
 
       const message = [execError.message, execError.stderr?.toString()].filter(Boolean).join('\n')
-      throw new Error(`Failed to retrieve token from Windows Credential Manager: ${this.scrubError(message)}`)
+      const redacted = this.redactDiagnostic(message, [account, service])
+      const safeDiagnostic = redacted.ambiguous ? '' : this.getSafeDiagnostic(redacted.message)
+      const finalMessage = `Failed to retrieve credential:${safeDiagnostic ? ` ${safeDiagnostic}` : ''}`
+      const identifiers = [account, service].filter(Boolean)
+      const leaksIdentifier = identifiers.some(identifier => finalMessage.includes(identifier))
+
+      // Check after adding fixed text: even a neutral prefix can contain a short identifier.
+      throw new Error(redacted.ambiguous || leaksIdentifier ? '' : finalMessage)
     }
   }
 
@@ -165,6 +179,19 @@ export class WindowsHandler {
   }
 
   /**
+   * Keeps only known-safe diagnostic text; arbitrary command output may contain other secrets.
+   */
+  private getSafeDiagnostic(message: string): string {
+    const safeParts: string[] = []
+
+    if (/\baccess denied\b/i.test(message)) safeParts.push('Access denied')
+    else if (/\bpermission denied\b/i.test(message)) safeParts.push('Permission denied')
+    else if (/^Token not found$/i.test(message.trim())) safeParts.push('Token not found')
+
+    return safeParts.join(' ')
+  }
+
+  /**
    * PasswordVault.Retrieve throws when the credential is absent (e.g. netrc-only login).
    */
   private isMissingVaultCredential(message: string): boolean {
@@ -172,6 +199,41 @@ export class WindowsHandler {
     return lower.includes('element not found')
       || lower.includes('specified credential could not be found')
       || lower.includes('0x80070490')
+  }
+
+  /**
+   * Removes runtime identifiers from command diagnostics without reprocessing replacement text.
+   * If an identifier is too short to redact without damaging ordinary diagnostics, omit the
+   * diagnostics rather than risk leaking it.
+   */
+  private redactDiagnostic(message: string, identifiers: string[]): RedactedDiagnostic {
+    const values = [...new Set(identifiers.filter(Boolean))]
+    if (values.some(value => value.length < MIN_REDACTABLE_IDENTIFIER_LENGTH)) {
+      return {ambiguous: true, message: ''}
+    }
+
+    if (values.length === 0) return {ambiguous: false, message}
+
+    const escapedValues = values
+      .sort((a, b) => b.length - a.length)
+      .map(value => value.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`))
+    const identifierPattern = new RegExp(escapedValues.join('|'), 'g')
+    let ambiguousMatch = false
+    const redactedMessage = message.replaceAll(identifierPattern, (match, offset: number) => {
+      const precedingCharacter = message[offset - 1]
+      const followingCharacter = message[offset + match.length]
+      const hasAmbiguousLeftBoundary = /[A-Za-z0-9_]/.test(match[0] ?? '')
+        && /[A-Za-z0-9_]/.test(precedingCharacter ?? '')
+      const hasAmbiguousRightBoundary = /[A-Za-z0-9_]/.test(match.at(-1) ?? '')
+        && /[A-Za-z0-9_]/.test(followingCharacter ?? '')
+      if (hasAmbiguousLeftBoundary || hasAmbiguousRightBoundary) {
+        ambiguousMatch = true
+      }
+
+      return DIAGNOSTIC_REDACTION
+    })
+
+    return {ambiguous: ambiguousMatch, message: redactedMessage}
   }
 
   /**
