@@ -155,6 +155,14 @@ describe('LinuxHandler', function () {
       expectMinimalChildEnvironment(execFileSyncStub.secondCall.args[2].env)
     })
 
+    it('returns the token from getAuthIfAvailable when the credential exists', function () {
+      execFileSyncStub.onFirstCall().returns('{"status":"match"}')
+      execFileSyncStub.onSecondCall().returns('my-secret-token')
+
+      expect(handler.getAuthIfAvailable(account, service)).to.equal('my-secret-token')
+      expect(execFileSyncStub.calledTwice).to.be.true
+    })
+
     it('returns undefined from getAuthIfAvailable for exact no-match protocol without looking up a secret', function () {
       execFileSyncStub.returns('{"status":"no-match"}')
 
@@ -162,10 +170,10 @@ describe('LinuxHandler', function () {
       expect(execFileSyncStub.calledOnce).to.be.true
     })
 
-    it('returns undefined from getAuth when the keyring has no matching item', function () {
+    it('throws from getAuth when the keyring has no matching item', function () {
       execFileSyncStub.returns('{"status":"no-match"}')
 
-      expect(handler.getAuth(account, service)).to.be.undefined
+      expect(() => handler.getAuth(account, service)).to.throw('No credentials found')
       expect(execFileSyncStub.calledOnce).to.be.true
     })
 

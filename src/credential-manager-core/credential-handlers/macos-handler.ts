@@ -19,11 +19,16 @@ export class MacOSHandler {
    * Retrieves the authentication token from macOS Keychain.
    * @param account - The account login to use (e.g. 'test@example.com')
    * @param service - The service name to use
-   * @returns The stored authentication token, or undefined if it is not found.
-   * @throws Error if retrieval fails.
+   * @returns The stored authentication token.
+   * @throws Error if retrieval fails or the credential is not found.
    */
-  public getAuth(account: string, service: string): string | undefined {
-    return this.getAuthIfAvailable(account, service)
+  public getAuth(account: string, service: string): string {
+    const token = this.getAuthIfAvailable(account, service)
+    if (token === undefined) {
+      throw new Error('No credentials found')
+    }
+
+    return token
   }
 
   /**

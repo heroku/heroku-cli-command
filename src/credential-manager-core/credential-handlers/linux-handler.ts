@@ -46,11 +46,16 @@ export class LinuxHandler {
    * Retrieves the authentication token from the Linux keyring.
    * @param account - The account login to use (e.g. 'test@example.com')
    * @param service - The service name to use
-   * @returns The stored authentication token, or undefined if no matching item exists.
-   * @throws Error if searching or retrieving the token fails.
+   * @returns The stored authentication token.
+   * @throws Error if searching or retrieving the token fails, or no matching item exists.
    */
-  public getAuth(account: string, service: string): string | undefined {
-    return this.getAuthIfAvailable(account, service)
+  public getAuth(account: string, service: string): string {
+    const token = this.getAuthIfAvailable(account, service)
+    if (token === undefined) {
+      throw new Error('No credentials found')
+    }
+
+    return token
   }
 
   /**

@@ -31,20 +31,26 @@ describe('WindowsHandler', function () {
         .to.throw('Failed to retrieve credential: Token not found')
     })
 
-    it('should return undefined only for the dedicated missing-credential exit code', function () {
+    it('should throw when the credential is missing with the dedicated exit code', function () {
       const err = Object.assign(new Error('Command failed: private runtime detail'), {
         status: 44,
         stderr: Buffer.from('private stderr detail'),
       })
       execSyncStub.throws(err)
 
-      expect(handler.getAuth('missing@example.com', 'heroku-cli')).to.be.undefined
+      expect(() => handler.getAuth('missing@example.com', 'heroku-cli')).to.throw('No credentials found')
       expect(execSyncStub.args[0][0]).to.contain('$_.Exception.HResult -eq -2147023728')
       expect(execSyncStub.args[0][0]).to.contain('exit 44')
     })
   })
 
   describe('getAuthIfAvailable', function () {
+    it('should return the token when the credential exists', function () {
+      execSyncStub.returns('my-secret-token')
+
+      expect(handler.getAuthIfAvailable('test@example.com', 'heroku-cli')).to.equal('my-secret-token')
+    })
+
     it('should return undefined only for the dedicated missing-credential exit code', function () {
       const err = Object.assign(new Error('Command failed'), {status: 44})
       execSyncStub.throws(err)

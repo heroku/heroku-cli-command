@@ -30,12 +30,12 @@ describe('MacOSHandler', function () {
       expect(() => handler.getAuth('test@example.com', 'heroku-cli')).to.throw('Failed to retrieve token from macOS Keychain: Token not found')
     })
 
-    it('should return undefined when the token does not exist (exit 44)', function () {
+    it('should throw when the credential does not exist (exit 44)', function () {
       const err = new Error('Command failed') as Error & {status?: number}
       err.status = 44
       execSyncStub.throws(err)
 
-      expect(handler.getAuth('missing@example.com', 'heroku-cli')).to.be.undefined
+      expect(() => handler.getAuth('missing@example.com', 'heroku-cli')).to.throw('No credentials found')
     })
 
     it('should throw an error when retrieval fails', function () {
@@ -60,6 +60,12 @@ describe('MacOSHandler', function () {
   })
 
   describe('getAuthIfAvailable', function () {
+    it('should return the token when the credential exists', function () {
+      execSyncStub.returns('my-secret-token')
+
+      expect(handler.getAuthIfAvailable('test@example.com', 'heroku-cli')).to.equal('my-secret-token')
+    })
+
     it('should return undefined when the token does not exist (exit 44)', function () {
       const err = new Error('Command failed') as Error & {status?: number}
       err.status = 44
