@@ -1,4 +1,3 @@
-import type {Duplex} from 'node:stream'
 import type {SinonStub} from 'sinon'
 
 import {Message} from '@jellybrick/dbus-next'
@@ -22,14 +21,15 @@ const sourceHelperPath = resolve(projectRoot, 'src/credential-manager-core/crede
 const builtHelperPath = resolve(projectRoot, 'lib/credential-manager-core/credential-handlers/linux-keyring-search.mjs')
 const mockedDbusLoader = `data:text/javascript,${encodeURIComponent(`
   const mockModule = ${JSON.stringify(`
+    import {EventEmitter} from 'node:events'
     export class Message { constructor() {} }
     export function sessionBus() {
-      return {
-        on() {},
-        removeListener() {},
+      const bus = new EventEmitter()
+      setInterval(() => {}, 60_000)
+      return Object.assign(bus, {
         call() { return Promise.resolve({body: [[], []]}) },
-        disconnect() {},
-      }
+        disconnect() { queueMicrotask(() => bus.emit('error', new Error('late D-Bus error'))) },
+      })
     }
   `)}
   export async function resolve(specifier, context, nextResolve) {
@@ -138,7 +138,7 @@ describe('LinuxHandler', function () {
       expect(helperArgs[0]).to.match(/linux-keyring-search\.mjs$/)
       expect(helperOptions.input).to.equal(JSON.stringify({account, service}))
       expect(helperOptions.stdio).to.deep.equal(['pipe', 'pipe', 'ignore'])
-      expect(helperOptions.timeout).to.be.a('number').and.greaterThan(0)
+      expect(helperOptions.timeout).to.equal(5000)
       expect(helperOptions.maxBuffer).to.be.a('number').and.greaterThan(0)
       expect(helperOptions.killSignal).to.equal('SIGKILL')
       expect(helperOptions.shell).to.be.undefined
@@ -155,7 +155,14 @@ describe('LinuxHandler', function () {
       expectMinimalChildEnvironment(execFileSyncStub.secondCall.args[2].env)
     })
 
-    it('returns undefined for exact no-match protocol without looking up a secret', function () {
+    it('returns undefined from getAuthIfAvailable for exact no-match protocol without looking up a secret', function () {
+      execFileSyncStub.returns('{"status":"no-match"}')
+
+      expect(handler.getAuthIfAvailable(account, service)).to.be.undefined
+      expect(execFileSyncStub.calledOnce).to.be.true
+    })
+
+    it('returns undefined from getAuth when the keyring has no matching item', function () {
       execFileSyncStub.returns('{"status":"no-match"}')
 
       expect(handler.getAuth(account, service)).to.be.undefined
@@ -242,7 +249,7 @@ describe('LinuxHandler', function () {
     // unit tests stay bus-independent and never connect to the invoking user's keyring. The built
     // helper mode runs after the package build; it is skipped when lib has not been generated.
     for (const [mode, helperPath] of [['source', sourceHelperPath], ['built lib', builtHelperPath]] as const) {
-      it(`writes compact JSON status to stdout in ${mode} mode${mode === 'built lib' ? ' when built helper is present' : ''}`, function () {
+      it(`writes compact JSON status and handles late bus errors in ${mode} mode${mode === 'built lib' ? ' when built helper is present' : ''}`, function () {
         if (mode === 'built lib' && !existsSync(helperPath)) this.skip()
 
         const result = runSubprocess(process.execPath, ['--no-warnings', '--loader', mockedDbusLoader, helperPath], {
@@ -250,6 +257,7 @@ describe('LinuxHandler', function () {
           env: {HOME: process.env.HOME, LC_ALL: 'C', PATH: process.env.PATH},
           input: JSON.stringify({account: 'account', service: 'service'}),
           stdio: ['pipe', 'pipe', 'pipe'],
+          timeout: 1000,
         })
 
         expect(result.status).to.equal(0)
@@ -304,7 +312,7 @@ describe('LinuxHandler', function () {
   })
 
   describe('Linux SearchItems helper', function () {
-    it('returns locked-match when locked and unlocked arrays both contain items', async function () {
+    it('returns locked-match when both locked and unlocked arrays contain items', async function () {
       const {bus, callStub, disconnectStub} = setupBus({body: [['/org/freedesktop/secrets/item/unlocked'], ['/org/freedesktop/secrets/item/locked']]})
 
       const result = await searchKeyring('account', 'service', () => bus)
@@ -329,8 +337,33 @@ describe('LinuxHandler', function () {
       expect(await searchKeyring('account', 'service', () => emptyBus.bus)).to.equal('no-match')
     })
 
-    it('rejects malformed SearchItems responses and disconnects the bus', async function () {
-      const invalidBus = setupBus({body: [['invalid path'], []]})
+    it('returns locked-match when only locked matches exist', async function () {
+      const lockedBus = setupBus({body: [[], ['/org/freedesktop/secrets/item/locked']]})
+
+      expect(await searchKeyring('account', 'service', () => lockedBus.bus)).to.equal('locked-match')
+      expect(lockedBus.disconnectStub.calledOnce).to.be.true
+    })
+
+    it('validates all SearchItems paths before classifying mixed results', async function () {
+      const invalidBus = setupBus({body: [['/org/freedesktop/secrets/item/unlocked'], ['invalid path']]})
+
+      await expect(searchKeyring('account', 'service', () => invalidBus.bus)).to.be.rejectedWith('Invalid SearchItems item paths')
+      expect(invalidBus.disconnectStub.calledOnce).to.be.true
+    })
+
+    it('rejects sparse unlocked SearchItems arrays before classifying results', async function () {
+      const unlocked: string[] = []
+      unlocked.length = 1
+      const invalidBus = setupBus({body: [unlocked, ['/org/freedesktop/secrets/item/locked']]})
+
+      await expect(searchKeyring('account', 'service', () => invalidBus.bus)).to.be.rejectedWith('Invalid SearchItems item paths')
+      expect(invalidBus.disconnectStub.calledOnce).to.be.true
+    })
+
+    it('rejects sparse locked SearchItems arrays before classifying results', async function () {
+      const locked: string[] = []
+      locked.length = 1
+      const invalidBus = setupBus({body: [['/org/freedesktop/secrets/item/unlocked'], locked]})
 
       await expect(searchKeyring('account', 'service', () => invalidBus.bus)).to.be.rejectedWith('Invalid SearchItems item paths')
       expect(invalidBus.disconnectStub.calledOnce).to.be.true
@@ -339,6 +372,7 @@ describe('LinuxHandler', function () {
     it('fails when the D-Bus connection emits an error', async function () {
       const errorBus = setupBus(null)
       errorBus.callStub.returns(new Promise(() => {}))
+      const initialErrorListeners = errorBus.bus.listenerCount('error')
       const search = searchKeyring('account', 'service', () => errorBus.bus)
       const rejected = expect(search).to.be.rejectedWith('SearchItems failed')
       errorBus.bus.emit('error', new Error('private D-Bus error'))
@@ -346,6 +380,9 @@ describe('LinuxHandler', function () {
       await rejected
 
       expect(errorBus.disconnectStub.calledOnce).to.be.true
+      expect(errorBus.bus.listenerCount('error')).to.equal(initialErrorListeners + 1)
+      expect(() => errorBus.bus.emit('error', new Error('late D-Bus error'))).to.not.throw()
+      expect(errorBus.bus.listenerCount('error')).to.equal(initialErrorListeners + 1)
     })
 
     it('times out a stuck SearchItems call and disconnects the bus', async function () {
@@ -359,47 +396,59 @@ describe('LinuxHandler', function () {
         await clock.tickAsync(4000)
         await rejected
         expect(timeoutBus.disconnectStub.calledOnce).to.be.true
+        expect(timeoutBus.bus.listenerCount('error')).to.equal(1)
+        expect(() => timeoutBus.bus.emit('error', new Error('late D-Bus error'))).to.not.throw()
+        expect(timeoutBus.bus.listenerCount('error')).to.equal(1)
       } finally {
         clock.restore()
       }
     })
 
-    it('keeps the D-Bus error listener until a timed-out socket closes', async function () {
-      const clock = useFakeTimers()
-      // dbus-next uses EventEmitter at runtime; mimic MessageBus/DBusConnection event semantics.
+    it('handles late D-Bus errors after public disconnect when another listener is present', async function () {
+      const {bus, disconnectStub} = setupBus({body: [[], []]})
+      // Existing bus listeners must be preserved when the search listener is replaced.
+      bus.on('error', () => {})
+
+      expect(await searchKeyring('account', 'service', () => bus)).to.equal('no-match')
+      expect(disconnectStub.calledOnce).to.be.true
+      expect(bus.listenerCount('error')).to.equal(2)
+      expect(() => bus.emit('error', new Error('late D-Bus error'))).to.not.throw()
+      expect(() => bus.emit('error', new Error('another late D-Bus error'))).to.not.throw()
+      expect(bus.listenerCount('error')).to.equal(2)
+    })
+
+    it('handles a late D-Bus error for direct callers after public disconnect', async function () {
+      const {bus, disconnectStub} = setupBus({body: [[], []]})
+      const initialErrorListeners = bus.listenerCount('error')
+
+      expect(await searchKeyring('account', 'service', () => bus)).to.equal('no-match')
+      expect(disconnectStub.calledOnce).to.be.true
+      expect(bus.listenerCount('error')).to.equal(initialErrorListeners + 1)
+      expect(() => bus.emit('error', new Error('late D-Bus error'))).to.not.throw()
+      expect(() => bus.emit('error', new Error('another late D-Bus error'))).to.not.throw()
+      expect(bus.listenerCount('error')).to.equal(initialErrorListeners + 1)
+    })
+
+    it('keeps its bus error listener to handle disconnect errors after a SearchItems error', async function () {
+      // dbus-next emits MessageBus errors through EventEmitter; model an error during the call.
       // eslint-disable-next-line unicorn/prefer-event-target
-      const bus = new EventEmitter() as EventEmitter & {_connection: EventEmitter & {stream?: Duplex}; call: (message: Message) => Promise<unknown>; disconnect: () => void}
-      // eslint-disable-next-line unicorn/prefer-event-target
-      const stream = new EventEmitter() as EventEmitter & {destroy: () => void}
-      // eslint-disable-next-line unicorn/prefer-event-target
-      const connection = new EventEmitter() as EventEmitter & {stream?: Duplex}
-      const callStub = stub().returns(new Promise(() => {}))
-      const destroyStub = stub()
+      const bus = new EventEmitter() as EventEmitter & {call: (message: Message) => Promise<unknown>; disconnect: () => void}
+      const callStub = stub().callsFake(() => {
+        bus.emit('error', new Error('D-Bus error'))
+        return new Promise(() => {})
+      })
       const disconnectStub = stub()
-      stream.destroy = destroyStub
-      connection.stream = stream as unknown as Duplex
       bus.call = callStub
       bus.disconnect = disconnectStub
-      bus._connection = connection
-      connection.on('error', error => bus.emit('error', error))
-      const initialErrorListeners = connection.listenerCount('error')
-      const search = searchKeyring('account', 'service', () => bus)
-      const rejected = expect(search).to.be.rejectedWith('SearchItems timed out')
+      const initialBusErrorListeners = bus.listenerCount('error')
 
-      try {
-        await clock.tickAsync(4000)
-        await rejected
-        expect(disconnectStub.calledOnce).to.be.true
-        expect(destroyStub.calledOnce).to.be.true
-        expect(bus.listenerCount('error')).to.equal(1)
-        expect(() => connection.emit('error', new Error('late D-Bus error'))).to.not.throw()
-        stream.emit('close')
-        expect(bus.listenerCount('error')).to.equal(0)
-        expect(connection.listenerCount('error')).to.equal(initialErrorListeners)
-        expect(stream.listenerCount('close')).to.equal(0)
-      } finally {
-        clock.restore()
-      }
+      await expect(searchKeyring('account', 'service', () => bus)).to.be.rejectedWith('SearchItems failed')
+
+      expect(disconnectStub.calledOnce).to.be.true
+      expect(bus.listenerCount('error')).to.equal(initialBusErrorListeners + 1)
+      expect(() => bus.emit('error', new Error('late D-Bus error'))).to.not.throw()
+      expect(() => bus.emit('error', new Error('another late D-Bus error'))).to.not.throw()
+      expect(bus.listenerCount('error')).to.equal(initialBusErrorListeners + 1)
     })
   })
 

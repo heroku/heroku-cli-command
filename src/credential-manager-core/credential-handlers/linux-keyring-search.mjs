@@ -7,8 +7,16 @@ const SECRET_SERVICE_INTERFACE = 'org.freedesktop.Secret.Service'
 const SEARCH_TIMEOUT_MS = 4000
 
 function isObjectPathArray(value) {
-  return Array.isArray(value) && value.every(item =>
-    typeof item === 'string' && (item === '/' || /^\/(?:[A-Za-z0-9_]+)(?:\/[A-Za-z0-9_]+)*$/.test(item)))
+  if (!Array.isArray(value)) return false
+
+  for (let index = 0; index < value.length; index++) {
+    if (!Object.prototype.hasOwnProperty.call(value, index)) return false
+
+    const item = value[index]
+    if (typeof item !== 'string' || !(item === '/' || /^\/(?:[A-Za-z0-9_]+)(?:\/[A-Za-z0-9_]+)*$/.test(item))) return false
+  }
+
+  return true
 }
 
 export async function searchKeyring(account, service, createSessionBus = sessionBus) {
@@ -54,66 +62,14 @@ export async function searchKeyring(account, service, createSessionBus = session
     searchSettled = true
     if (timeout) clearTimeout(timeout)
 
-    const connection = bus._connection
-    let stream = connection?.stream
-    let cleaned = false
-    const cleanup = () => {
-      if (cleaned) return
-      cleaned = true
-      stream?.removeListener('close', cleanup)
-      connection?.removeListener('connect', onConnect)
-      connection?.removeListener('error', onConnectionError)
-      connection?.removeListener('end', onConnectionEnd)
-      if (onBusError) bus.removeListener('error', onBusError)
-    }
-
-    const closeStream = () => {
-      stream = connection?.stream
-      if (!stream) {
-        cleanup()
-        return
-      }
-
-      stream.once('close', cleanup)
-      try {
-        stream.destroy()
-      } catch {
-        cleanup()
-      }
-    }
-
-    const onConnect = () => {
-      try {
-        bus.disconnect()
-      } catch {
-        // Disconnect errors must not obscure the search result.
-      }
-
-      closeStream()
-    }
-
-    const onConnectionError = () => closeStream()
-    const onConnectionEnd = () => closeStream()
-
-    // Keep the search listener until the socket closes to catch late connection errors.
-    if (stream) {
-      stream.once('close', cleanup)
-    } else if (connection) {
-      connection.once('connect', onConnect)
-      connection.once('error', onConnectionError)
-      connection.once('end', onConnectionEnd)
-    }
+    // MessageBus does not forward the internal connection's `end` event. Keep this listener attached
+    // as a no-op after settlement so later `error` events remain handled until the bus is collected.
+    // The default helper creates a short-lived bus, so retaining it here does not extend its lifetime.
 
     try {
       bus.disconnect()
     } catch {
       // Disconnect failures must not change the strict protocol result.
-    }
-
-    if (stream) {
-      closeStream()
-    } else if (!connection) {
-      cleanup()
     }
   }
 }
@@ -136,8 +92,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   try {
     const {account, service} = await readInput()
     const status = await searchKeyring(account, service)
-    process.stdout.write(JSON.stringify({status}))
+    process.stdout.write(JSON.stringify({status}), error => process.exit(error ? 1 : 0))
   } catch {
-    process.exitCode = 1
+    process.exit(1)
   }
 }

@@ -50,6 +50,17 @@ export class LinuxHandler {
    * @throws Error if searching or retrieving the token fails.
    */
   public getAuth(account: string, service: string): string | undefined {
+    return this.getAuthIfAvailable(account, service)
+  }
+
+  /**
+   * Retrieves the authentication token from the Linux keyring when a matching item exists.
+   * @param account - The account login to use (e.g. 'test@example.com')
+   * @param service - The service name to use
+   * @returns The stored authentication token, or undefined if no matching item exists.
+   * @throws Error if searching or retrieving the token fails.
+   */
+  public getAuthIfAvailable(account: string, service: string): string | undefined {
     let searchResult: string
     const env = createChildEnvironment()
 

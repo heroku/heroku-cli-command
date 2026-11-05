@@ -15,10 +15,36 @@ import {unwrap} from '../helpers/unwrap.js'
 
 use(chaiAsPromised)
 
+const runSubprocess = childProcess.spawnSync.bind(childProcess)
+const mixedSearchItemsDbusLoader = `data:text/javascript,${encodeURIComponent(`
+  const mockModule = ${JSON.stringify(`
+    import {EventEmitter} from 'node:events'
+    export class Message { constructor() {} }
+    export function sessionBus() {
+      const bus = new EventEmitter()
+      return Object.assign(bus, {
+        call() {
+          return Promise.resolve({body: [
+            ['/org/freedesktop/secrets/item/unlocked'],
+            ['/org/freedesktop/secrets/item/locked'],
+          ]})
+        },
+        disconnect() {},
+      })
+    }
+  `)}
+  export async function resolve(specifier, context, nextResolve) {
+    if (specifier === '@jellybrick/dbus-next') {
+      return {url: 'data:text/javascript,' + encodeURIComponent(mockModule), shortCircuit: true}
+    }
+    return nextResolve(specifier, context)
+  }
+`)}`
+
 function stubNativeGetAuth(platform: 'linux' | 'win32') {
   return platform === 'linux'
-    ? sinon.stub(LinuxHandler.prototype, 'getAuth')
-    : sinon.stub(WindowsHandler.prototype, 'getAuth')
+    ? sinon.stub(LinuxHandler.prototype, 'getAuthIfAvailable')
+    : sinon.stub(WindowsHandler.prototype, 'getAuthIfAvailable')
 }
 
 describe('credential-manager', function () {
@@ -121,6 +147,39 @@ describe('credential-manager', function () {
   })
 
   describe('getAuth', function () {
+    const missingCredentialPlatforms = [
+      {command: 'security find-generic-password', name: 'macOS', platform: 'darwin'},
+      {command: 'PasswordVault', name: 'Windows', platform: 'win32'},
+    ] as const
+
+    for (const {command, name, platform} of missingCredentialPlatforms) {
+      it(`should fall back to netrc without telemetry when ${name} handler reports a missing credential`, async function () {
+        Object.defineProperty(process, 'platform', {configurable: true, value: platform})
+
+        const missingCredentialError = Object.assign(new Error('Credential not found'), {status: 44})
+        const execSyncStub = sinon.stub(childProcess, 'execSync').throws(missingCredentialError)
+        const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
+          .resolves({login: 'user@example.com', password: 'netrc-token'})
+        const {captureExceptionStub, client, flushStub, getClientStub, initStub} = stubCredentialTelemetry()
+
+        const auth = await credentialManager.getAuth('user@example.com', 'api.heroku.com')
+
+        expect(execSyncStub.calledOnce).to.be.true
+        expect(execSyncStub.firstCall.args[0]).to.contain(command)
+        if (platform === 'win32') {
+          expect(execSyncStub.firstCall.args[1]).to.have.property('shell', 'powershell')
+        }
+
+        expect(netrcStub.calledOnceWith('api.heroku.com')).to.be.true
+        expect(initStub.notCalled).to.be.true
+        expect(captureExceptionStub.notCalled).to.be.true
+        expect(flushStub.notCalled).to.be.true
+        expect(getClientStub.notCalled).to.be.true
+        expect(client.close.notCalled).to.be.true
+        expect(auth).to.deep.equal({account: 'user@example.com', token: 'netrc-token'})
+      })
+    }
+
     const dispatcherPlatforms = [
       {name: 'Linux', platform: 'linux', store: CredentialStore.LinuxSecretService},
       {name: 'Windows', platform: 'win32', store: CredentialStore.WindowsCredentialManager},
@@ -151,6 +210,16 @@ describe('credential-manager', function () {
           expect(initStub.notCalled).to.be.true
           expect(captureExceptionStub.notCalled).to.be.true
           expect(auth).to.deep.equal({account: 'user@example.com', token: 'netrc-token'})
+        })
+
+        it('should use getAuthIfAvailable to distinguish native misses from errors', async function () {
+          const nativeStub = stubNativeGetAuth(platform)
+          nativeStub.returns('native-token' as never)
+
+          const auth = await credentialManager.getAuth('user@example.com', 'api.heroku.com')
+
+          expect(nativeStub.calledOnceWith('user@example.com', 'heroku-cli')).to.be.true
+          expect(auth).to.deep.equal({account: 'user@example.com', token: 'native-token'})
         })
 
         it('should reject when the native store misses and netrc has no auth', async function () {
@@ -210,8 +279,53 @@ describe('credential-manager', function () {
       Object.defineProperty(process, 'platform', {configurable: true, value: 'linux'})
       sinon.stub(childProcess, 'execSync').returns('secret-tool' as never)
 
-      // The helper classifies mixed locked/unlocked SearchItems replies as locked-match.
-      // Stub its bridge response to exercise the real handler and dispatcher without D-Bus.
+      // Run the real helper with a controlled D-Bus reply so it classifies the mixed arrays itself.
+      const helperStub = sinon.stub(childProcess, 'execFileSync').callsFake((file, args, options) => {
+        expect(file).to.equal(process.execPath)
+
+        const result = runSubprocess(file, ['--no-warnings', '--loader', mixedSearchItemsDbusLoader, ...args], {
+          encoding: 'utf8',
+          env: options?.env,
+          input: options?.input,
+          killSignal: options?.killSignal,
+          maxBuffer: options?.maxBuffer,
+          stdio: options?.stdio,
+          timeout: options?.timeout,
+        })
+        if (result.error) throw result.error
+        if (result.status !== 0) throw new Error('Linux keyring helper failed')
+        return result.stdout as never
+      })
+      const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
+        .resolves({login: 'user@example.com', password: 'netrc-token'})
+      const {captureExceptionStub, initStub} = stubCredentialTelemetry()
+
+      const auth = await credentialManager.getAuth('user@example.com', 'api.heroku.com')
+
+      expect(helperStub.calledOnce).to.be.true
+      expect(helperStub.callCount).to.equal(1)
+      expect(helperStub.returnValues[0]).to.equal('{"status":"locked-match"}')
+      expect(helperStub.firstCall.args[1][0]).to.contain('linux-keyring-search.mjs')
+      expect(helperStub.firstCall.args[1]).to.not.include('lookup')
+      expect(captureExceptionStub.calledOnce).to.be.true
+      expect(captureExceptionStub.firstCall.args[0]).to.have.property('message', 'Failed to retrieve token from Linux keyring: keyring is locked')
+      expect(netrcStub.calledOnceWith('api.heroku.com')).to.be.true
+      expect(initStub.calledOnce).to.be.true
+      expect(captureExceptionStub.firstCall.args[1]).to.deep.equal({
+        tags: {
+          component: 'heroku-cli-command',
+          credential_operation: 'getAuth',
+          credential_store: CredentialStore.LinuxSecretService,
+        },
+      })
+      expect(auth).to.deep.equal({account: 'user@example.com', token: 'netrc-token'})
+    })
+
+    it('should report a Linux locked-only match, skip lookup, and fall back', async function () {
+      Object.defineProperty(process, 'platform', {configurable: true, value: 'linux'})
+      sinon.stub(childProcess, 'execSync').returns('secret-tool' as never)
+
+      // A locked-only SearchItems reply is also represented by locked-match.
       const helperStub = sinon.stub(childProcess, 'execFileSync').returns(JSON.stringify({status: 'locked-match'}) as never)
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
         .resolves({login: 'user@example.com', password: 'netrc-token'})
@@ -238,7 +352,7 @@ describe('credential-manager', function () {
     })
 
     it('should retrieve from credential store when available', async function () {
-      const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuth').returns('keychain-token')
+      const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuthIfAvailable').returns('keychain-token')
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
 
       const auth = await credentialManager.getAuth('user@example.com', 'api.heroku.com')
@@ -251,7 +365,7 @@ describe('credential-manager', function () {
     })
 
     it('should fall back to netrc when credential store returns undefined', async function () {
-      const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuth').returns(undefined as never)
+      const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuthIfAvailable').returns()
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
         .resolves({login: 'user@example.com', password: 'netrc-token'})
       const {captureExceptionStub, initStub} = stubCredentialTelemetry()
@@ -266,7 +380,7 @@ describe('credential-manager', function () {
     })
 
     it('should reject when credential store returns undefined and netrc has no auth', async function () {
-      const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuth').returns(undefined as never)
+      const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuthIfAvailable').returns()
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
         .rejects(new Error('No auth found for api.heroku.com'))
 
@@ -278,7 +392,7 @@ describe('credential-manager', function () {
 
     it('should retrieve from netrc-only when HEROKU_NETRC_WRITE is true', async function () {
       process.env.HEROKU_NETRC_WRITE = 'TRUE'
-      const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuth')
+      const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuthIfAvailable')
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth').resolves({login: 'user@example.com', password: 'netrc-token'})
 
       const auth = await credentialManager.getAuth('user@example.com', 'api.heroku.com')
@@ -291,7 +405,7 @@ describe('credential-manager', function () {
 
     it('should fall back to netrc if credential store fails', async function () {
       const nativeError = new Error('Keychain error')
-      const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuth').throws(nativeError)
+      const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuthIfAvailable').throws(nativeError)
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
       netrcStub.resolves({login: 'user@example.com', password: 'netrc-token'})
       const {captureExceptionStub, client, flushStub, getClientStub, initStub} = stubCredentialTelemetry()
@@ -318,7 +432,7 @@ describe('credential-manager', function () {
     })
 
     it('should throw error when credentials are not found in either location', async function () {
-      const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuth').throws(new Error('Not found'))
+      const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuthIfAvailable').throws(new Error('Not found'))
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
       netrcStub.rejects(new Error('No auth found for api.heroku.com'))
 
@@ -329,7 +443,7 @@ describe('credential-manager', function () {
     })
 
     it('should throw error when netrc password is empty', async function () {
-      const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuth').throws(new Error('Not found'))
+      const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuthIfAvailable').throws(new Error('Not found'))
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
       netrcStub.resolves({login: 'user@example.com', password: undefined})
 
@@ -340,7 +454,7 @@ describe('credential-manager', function () {
     })
 
     it('should fall back to netrc when an account is not provided', async function () {
-      const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuth')
+      const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuthIfAvailable')
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
       netrcStub.resolves({login: 'user@example.com', password: 'netrc-token'})
 
@@ -356,7 +470,7 @@ describe('credential-manager', function () {
     })
 
     it('should retrieve from credential store with custom service name', async function () {
-      const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuth').returns('keychain-token')
+      const macosStub = sinon.stub(MacOSHandler.prototype, 'getAuthIfAvailable').returns('keychain-token')
       const netrcStub = sinon.stub(NetrcHandler.prototype, 'getAuth')
 
       const auth = await credentialManager.getAuth('user@example.com', 'api.heroku.com', 'custom-service')

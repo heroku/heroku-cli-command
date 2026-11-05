@@ -246,7 +246,7 @@ describe('credential-manager acceptance', function () {
       try {
         // Use only this fixture's account/service pair, never all items in the user's keyring.
         handler.removeAuth(fixture.account, fixture.service)
-        expect(handler.getAuth(fixture.account, fixture.service)).to.be.undefined
+        expect(handler.getAuthIfAvailable(fixture.account, fixture.service)).to.be.undefined
 
         // Seed netrc without saving a duplicate item in the native store.
         process.env.HEROKU_NETRC_WRITE = 'TRUE'

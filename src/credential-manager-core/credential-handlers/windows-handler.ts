@@ -6,6 +6,7 @@ import {KeychainAuthEntry} from '../lib/types.js'
 const MISSING_CREDENTIAL_EXIT_CODE = 44
 const DIAGNOSTIC_REDACTION = '[SCRUBBED]'
 const MIN_REDACTABLE_IDENTIFIER_LENGTH = 4
+const GET_AUTH_ERROR_PREFIX = 'Failed to retrieve credential'
 
 interface RedactedDiagnostic {
   ambiguous: boolean
@@ -32,6 +33,17 @@ export class WindowsHandler {
    * @throws Error if retrieval fails.
    */
   public getAuth(account: string, service: string): string | undefined {
+    return this.getAuthIfAvailable(account, service)
+  }
+
+  /**
+   * Retrieves the authentication token from Windows Credential Manager when one exists.
+   * @param account - The account login to use (e.g. 'test@example.com')
+   * @param service - The service name to use
+   * @returns The stored authentication token, or undefined if it is not found.
+   * @throws Error if retrieval fails.
+   */
+  public getAuthIfAvailable(account: string, service: string): string | undefined {
     try {
       const psCommand = `
       $ErrorActionPreference = 'Stop'
@@ -64,14 +76,12 @@ export class WindowsHandler {
       }
 
       const message = [execError.message, execError.stderr?.toString()].filter(Boolean).join('\n')
-      const redacted = this.redactDiagnostic(message, [account, service])
-      const safeDiagnostic = redacted.ambiguous ? '' : this.getSafeDiagnostic(redacted.message)
-      const finalMessage = `Failed to retrieve credential:${safeDiagnostic ? ` ${safeDiagnostic}` : ''}`
       const identifiers = [account, service].filter(Boolean)
-      const leaksIdentifier = identifiers.some(identifier => finalMessage.includes(identifier))
-
-      // Check after adding fixed text: even a neutral prefix can contain a short identifier.
-      throw new Error(redacted.ambiguous || leaksIdentifier ? '' : finalMessage)
+      const redacted = this.redactDiagnostic(message, identifiers)
+      const safeDiagnostic = redacted.ambiguous ? '' : this.getSafeDiagnostic(redacted.message)
+      throw new Error(redacted.ambiguous
+        ? this.getSafeFallbackMessage(identifiers)
+        : this.getFailureMessage(safeDiagnostic, identifiers))
     }
   }
 
@@ -178,6 +188,27 @@ export class WindowsHandler {
     }
   }
 
+  private containsIdentifier(message: string, identifiers: string[]): boolean {
+    const normalizedMessage = message.toLowerCase()
+    return identifiers.some(identifier => {
+      if (identifier.length < MIN_REDACTABLE_IDENTIFIER_LENGTH) {
+        // Short identifiers are meaningful only as standalone tokens; substring checks
+        // would make ordinary words collide with values such as "o" or "t".
+        const escapedIdentifier = identifier.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)
+        return new RegExp(`(^|[^A-Za-z0-9_])${escapedIdentifier}($|[^A-Za-z0-9_])`, 'i').test(message)
+      }
+
+      return normalizedMessage.includes(identifier.toLowerCase())
+    })
+  }
+
+  private getFailureMessage(detail: string, identifiers: string[]): string {
+    const message = `${GET_AUTH_ERROR_PREFIX}${detail ? `: ${detail}` : ''}`
+    return this.containsIdentifier(message, identifiers)
+      ? this.getSafeFallbackMessage(identifiers)
+      : message
+  }
+
   /**
    * Keeps only known-safe diagnostic text; arbitrary command output may contain other secrets.
    */
@@ -189,6 +220,42 @@ export class WindowsHandler {
     else if (/^Token not found$/i.test(message.trim())) safeParts.push('Token not found')
 
     return safeParts.join(' ')
+  }
+
+  private getSafeFallbackMessage(identifiers: string[]): string {
+    const candidates = [
+      GET_AUTH_ERROR_PREFIX,
+      'Credential lookup failed',
+      'Authentication lookup failed',
+      'Lookup did not work',
+      'Action did not work',
+      'Request could not be completed',
+      'Credential retrieval failed',
+      'Unable to retrieve credential',
+      'Authentication request failed',
+      'Authentication problem',
+      'Token unavailable',
+      'No token available',
+      'The request failed',
+      'A problem occurred',
+      'The operation failed',
+      'Unable to continue',
+      'No result available',
+      'Something went wrong',
+      'Please try again',
+      'Oops',
+      'Try',
+    ]
+    // Fixed prefixes and even short identifiers can collide with otherwise safe wording.
+    // Check every candidate against every nonempty identifier before returning it. Short
+    // identifiers use whole-token matching so incidental letters in useful wording are safe.
+    const candidate = candidates.find(message => message.trim().length > 0
+      && !message.endsWith(':')
+      && !/^[\p{P}\p{S}\s]+$/u.test(message)
+      && !this.containsIdentifier(message, identifiers))
+    // Never include runtime values in the final fallback; this fixed text keeps the error useful
+    // even if unusual identifiers collide with every candidate above.
+    return (candidate ?? 'Credential retrieval could not be completed').replace(/:+$/, '')
   }
 
   /**
@@ -217,7 +284,7 @@ export class WindowsHandler {
     const escapedValues = values
       .sort((a, b) => b.length - a.length)
       .map(value => value.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`))
-    const identifierPattern = new RegExp(escapedValues.join('|'), 'g')
+    const identifierPattern = new RegExp(escapedValues.join('|'), 'gi')
     let ambiguousMatch = false
     const redactedMessage = message.replaceAll(identifierPattern, (match, offset: number) => {
       const precedingCharacter = message[offset - 1]

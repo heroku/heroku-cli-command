@@ -59,6 +59,16 @@ describe('MacOSHandler', function () {
     })
   })
 
+  describe('getAuthIfAvailable', function () {
+    it('should return undefined when the token does not exist (exit 44)', function () {
+      const err = new Error('Command failed') as Error & {status?: number}
+      err.status = 44
+      execSyncStub.throws(err)
+
+      expect(handler.getAuthIfAvailable('missing@example.com', 'heroku-cli')).to.be.undefined
+    })
+  })
+
   describe('listAccounts', function () {
     it('should call execSync with the correct arguments to list accounts', function () {
       execSyncStub.returns('')

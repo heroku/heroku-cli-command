@@ -69,7 +69,7 @@ export async function getAuth(account: string | undefined, host: string, service
   if (config.credentialStore && account) {
     try {
       const handler = getCredentialHandler(config.credentialStore)
-      const token = await handler.getAuth(account, service)
+      const token = await handler.getAuthIfAvailable(account, service)
       if (token !== undefined) {
         keychainSuccess = true
         return {account, token}
