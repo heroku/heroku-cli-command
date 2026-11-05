@@ -69,9 +69,11 @@ export async function getAuth(account: string | undefined, host: string, service
   if (config.credentialStore && account) {
     try {
       const handler = getCredentialHandler(config.credentialStore)
-      const token = handler.getAuth(account, service)
-      keychainSuccess = true
-      return {account, token}
+      const token = await handler.getAuthIfAvailable(account, service)
+      if (token !== undefined) {
+        keychainSuccess = true
+        return {account, token}
+      }
     } catch (error) {
       const {message} = error as Error
       credDebug(message)

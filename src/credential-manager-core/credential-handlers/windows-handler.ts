@@ -3,6 +3,16 @@ import childProcess from 'node:child_process'
 
 import {KeychainAuthEntry} from '../lib/types.js'
 
+const MISSING_CREDENTIAL_EXIT_CODE = 44
+const DIAGNOSTIC_REDACTION = '[SCRUBBED]'
+const MIN_REDACTABLE_IDENTIFIER_LENGTH = 4
+const GET_AUTH_ERROR_PREFIX = 'Failed to retrieve credential'
+
+interface RedactedDiagnostic {
+  ambiguous: boolean
+  message: string
+}
+
 /**
  * Handles credential storage and retrieval using the Windows Credential Manager.
  * Uses PowerShell commands to interact with the Windows.Security.Credentials.PasswordVault API.
@@ -20,19 +30,43 @@ export class WindowsHandler {
    * @param account - The account login to use (e.g. 'test@example.com')
    * @param service - The service name to use
    * @returns The stored authentication token.
-   * @throws Error if the token is not found or retrieval fails.
+   * @throws Error if retrieval fails or the credential is not found.
    */
   public getAuth(account: string, service: string): string {
+    const token = this.getAuthIfAvailable(account, service)
+    if (token === undefined) {
+      throw new Error('No credentials found')
+    }
+
+    return token
+  }
+
+  /**
+   * Retrieves the authentication token from Windows Credential Manager when one exists.
+   * @param account - The account login to use (e.g. 'test@example.com')
+   * @param service - The service name to use
+   * @returns The stored authentication token, or undefined if it is not found.
+   * @throws Error if retrieval fails.
+   */
+  public getAuthIfAvailable(account: string, service: string): string | undefined {
     try {
       const psCommand = `
       $ErrorActionPreference = 'Stop'
       [void][Windows.Security.Credentials.PasswordVault,Windows.Security.Credentials,ContentType=WindowsRuntime]
       $vault = New-Object Windows.Security.Credentials.PasswordVault
-      $credential = $vault.Retrieve("${service}", "${account}")
+      try {
+        $credential = $vault.Retrieve("${service}", "${account}")
+      } catch {
+        if ($_.Exception.HResult -eq -2147023728) {
+          exit ${MISSING_CREDENTIAL_EXIT_CODE}
+        }
+
+        throw
+      }
       $credential.Password
     `
 
-      const output = childProcess.execSync(psCommand, {encoding: 'utf8', shell: 'powershell', stdio: ['pipe', 'pipe', 'ignore']})
+      const output = childProcess.execSync(psCommand, {encoding: 'utf8', shell: 'powershell', stdio: ['pipe', 'pipe', 'pipe']})
       const token = output.trim()
 
       if (!token) {
@@ -41,8 +75,18 @@ export class WindowsHandler {
 
       return token
     } catch (error) {
-      const {message} = error as Error
-      throw new Error(`Failed to retrieve token from Windows Credential Manager: ${this.scrubError(message)}`)
+      const execError = error as Error & {status?: number; stderr?: Buffer | string}
+      if (execError.status === MISSING_CREDENTIAL_EXIT_CODE) {
+        return undefined
+      }
+
+      const message = [execError.message, execError.stderr?.toString()].filter(Boolean).join('\n')
+      const identifiers = [account, service].filter(Boolean)
+      const redacted = this.redactDiagnostic(message, identifiers)
+      const safeDiagnostic = redacted.ambiguous ? '' : this.getSafeDiagnostic(redacted.message)
+      throw new Error(redacted.ambiguous
+        ? this.getSafeFallbackMessage(identifiers)
+        : this.getFailureMessage(safeDiagnostic, identifiers))
     }
   }
 
@@ -149,6 +193,76 @@ export class WindowsHandler {
     }
   }
 
+  private containsIdentifier(message: string, identifiers: string[]): boolean {
+    const normalizedMessage = message.toLowerCase()
+    return identifiers.some(identifier => {
+      if (identifier.length < MIN_REDACTABLE_IDENTIFIER_LENGTH) {
+        // Short identifiers are meaningful only as standalone tokens; substring checks
+        // would make ordinary words collide with values such as "o" or "t".
+        const escapedIdentifier = identifier.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)
+        return new RegExp(`(^|[^A-Za-z0-9_])${escapedIdentifier}($|[^A-Za-z0-9_])`, 'i').test(message)
+      }
+
+      return normalizedMessage.includes(identifier.toLowerCase())
+    })
+  }
+
+  private getFailureMessage(detail: string, identifiers: string[]): string {
+    const message = `${GET_AUTH_ERROR_PREFIX}${detail ? `: ${detail}` : ''}`
+    return this.containsIdentifier(message, identifiers)
+      ? this.getSafeFallbackMessage(identifiers)
+      : message
+  }
+
+  /**
+   * Keeps only known-safe diagnostic text; arbitrary command output may contain other secrets.
+   */
+  private getSafeDiagnostic(message: string): string {
+    const safeParts: string[] = []
+
+    if (/\baccess denied\b/i.test(message)) safeParts.push('Access denied')
+    else if (/\bpermission denied\b/i.test(message)) safeParts.push('Permission denied')
+    else if (/^Token not found$/i.test(message.trim())) safeParts.push('Token not found')
+
+    return safeParts.join(' ')
+  }
+
+  private getSafeFallbackMessage(identifiers: string[]): string {
+    const candidates = [
+      GET_AUTH_ERROR_PREFIX,
+      'Credential lookup failed',
+      'Authentication lookup failed',
+      'Lookup did not work',
+      'Action did not work',
+      'Request could not be completed',
+      'Credential retrieval failed',
+      'Unable to retrieve credential',
+      'Authentication request failed',
+      'Authentication problem',
+      'Token unavailable',
+      'No token available',
+      'The request failed',
+      'A problem occurred',
+      'The operation failed',
+      'Unable to continue',
+      'No result available',
+      'Something went wrong',
+      'Please try again',
+      'Oops',
+      'Try',
+    ]
+    // Fixed prefixes and even short identifiers can collide with otherwise safe wording.
+    // Check every candidate against every nonempty identifier before returning it. Short
+    // identifiers use whole-token matching so incidental letters in useful wording are safe.
+    const candidate = candidates.find(message => message.trim().length > 0
+      && !message.endsWith(':')
+      && !/^[\p{P}\p{S}\s]+$/u.test(message)
+      && !this.containsIdentifier(message, identifiers))
+    // Never include runtime values in the final fallback; this fixed text keeps the error useful
+    // even if unusual identifiers collide with every candidate above.
+    return (candidate ?? 'Credential retrieval could not be completed').replace(/:+$/, '')
+  }
+
   /**
    * PasswordVault.Retrieve throws when the credential is absent (e.g. netrc-only login).
    */
@@ -157,6 +271,41 @@ export class WindowsHandler {
     return lower.includes('element not found')
       || lower.includes('specified credential could not be found')
       || lower.includes('0x80070490')
+  }
+
+  /**
+   * Removes runtime identifiers from command diagnostics without reprocessing replacement text.
+   * If an identifier is too short to redact without damaging ordinary diagnostics, omit the
+   * diagnostics rather than risk leaking it.
+   */
+  private redactDiagnostic(message: string, identifiers: string[]): RedactedDiagnostic {
+    const values = [...new Set(identifiers.filter(Boolean))]
+    if (values.some(value => value.length < MIN_REDACTABLE_IDENTIFIER_LENGTH)) {
+      return {ambiguous: true, message: ''}
+    }
+
+    if (values.length === 0) return {ambiguous: false, message}
+
+    const escapedValues = values
+      .sort((a, b) => b.length - a.length)
+      .map(value => value.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`))
+    const identifierPattern = new RegExp(escapedValues.join('|'), 'gi')
+    let ambiguousMatch = false
+    const redactedMessage = message.replaceAll(identifierPattern, (match, offset: number) => {
+      const precedingCharacter = message[offset - 1]
+      const followingCharacter = message[offset + match.length]
+      const hasAmbiguousLeftBoundary = /[A-Za-z0-9_]/.test(match[0] ?? '')
+        && /[A-Za-z0-9_]/.test(precedingCharacter ?? '')
+      const hasAmbiguousRightBoundary = /[A-Za-z0-9_]/.test(match.at(-1) ?? '')
+        && /[A-Za-z0-9_]/.test(followingCharacter ?? '')
+      if (hasAmbiguousLeftBoundary || hasAmbiguousRightBoundary) {
+        ambiguousMatch = true
+      }
+
+      return DIAGNOSTIC_REDACTION
+    })
+
+    return {ambiguous: ambiguousMatch, message: redactedMessage}
   }
 
   /**

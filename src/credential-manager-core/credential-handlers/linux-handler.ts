@@ -1,16 +1,44 @@
 import {Scrubber} from '@heroku/js-blanket'
 import childProcess from 'node:child_process'
+import {dirname, join} from 'node:path'
+import {fileURLToPath} from 'node:url'
 
 import {KeychainAuthEntry} from '../lib/types.js'
 
+const SEARCH_TIMEOUT_MS = 5000
+const SEARCH_MAX_BUFFER = 1024
+const LOOKUP_MAX_BUFFER = 1024 * 1024
+const SEARCH_HELPER_PATH = join(dirname(fileURLToPath(import.meta.url)), 'linux-keyring-search.mjs')
+const CHILD_ENV_KEYS = [
+  'PATH',
+  'HOME',
+  'XDG_RUNTIME_DIR',
+  'DBUS_SESSION_BUS_ADDRESS',
+  'DISPLAY',
+  'DBUS_STARTER_ADDRESS',
+  'DBUS_STARTER_BUS_TYPE',
+] as const
+
+export function createChildEnvironment(): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = {}
+
+  for (const key of CHILD_ENV_KEYS) {
+    const value = process.env[key]
+    if (value !== undefined) env[key] = value
+  }
+
+  env.LC_ALL = 'C'
+  return env
+}
+
 /**
- * Handles credential storage, removal, and retrieval using the Linux Secret Service API.
- * Uses the secret-tool command-line utility (part of libsecret) to interact with desktop keyrings.
+ * Handles credentials in the Linux Secret Service.
+ * Uses D-Bus for metadata searches and secret-tool (libsecret) to retrieve and mutate secrets.
  */
 export class LinuxHandler {
   private readonly scrubber = new Scrubber({
     patterns: [
-      /account\s+"[^"]*"/g,  // Scrub account value
+      /\baccount\s+(?:"[^"]*"|[^\r\n]+)/g,  // Scrub account value
     ],
   })
 
@@ -19,13 +47,90 @@ export class LinuxHandler {
    * @param account - The account login to use (e.g. 'test@example.com')
    * @param service - The service name to use
    * @returns The stored authentication token.
-   * @throws Error if the token is not found or retrieval fails.
+   * @throws Error if searching or retrieving the token fails, or no matching item exists.
    */
   public getAuth(account: string, service: string): string {
+    const token = this.getAuthIfAvailable(account, service)
+    if (token === undefined) {
+      throw new Error('No credentials found')
+    }
+
+    return token
+  }
+
+  /**
+   * Retrieves the authentication token from the Linux keyring when a matching item exists.
+   * @param account - The account login to use (e.g. 'test@example.com')
+   * @param service - The service name to use
+   * @returns The stored authentication token, or undefined if no matching item exists.
+   * @throws Error if searching or retrieving the token fails.
+   */
+  public getAuthIfAvailable(account: string, service: string): string | undefined {
+    let searchResult: string
+    const env = createChildEnvironment()
+
     try {
-      const output = childProcess.execSync(
-        `secret-tool lookup service "${service}" account "${account}"`,
-        {encoding: 'utf8'},
+      searchResult = childProcess.execFileSync(
+        process.execPath,
+        [SEARCH_HELPER_PATH],
+        {
+          encoding: 'utf8',
+          env,
+          input: JSON.stringify({account, service}),
+          killSignal: 'SIGKILL',
+          maxBuffer: SEARCH_MAX_BUFFER,
+          stdio: ['pipe', 'pipe', 'ignore'],
+          timeout: SEARCH_TIMEOUT_MS,
+        },
+      )
+    } catch {
+      throw new Error('Failed to search Linux keyring')
+    }
+
+    let parsedResult: unknown
+    try {
+      parsedResult = JSON.parse(searchResult)
+    } catch {
+      throw new Error('Failed to search Linux keyring')
+    }
+
+    if (!parsedResult || typeof parsedResult !== 'object' || Array.isArray(parsedResult)
+      || Object.getPrototypeOf(parsedResult) !== Object.prototype) {
+      throw new Error('Failed to search Linux keyring')
+    }
+
+    const resultKeys = Reflect.ownKeys(parsedResult)
+    if (resultKeys.length !== 1 || resultKeys[0] !== 'status') {
+      throw new Error('Failed to search Linux keyring')
+    }
+
+    const {status} = parsedResult as {status?: unknown}
+    if ((status !== 'locked-match' && status !== 'match' && status !== 'no-match')
+      // Re-serialization rejects duplicate keys, whitespace, and any non-compact representation.
+      || JSON.stringify(parsedResult) !== searchResult) {
+      throw new Error('Failed to search Linux keyring')
+    }
+
+    if (status === 'no-match') {
+      return undefined
+    }
+
+    if (status === 'locked-match') {
+      throw new Error('Failed to retrieve token from Linux keyring: keyring is locked')
+    }
+
+    try {
+      const output = childProcess.execFileSync(
+        'secret-tool',
+        ['lookup', 'service', service, 'account', account],
+        {
+          encoding: 'utf8',
+          env,
+          killSignal: 'SIGKILL',
+          maxBuffer: LOOKUP_MAX_BUFFER,
+          stdio: ['ignore', 'pipe', 'ignore'],
+          timeout: SEARCH_TIMEOUT_MS,
+        },
       )
       const token = output.trim()
 
@@ -34,9 +139,8 @@ export class LinuxHandler {
       }
 
       return token
-    } catch (error) {
-      const {message} = error as Error
-      throw new Error(`Failed to retrieve token from Linux keyring: ${this.scrubError(message)}`)
+    } catch {
+      throw new Error('Failed to retrieve token from Linux keyring')
     }
   }
 
@@ -51,7 +155,7 @@ export class LinuxHandler {
       const spawnResult = childProcess.spawnSync(
         'secret-tool',
         ['search', '--all', 'service', service],
-        {encoding: 'utf8'},
+        {encoding: 'utf8', env: createChildEnvironment()},
       )
 
       if (spawnResult.error) {
@@ -100,7 +204,7 @@ export class LinuxHandler {
     const spawnResult = childProcess.spawnSync(
       'secret-tool',
       ['clear', 'service', service, 'account', account],
-      {encoding: 'utf8', env: {...process.env, LC_ALL: 'C'}},
+      {encoding: 'utf8', env: createChildEnvironment()},
     )
 
     if (spawnResult.error) {
@@ -143,6 +247,7 @@ export class LinuxHandler {
         ],
         {
           encoding: 'utf8',
+          env: createChildEnvironment(),
           input: auth.token,
         },
       )
