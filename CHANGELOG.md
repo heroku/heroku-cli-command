@@ -10,6 +10,13 @@ With this major version release we will be improving the security by storing aut
 
 * remove dual write for credential storage ([#389](https://github.com/heroku/heroku-cli-command/issues/389)) ([e50b5be](https://github.com/heroku/heroku-cli-command/commit/e50b5be106f7997d85f7a5a53ff06ff1eadecb9c))
 
+## [13.2.6](https://github.com/heroku/heroku-cli-command/compare/command-v13.2.5...command-v13.2.6) (2026-11-05)
+
+
+### Bug Fixes
+
+* **credentials:** fall back on native store misses ([#457](https://github.com/heroku/heroku-cli-command/issues/457)) ([ce8004d](https://github.com/heroku/heroku-cli-command/commit/ce8004d768f15113c93251759a73d7c589189984))
+
 ## [13.2.5](https://github.com/heroku/heroku-cli-command/compare/command-v13.2.4...command-v13.2.5) (2026-10-29)
 
 
