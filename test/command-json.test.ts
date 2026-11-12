@@ -75,7 +75,10 @@ class UndeclaredShortCommand extends Command {
 
 type Output = {stderr: string; stdout: string}
 
-/** Runs the command through oclif's lifecycle (init, run, catch, finally) and captures output. */
+/**
+ * Runs the command through oclif's lifecycle (init, run, catch, finally) and captures output.
+ * Uses the loaded Config as is: the static `Command.run` reloads it.
+ */
 async function run(Cmd: typeof Command, argv: string[], config: Config): Promise<Output & {error?: Error}> {
   const output = {stderr: '', stdout: ''}
   const stdout = sinon.stub(process.stdout, 'write').callsFake(chunk => {
@@ -88,7 +91,8 @@ async function run(Cmd: typeof Command, argv: string[], config: Config): Promise
   })
   let error: Error | undefined
   try {
-    await (Cmd as unknown as {run(argv: string[], config: Config): Promise<unknown>}).run(argv, config)
+    const Ctor = Cmd as unknown as new (argv: string[], config: Config) => Command & {_run(): Promise<unknown>}
+    await new Ctor(argv, config)._run()
   } catch (error_) {
     error = error_ as Error
   } finally {
@@ -108,9 +112,10 @@ describe('command --json', () => {
   })
 
   beforeEach(() => {
-    // HEROKU_API_KEY loads the token without reading credential storage, which a
-    // loaded Config would otherwise reach through its data dir.
-    process.env = {HEROKU_API_KEY: LEGACY_TOKEN}
+    // Keep the platform environment (Windows needs it) but none of the variables these tests set.
+    // HEROKU_API_KEY loads the token without reading credential storage.
+    process.env = Object.fromEntries(Object.entries(env).filter(([name]) => !/^(HEROKU_|DEBUG$)/.test(name)))
+    process.env.HEROKU_API_KEY = LEGACY_TOKEN
     process.exitCode = undefined
   })
 
