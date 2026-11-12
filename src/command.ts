@@ -1,6 +1,7 @@
 import type {Input, ParserOutput} from '@oclif/core/interfaces'
 
 import {Command as Base} from '@oclif/core/command'
+import {CLIError} from '@oclif/core/errors'
 import * as Flags from '@oclif/core/flags'
 import {ux} from '@oclif/core/ux'
 
@@ -16,6 +17,8 @@ export abstract class Command extends Base {
   static baseFlags: Record<string, any> = {
     prompt: Flags.boolean({
       description: 'interactively prompt for command arguments and flags',
+      // Enforced in init(), before any prompt; this only documents the conflict.
+      exclusive: ['json'],
       helpGroup: 'GLOBAL',
     }),
   }
@@ -108,6 +111,12 @@ export abstract class Command extends Base {
     // Check if --prompt flag is present in argv
     if (!this.argv.includes('--prompt')) {
       return
+    }
+
+    // Prompts wait for answers a script will never type. Checked here because prompting runs
+    // before parse() enforces `exclusive`, and HEROKU_CONTENT_TYPE=json sets no flag at all.
+    if (this.jsonEnabled()) {
+      throw new CLIError('--prompt can\'t be used with --json. Pass the arguments and flags on the command line.')
     }
 
     // If we get here, we need to prompt for inputs

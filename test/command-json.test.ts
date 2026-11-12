@@ -7,6 +7,7 @@ import {fileURLToPath} from 'node:url'
 import * as sinon from 'sinon'
 
 import {Command} from '../src/command.js'
+import {prompter} from '../src/prompter.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const LEGACY_TOKEN = '01234567-89ab-cdef-0123-456789abcdef'
@@ -29,6 +30,16 @@ class FailingCommand extends Command {
   async run() {
     await this.parse(FailingCommand)
     throw new Error(`request with ${LEGACY_TOKEN} failed`)
+  }
+}
+
+class PromptCommand extends Command {
+  static enableJsonFlag = true
+  static id = 'demo:prompt'
+
+  async run() {
+    await this.parse(PromptCommand)
+    return {ok: true}
   }
 }
 
@@ -244,6 +255,40 @@ describe('command --json', () => {
       const {error, stdout} = await run(ShortCommand, ['--json', '--bogus', '--', '--short'], config)
       expect(error).to.equal(undefined)
       expect(JSON.parse(stdout).error.message).to.contain('--bogus')
+    })
+  })
+
+  describe('--prompt', () => {
+    const MESSAGE = '--prompt can\'t be used with --json. Pass the arguments and flags on the command line.'
+
+    it('fails before prompting under --json', async () => {
+      const findCommand = sinon.spy(config, 'findCommand')
+      const prompt = sinon.spy(prompter, 'prompt')
+      const {error, stdout} = await run(PromptCommand, ['--json', '--prompt'], config)
+      expect(error).to.equal(undefined)
+      expect(JSON.parse(stdout).error).to.include({exitCode: 1, message: MESSAGE})
+      expect(findCommand.called).to.equal(false)
+      expect(prompt.called).to.equal(false)
+    })
+
+    it('fails before prompting under HEROKU_CONTENT_TYPE=json', async () => {
+      process.env[config.scopedEnvVarKey('CONTENT_TYPE')] = 'json'
+      const findCommand = sinon.spy(config, 'findCommand')
+      const {stdout} = await run(PromptCommand, ['--prompt'], config)
+      expect(JSON.parse(stdout).error.message).to.equal(MESSAGE)
+      expect(findCommand.called).to.equal(false)
+    })
+
+    it('prompts without --json', async () => {
+      // No command metadata, so promptAndRun returns without asking anything.
+      const findCommand = sinon.stub(config, 'findCommand').returns(undefined)
+      const {error} = await run(PromptCommand, ['--prompt'], config)
+      expect(error).to.equal(undefined)
+      expect(findCommand.calledWith('demo:prompt')).to.equal(true)
+    })
+
+    it('documents the conflict on the flag', () => {
+      expect(Command.baseFlags.prompt.exclusive).to.deep.equal(['json'])
     })
   })
 })
