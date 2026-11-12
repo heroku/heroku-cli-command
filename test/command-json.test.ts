@@ -7,7 +7,6 @@ import {fileURLToPath} from 'node:url'
 import * as sinon from 'sinon'
 
 import {Command} from '../src/command.js'
-import {stubCredentialManager} from './helpers/credential-manager-stub.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const LEGACY_TOKEN = '01234567-89ab-cdef-0123-456789abcdef'
@@ -109,12 +108,15 @@ describe('command --json', () => {
   })
 
   beforeEach(() => {
-    process.env = {}
+    // HEROKU_API_KEY loads the token without reading credential storage, which a
+    // loaded Config would otherwise reach through its data dir.
+    process.env = {HEROKU_API_KEY: LEGACY_TOKEN}
     process.exitCode = undefined
-    stubCredentialManager(LEGACY_TOKEN)
   })
 
   afterEach(() => {
+    // Restore any stdout/stderr stub a timed-out test left behind.
+    sinon.restore()
     process.env = env
     process.exitCode = undefined
   })
@@ -135,12 +137,6 @@ describe('command --json', () => {
       const {stdout} = await run(FailingCommand, ['--json'], config)
       const {error} = JSON.parse(stdout)
       expect(error.message).to.equal('request with [REDACTED] failed')
-    })
-
-    it('redacts HEROKU_API_KEY', async () => {
-      process.env.HEROKU_API_KEY = LEGACY_TOKEN
-      const {stdout} = await run(FailingCommand, ['--json'], config)
-      expect(stdout).to.not.contain(LEGACY_TOKEN)
     })
 
     it('writes the full redacted error to stderr under HEROKU_DEBUG, leaving stdout the document', async () => {
