@@ -23,7 +23,7 @@ describe('manifest generation', () => {
 
   afterEach(() => {
     for (const name of envVars) {
-      if (originalEnv[name] === undefined) delete process.env[name]
+      if (originalEnv[name] === undefined) Reflect.deleteProperty(process.env, name)
       else process.env[name] = originalEnv[name]
     }
   })

@@ -1,5 +1,4 @@
-// the fixture needs its own package.json to load as an oclif plugin, so import rules treat it as a separate package
-/* eslint-disable n/no-extraneous-import, n/no-unpublished-import */
+/* eslint-disable n/no-extraneous-import, n/no-unpublished-import, import-x/no-extraneous-dependencies -- the fixture needs its own package.json to load as an oclif plugin, so import rules treat it as a separate package */
 import {Command} from '@oclif/core/command'
 
 import * as flags from '../../../../src/flags/index.js'
