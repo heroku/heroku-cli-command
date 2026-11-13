@@ -161,4 +161,41 @@ describe('credential-error-reporter', function () {
       expect(closeStub.called).to.equal(false)
     })
   })
+
+  describe('beforeSend', function () {
+    it('scrubs credentials and PII from the event', async function () {
+      delete process.env.CI
+      process.env.NODE_ENV = 'development'
+      delete process.env.IS_HEROKU_TEST_ENV
+      delete process.env.DISABLE_TELEMETRY
+
+      stub(credentialSentrySdk, 'getClient').returns(undefined)
+      const initStub = stub(credentialSentrySdk, 'init')
+      stub(credentialSentrySdk, 'captureException')
+      stub(credentialSentrySdk, 'flush').resolves(true)
+
+      await reportCredentialStoreError(new Error('boom'), {
+        credentialStore: CredentialStore.MacOSKeychain,
+        operation: 'getAuth',
+      })
+
+      const {beforeSend} = initStub.firstCall.args[0] as {beforeSend: (event: unknown) => unknown}
+      const event = {
+        exception: {
+          values: [{
+            type: 'Error',
+            value: 'netrc write failed for postgres://u:p4ss@db.example.com/d (Authorization: Bearer HRKU-abc123), contact x@y.com',
+          }],
+        },
+      }
+      expect(beforeSend(event)).to.deep.equal({
+        exception: {
+          values: [{
+            type: 'Error',
+            value: 'netrc write failed for postgres://[SCRUBBED]@db.example.com/d (Authorization: Bearer [SCRUBBED]), contact [SCRUBBED]',
+          }],
+        },
+      })
+    })
+  })
 })
