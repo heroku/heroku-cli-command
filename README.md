@@ -64,9 +64,24 @@ Commands with `static enableJsonFlag = true` print JSON under `--json` or `HEROK
 - To tell errors apart, match on `exitCode`, `statusCode`, `id` and `code`. `name` and `message` are for people: the same API failure can have a different `name` depending on the client that made the request.
 - Fields are optional except `message`, `name` and `exitCode`. New fields may be added, so ignore fields you don't know.
 - The document is built from a fixed list of fields, with the API token and credentials redacted. The length limits and redaction rules aren't part of the contract.
+- For a failed API request, `message` is the API's own message, such as `Couldn't find that app.`, whichever HTTP client made the request.
 - `this.exit(n)` prints no document; the process exits with `n`.
 - Spinners (`ux.action`) are silent, and `--prompt` is rejected with the code `HEROKU_PROMPT_WITH_JSON`.
 - `HEROKU_DEBUG=1` also writes the full error, redacted, to stderr.
+
+A command whose flag prints raw output instead of JSON lists that flag in `static jsonSuppressedBy`. When the flag is set, `jsonEnabled()` is false and the command prints its raw output, even under `--json` or `HEROKU_CONTENT_TYPE=json`. A value that comes only from the flag's `default` doesn't count, and an error before or during flag parsing is still printed as an error document. To reject the flag together with `--json`, also give it `exclusive: ['json']`.
+
+```typescript
+export default class Create extends Command {
+  static enableJsonFlag = true
+  static jsonSuppressedBy = ['short']
+  static flags = {
+    short: Flags.boolean({char: 'S', description: 'only output token', exclusive: ['json']}),
+  }
+}
+```
+
+With this, `HEROKU_CONTENT_TYPE=json heroku authorizations:create --short` prints only the token.
 
 ## Usage
 
