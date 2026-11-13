@@ -10,6 +10,13 @@ With this major version release we will be improving the security by storing aut
 
 * remove dual write for credential storage ([#389](https://github.com/heroku/heroku-cli-command/issues/389)) ([e50b5be](https://github.com/heroku/heroku-cli-command/commit/e50b5be106f7997d85f7a5a53ff06ff1eadecb9c))
 
+## [14.0.0-beta.4](https://github.com/heroku/heroku-cli-command/compare/command-v14.0.0-beta.3...command-v14.0.0-beta.4) (2026-11-13)
+
+
+### Features
+
+* **beta:** refresh from v14.0.0 ([#462](https://github.com/heroku/heroku-cli-command/issues/462)) ([3107894](https://github.com/heroku/heroku-cli-command/commit/3107894c1be997821e6cb0d2e6e06d0a112982a3))
+
 ## [14.0.0-beta.3](https://github.com/heroku/heroku-cli-command/compare/command-v14.0.0-beta.2...command-v14.0.0-beta.3) (2026-10-20)
 
 
