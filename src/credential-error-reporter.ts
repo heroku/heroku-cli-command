@@ -2,6 +2,7 @@ import type {CredentialErrorContext} from '@heroku/heroku-credential-manager'
 import type {ErrorEvent} from '@sentry/node'
 
 import {
+  CREDENTIAL_PATTERNS,
   GDPR_FIELDS,
   HEROKU_FIELDS,
   PCI_FIELDS,
@@ -18,7 +19,9 @@ const DSN =
 
 const scrubber = new Scrubber({
   fields: [...HEROKU_FIELDS, ...GDPR_FIELDS, ...PCI_FIELDS],
-  patterns: [...PII_PATTERNS],
+  // Credentials first, so a URL password is replaced as a whole rather than
+  // partly matched by the email pattern.
+  patterns: [...CREDENTIAL_PATTERNS, ...PII_PATTERNS],
 })
 
 /** Indirection so tests can `sinon.stub` without stubbing the ESM `@sentry/node` namespace. */
