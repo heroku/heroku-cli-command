@@ -6,7 +6,7 @@ import path from 'node:path'
 import {fileURLToPath} from 'node:url'
 import * as sinon from 'sinon'
 
-import {Command} from '../src/command.js'
+import {Command, PROMPT_WITH_JSON_ERROR_CODE} from '../src/command.js'
 import {prompter} from '../src/prompter.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -57,6 +57,42 @@ class SpinnerCommand extends Command {
   }
 }
 
+class ExitCommand extends Command {
+  static enableJsonFlag = true
+  static flags = {
+    code: OclifFlags.integer({default: 0}),
+  }
+
+  async run() {
+    const {flags} = await this.parse(ExitCommand)
+    this.exit(flags.code)
+  }
+}
+
+class ThrowValueCommand extends Command {
+  static enableJsonFlag = true
+  static value: unknown
+
+  async run() {
+    await this.parse(ThrowValueCommand)
+    throw ThrowValueCommand.value
+  }
+}
+
+class DefaultShortCommand extends Command {
+  static enableJsonFlag = true
+  static flags = {
+    format: OclifFlags.string({default: 'short'}),
+  }
+
+  static jsonSuppressedBy: Array<keyof typeof DefaultShortCommand.flags> = ['format']
+
+  async run() {
+    await this.parse(DefaultShortCommand)
+    return {token: 'in-json'}
+  }
+}
+
 class ShortCommand extends Command {
   static enableJsonFlag = true
   static flags = {
@@ -90,7 +126,7 @@ type Output = {stderr: string; stdout: string}
  * Runs the command through oclif's lifecycle (init, run, catch, finally) and captures output.
  * Uses the loaded Config as is: the static `Command.run` reloads it.
  */
-async function run(Cmd: typeof Command, argv: string[], config: Config): Promise<Output & {error?: Error}> {
+async function run(Cmd: typeof Command, argv: string[], config: Config, before?: () => void): Promise<Output & {error?: Error}> {
   const output = {stderr: '', stdout: ''}
   const stdout = sinon.stub(process.stdout, 'write').callsFake(chunk => {
     output.stdout += String(chunk)
@@ -102,6 +138,7 @@ async function run(Cmd: typeof Command, argv: string[], config: Config): Promise
   })
   let error: Error | undefined
   try {
+    before?.()
     const Ctor = Cmd as unknown as new (argv: string[], config: Config) => Command & {_run(): Promise<unknown>}
     await new Ctor(argv, config)._run()
   } catch (error_) {
@@ -142,7 +179,7 @@ describe('command --json', () => {
       const {error, stdout} = await run(JsonCommand, ['--json', '--bogus'], config)
       expect(error).to.equal(undefined)
       const document = JSON.parse(stdout)
-      expect(document.error).to.include({exitCode: 1, name: 'Error'})
+      expect(document.error).to.include({exitCode: 1, name: 'NonExistentFlagsError'})
       expect(document.error.message).to.contain('--bogus')
       expect(document.error).to.not.have.any.keys('parse', 'oclif')
       expect(stdout).to.not.contain(LEGACY_TOKEN)
@@ -164,9 +201,54 @@ describe('command --json', () => {
       expect(stderr).to.not.contain(LEGACY_TOKEN)
     })
 
+    it('writes the debug error under HEROKU_DEBUG=true', async () => {
+      process.env.HEROKU_DEBUG = 'true'
+      const {stderr} = await run(FailingCommand, ['--json'], config)
+      expect(stderr).to.contain('at ')
+    })
+
     it('writes nothing to stderr without debug', async () => {
       const {stderr} = await run(FailingCommand, ['--json'], config)
       expect(stderr).to.equal('')
+    })
+
+    it('ignores DEBUG, which other tools use for their own namespaces', async () => {
+      process.env.DEBUG = 'express:*'
+      const {stderr} = await run(FailingCommand, ['--json'], config)
+      expect(stderr).to.equal('')
+    })
+
+    it('renders a document for a thrown undefined', async () => {
+      ThrowValueCommand.value = undefined
+      const {error, stdout} = await run(ThrowValueCommand, ['--json'], config)
+      expect(error).to.equal(undefined)
+      expect(JSON.parse(stdout).error).to.include({exitCode: 1, message: 'The command failed without an error message.'})
+    })
+
+    it('reports a thrown null as an error without --json', async () => {
+      ThrowValueCommand.value = null
+      const {error} = await run(ThrowValueCommand, [], config)
+      expect(error?.message).to.equal('The command failed without an error message.')
+    })
+  })
+
+  describe('this.exit()', () => {
+    it('writes no document for exit(0) and exits 0', async () => {
+      const {error, stdout} = await run(ExitCommand, ['--json'], config)
+      expect(error).to.equal(undefined)
+      expect(stdout).to.equal('')
+      expect(process.exitCode).to.equal(0)
+    })
+
+    it('writes no document for exit(3) and exits 3', async () => {
+      const {stdout} = await run(ExitCommand, ['--json', '--code', '3'], config)
+      expect(stdout).to.equal('')
+      expect(process.exitCode).to.equal(3)
+    })
+
+    it('leaves exit() to oclif without --json', async () => {
+      const {error} = await run(ExitCommand, ['--code', '3'], config)
+      expect((error as Error & {oclif?: {exit?: number}})?.oclif?.exit).to.equal(3)
     })
   })
 
@@ -211,6 +293,23 @@ describe('command --json', () => {
 
       expect(written).to.contain('"message": "boom"')
     })
+
+    it('stops a spinner started before the command so the error document is written', async () => {
+      // As a prerun hook or a parent command would.
+      const {stdout} = await run(FailingCommand, ['--json'], config, () => {
+        ux.action.start('started before init')
+      })
+      expect(ux.action.running).to.equal(false)
+      expect(JSON.parse(stdout).error.message).to.equal('request with [REDACTED] failed')
+    })
+
+    it('stops a spinner started before the command so the result is written', async () => {
+      const {stdout} = await run(JsonCommand, ['--json'], config, () => {
+        ux.action.start('started before init')
+      })
+      expect(ux.action.running).to.equal(false)
+      expect(JSON.parse(stdout)).to.deep.equal({ok: true})
+    })
   })
 
   describe('jsonSuppressedBy', () => {
@@ -245,16 +344,20 @@ describe('command --json', () => {
       expect(JSON.parse(stdout)).to.deep.equal({token: 'in-json'})
     })
 
-    it('renders a parse error as text when the flag is on the command line', async () => {
+    it('renders a parse error as a document even with the flag on the command line', async () => {
       const {error, stdout} = await run(ShortCommand, ['--json', '--short', '--bogus'], config)
-      expect(error?.message).to.contain('--bogus')
-      expect(stdout).to.equal('')
-    })
-
-    it('ignores the flag after -- when scanning argv', async () => {
-      const {error, stdout} = await run(ShortCommand, ['--json', '--bogus', '--', '--short'], config)
       expect(error).to.equal(undefined)
       expect(JSON.parse(stdout).error.message).to.contain('--bogus')
+    })
+
+    it('ignores a value that comes from the flag default', async () => {
+      const {stdout} = await run(DefaultShortCommand, ['--json'], config)
+      expect(JSON.parse(stdout)).to.deep.equal({token: 'in-json'})
+    })
+
+    it('counts the same value when it is passed', async () => {
+      const {stdout} = await run(DefaultShortCommand, ['--json', '--format', 'short'], config)
+      expect(stdout).to.equal('')
     })
   })
 
@@ -266,7 +369,7 @@ describe('command --json', () => {
       const prompt = sinon.spy(prompter, 'prompt')
       const {error, stdout} = await run(PromptCommand, ['--json', '--prompt'], config)
       expect(error).to.equal(undefined)
-      expect(JSON.parse(stdout).error).to.include({exitCode: 1, message: MESSAGE})
+      expect(JSON.parse(stdout).error).to.include({code: PROMPT_WITH_JSON_ERROR_CODE, exitCode: 1, message: MESSAGE})
       expect(findCommand.called).to.equal(false)
       expect(prompt.called).to.equal(false)
     })

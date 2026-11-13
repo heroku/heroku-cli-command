@@ -29,7 +29,7 @@ describe('toErrorDocument', () => {
       code: 'HEROKU_NONINTERACTIVE_LOGIN',
       exitCode: 2,
       message: 'nope',
-      name: 'Error',
+      name: 'CLIError',
       suggestions: ['run heroku login'],
     })
   })
@@ -40,7 +40,7 @@ describe('toErrorDocument', () => {
     })
     const document = toErrorDocument(err, {exitCode: 1})
     expect(document).to.include({
-      id: 'not_found', name: 'Error', resource: 'app', statusCode: 404, url: 'https://devcenter.heroku.com/x',
+      id: 'not_found', name: 'HerokuAPIError', resource: 'app', statusCode: 404, url: 'https://devcenter.heroku.com/x',
     })
     expect(document.message).to.contain('Couldn\'t find that app.')
     expect(document).to.not.have.any.keys('body', 'http', 'app')
@@ -60,6 +60,41 @@ describe('toErrorDocument', () => {
 
   it('wraps a thrown non-Error', () => {
     expect(toErrorDocument('just a string', {exitCode: 1})).to.deep.equal({exitCode: 1, message: 'just a string', name: 'Error'})
+  })
+
+  it('uses the message of a thrown plain object, and never "[object Object]"', () => {
+    expect(toErrorDocument({message: 'from an object'}, {exitCode: 1}).message).to.equal('from an object')
+    expect(toErrorDocument({status: 'bad'}, {exitCode: 1}).message).to.equal('The command failed with a value that isn\'t an error.')
+    expect(toErrorDocument(Object.create(null), {exitCode: 1}).message).to.equal('The command failed with a value that isn\'t an error.')
+  })
+
+  it('names the class of an error that does not set name', () => {
+    class NonExistentFlagsError extends Error {}
+    expect(toErrorDocument(new NonExistentFlagsError('x'), {exitCode: 2}).name).to.equal('NonExistentFlagsError')
+  })
+
+  it('keeps an explicit name over the class name', () => {
+    const err = Object.assign(new Errors.CLIError('x'), {name: 'NotFoundError'})
+    expect(toErrorDocument(err, {exitCode: 1}).name).to.equal('NotFoundError')
+  })
+
+  it('keeps the request ID and retryAfter of a heroku-fetch error', () => {
+    const err = Object.assign(new Error('Rate limit exceeded'), {
+      response: new Response(null, {headers: {'Request-Id': 'req-123'}, status: 429}),
+      retryAfter: 30,
+      statusCode: 429,
+    })
+    expect(toErrorDocument(err, {exitCode: 1})).to.include({requestId: 'req-123', retryAfter: 30, statusCode: 429})
+  })
+
+  it('keeps the request ID of an http-call error', () => {
+    const err = Object.assign(new Error('HTTP Error 500'), {http: {headers: {'request-id': 'req-456'}, statusCode: 500}})
+    expect(toErrorDocument(err, {exitCode: 1})).to.include({requestId: 'req-456', statusCode: 500})
+  })
+
+  it('drops a retryAfter that is not a finite number', () => {
+    const err = Object.assign(new Error('slow down'), {retryAfter: NaN})
+    expect(toErrorDocument(err, {exitCode: 1})).to.not.have.property('retryAfter')
   })
 
   it('includes the cause, without an exit code', () => {

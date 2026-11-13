@@ -6,6 +6,11 @@ import {inspect} from 'node:util'
  * every command. Built from an allowlist, so object graphs an error happens to
  * reference (the command, its Config, the API client and its token, HTTP
  * request and response objects) never reach stdout.
+ *
+ * The exit code decides success or failure. To tell errors apart, match on
+ * `exitCode`, `statusCode`, `id` and `code`. `name` and `message` are for
+ * people. New fields may be added, so ignore fields you don't know. The length
+ * limits and redaction rules aren't part of the contract.
  */
 export type ErrorDocument = {
   /** The error's cause, built the same way, up to {@link MAX_CAUSE_DEPTH} levels deep. */
@@ -17,10 +22,18 @@ export type ErrorDocument = {
   /** The API error id, such as `not_found`. */
   id?: string;
   message: string;
-  /** The error class name, such as `NotFoundError`. */
+  /**
+   * The error class name, such as `NotFoundError` or `NonExistentFlagsError`.
+   * Informational: the same API failure can have a different name depending on
+   * the client that made the request.
+   */
   name: string;
+  /** The `Request-Id` of a failed API request, for Heroku support. */
+  requestId?: string;
   /** The API resource the error is about, such as `app`. */
   resource?: string;
+  /** Seconds to wait before retrying a rate-limited request. */
+  retryAfter?: number;
   /** The HTTP status code of a failed API request. */
   statusCode?: number;
   suggestions?: string[];
@@ -32,7 +45,7 @@ export type ErrorDocument = {
 export const MAX_MESSAGE_LENGTH = 4096
 /** Longest `url` or suggestion, in characters. */
 export const MAX_TEXT_LENGTH = 1024
-/** Longest `name`, `code`, `id` or `resource`, in characters. */
+/** Longest `name`, `code`, `id`, `requestId` or `resource`, in characters. */
 export const MAX_SHORT_LENGTH = 256
 /** Most suggestions kept. */
 export const MAX_SUGGESTIONS = 5
@@ -50,13 +63,46 @@ type ErrorFields = {
   body?: {id?: unknown; resource?: unknown; url?: unknown};
   cause?: unknown;
   code?: unknown;
-  http?: {statusCode?: unknown};
+  http?: {headers?: Record<string, unknown>; statusCode?: unknown};
   id?: unknown;
   message?: unknown;
   name?: unknown;
   resource?: unknown;
+  response?: {headers?: {get?: (name: string) => unknown}};
+  retryAfter?: unknown;
   statusCode?: unknown;
   suggestions?: unknown;
+}
+
+/**
+ * The message for a thrown value that isn't an Error: an object's string
+ * `message`, a primitive as text, or a fixed message.
+ */
+function nonErrorMessage(value: unknown): string {
+  if (value === undefined || value === null) return 'The command failed without an error message.'
+  if (typeof value === 'string') return value
+  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') return String(value)
+  try {
+    const {message} = value as {message?: unknown}
+    if (typeof message === 'string') return message
+  } catch {}
+
+  return 'The command failed with a value that isn\'t an error.'
+}
+
+/** oclif's errors (CLIError, its parse errors) don't set `name`, so fall back to the class name. */
+function nameOf(e: Error): unknown {
+  return e.name && e.name !== 'Error' ? e.name : e.constructor?.name
+}
+
+/** heroku-fetch keeps the fetch Response; http-call keeps the headers on `http`. */
+function requestIdOf(e: ErrorFields): unknown {
+  return e.response?.headers?.get?.('request-id') ?? e.http?.headers?.['request-id']
+}
+
+/** An Error for any thrown value. An Error is returned as is. */
+export function toError(value: unknown): Error {
+  return value instanceof Error ? value : new Error(nonErrorMessage(value))
 }
 
 export type ErrorDocumentOptions = {
@@ -100,7 +146,7 @@ export function toErrorDocument(err: unknown, {exitCode, secrets = []}: ErrorDoc
 
   const build = (value: unknown, depth: number, seen: Set<unknown>): ErrorDocument => {
     if (!(value instanceof Error)) {
-      return {message: text(String(value), MAX_MESSAGE_LENGTH) ?? '', name: 'Error'}
+      return {message: text(nonErrorMessage(value), MAX_MESSAGE_LENGTH) ?? '', name: 'Error'}
     }
 
     seen.add(value)
@@ -119,14 +165,18 @@ export function toErrorDocument(err: unknown, {exitCode, secrets = []}: ErrorDoc
     const cause = read(() => e.cause)
     const document: ErrorDocument = {
       message: text(read(() => e.message), MAX_MESSAGE_LENGTH) ?? '',
-      name: text(read(() => e.name)) || 'Error',
+      name: text(read(() => nameOf(e))) || 'Error',
     }
     const code = text(read(() => e.code))
     const id = text(read(() => e.id ?? e.body?.id))
     const resource = text(read(() => e.resource ?? e.body?.resource))
     const url = text(read(() => e.body?.url), MAX_TEXT_LENGTH)
+    const requestId = text(read(() => requestIdOf(e)))
+    const retryAfter = read(() => e.retryAfter)
     if (code) document.code = code
     if (typeof statusCode === 'number') document.statusCode = statusCode
+    if (requestId) document.requestId = requestId
+    if (typeof retryAfter === 'number' && Number.isFinite(retryAfter)) document.retryAfter = retryAfter
     if (id) document.id = id
     if (resource) document.resource = resource
     if (url) document.url = url

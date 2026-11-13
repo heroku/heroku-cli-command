@@ -52,6 +52,22 @@ const heroku = new APIClient(config)
 const {body: resources} = await heroku.get('/apps')
 ```
 
+### JSON output
+
+Commands with `static enableJsonFlag = true` print JSON under `--json` or `HEROKU_CONTENT_TYPE=json`. On success, stdout holds what `run()` returned. On failure, stdout holds an error document, the same shape for every command (the `ErrorDocument` type):
+
+```json
+{"error": {"message": "Couldn't find that app.", "name": "NotFoundError", "exitCode": 1, "statusCode": 404, "id": "not_found", "resource": "app", "requestId": "…"}}
+```
+
+- The exit code decides success or failure.
+- To tell errors apart, match on `exitCode`, `statusCode`, `id` and `code`. `name` and `message` are for people: the same API failure can have a different `name` depending on the client that made the request.
+- Fields are optional except `message`, `name` and `exitCode`. New fields may be added, so ignore fields you don't know.
+- The document is built from a fixed list of fields, with the API token and credentials redacted. The length limits and redaction rules aren't part of the contract.
+- `this.exit(n)` prints no document; the process exits with `n`.
+- Spinners (`ux.action`) are silent, and `--prompt` is rejected with the code `HEROKU_PROMPT_WITH_JSON`.
+- `HEROKU_DEBUG=1` also writes the full error, redacted, to stderr.
+
 ## Usage
 
 This package is primarily used as a dependency in other Heroku CLI plugins and commands. It provides the base functionality needed to implement Heroku CLI commands with proper completion support.

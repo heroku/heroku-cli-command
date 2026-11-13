@@ -6,8 +6,16 @@ import * as Flags from '@oclif/core/flags'
 import {ux} from '@oclif/core/ux'
 
 import {APIClient, type IOptions} from './api-client.js'
-import {debugErrorText, type ErrorDocument, toErrorDocument} from './error-document.js'
+import {
+  debugErrorText,
+  type ErrorDocument,
+  toError,
+  toErrorDocument,
+} from './error-document.js'
 import {quietSpinners} from './quiet-spinners.js'
+
+/** The `code` of the error for `--prompt` under JSON output. */
+export const PROMPT_WITH_JSON_ERROR_CODE = 'HEROKU_PROMPT_WITH_JSON'
 
 export abstract class Command extends Base {
   /**
@@ -27,7 +35,9 @@ export abstract class Command extends Base {
    * Flags on this command that print raw output, such as a flag that prints only
    * a token. When one is set, JSON output is off, even under `--json` or
    * `HEROKU_CONTENT_TYPE=json`. Only this command's own declaration counts: the
-   * same flag name on another command has no effect. Type it against the
+   * same flag name on another command has no effect. The parsed flags decide,
+   * so an error before or during parsing is still a JSON document, and a value
+   * that comes from the flag's `default` doesn't count. Type it against the
    * command's flags so a typo fails to compile:
    *
    * @example
@@ -41,6 +51,7 @@ export abstract class Command extends Base {
   static promptFlagActive = true
   _heroku!: APIClient
 
+  private parsedFlagMetadata?: Record<string, {setFromDefault?: boolean}>
   private parsedFlags?: Record<string, unknown>
   private restoreSpinners?: () => void
 
@@ -65,8 +76,8 @@ export abstract class Command extends Base {
   get heroku(): APIClient {
     if (this._heroku) return this._heroku
     const options: IOptions = {
-      debug: process.env.HEROKU_DEBUG === '1' || process.env.HEROKU_DEBUG?.toUpperCase() === 'TRUE',
-      debugHeaders: process.env.HEROKU_DEBUG_HEADERS === '1' || process.env.HEROKU_DEBUG_HEADERS?.toUpperCase() === 'TRUE',
+      debug: isEnvTrue('HEROKU_DEBUG'),
+      debugHeaders: isEnvTrue('HEROKU_DEBUG_HEADERS'),
     }
     this._heroku = new APIClient(this.config, options)
     return this._heroku
@@ -77,13 +88,21 @@ export abstract class Command extends Base {
    * when JSON output is off, and a running spinner buffers stdout, so the
    * `--json` error document would otherwise never be written.
    */
-  async catch(err: Error & {exitCode?: number}): Promise<any> {
+  async catch(thrown: Error & {exitCode?: number}): Promise<any> {
+    // oclif's catch() reads properties of the thrown value, so `throw undefined` would crash it.
+    const err = toError(thrown) as CLIError & {exitCode?: number}
     try {
       if (ux.action.running) ux.action.stop(ux.colorize('bold', ux.colorize('red', '!')))
     } catch {}
 
-    if (this.jsonEnabled() && isDebugEnabled()) {
-      process.stderr.write(`${debugErrorText(err, this.knownSecrets())}\n`)
+    if (this.jsonEnabled()) {
+      // this.exit() and ux.exit() aren't failures to report: the exit code says it all.
+      if (err.code === 'EEXIT') {
+        process.exitCode ??= err.oclif?.exit ?? 0
+        return
+      }
+
+      if (isEnvTrue('HEROKU_DEBUG')) process.stderr.write(`${debugErrorText(err, this.knownSecrets())}\n`)
     }
 
     return super.catch(err)
@@ -116,7 +135,9 @@ export abstract class Command extends Base {
     // Prompts wait for answers a script will never type. Checked here because prompting runs
     // before parse() enforces `exclusive`, and HEROKU_CONTENT_TYPE=json sets no flag at all.
     if (this.jsonEnabled()) {
-      throw new CLIError('--prompt can\'t be used with --json. Pass the arguments and flags on the command line.')
+      throw new CLIError('--prompt can\'t be used with --json. Pass the arguments and flags on the command line.', {
+        code: PROMPT_WITH_JSON_ERROR_CODE,
+      })
     }
 
     // If we get here, we need to prompt for inputs
@@ -160,6 +181,7 @@ export abstract class Command extends Base {
   ): Promise<ParserOutput<F, B, A>> {
     const output = await super.parse<F, B, A>(options, argv)
     this.parsedFlags = output.flags
+    this.parsedFlagMetadata = output.metadata.flags
     return output
   }
 
@@ -176,36 +198,20 @@ export abstract class Command extends Base {
   }
 
   /**
-   * Whether a flag in {@link Command.jsonSuppressedBy} is set. After parsing, the
-   * parsed flags decide, so aliases, `--no-<flag>` and the `--` passthrough are
-   * handled by the parser. Before parsing (an error in init() or in parsing
-   * itself), argv is scanned up to `--` for `--name`, `--name=value`, an alias,
-   * or the flag's `-c` character.
+   * Whether a flag in {@link Command.jsonSuppressedBy} is set on the command line
+   * or by its environment variable. Always false before parsing.
    */
   private jsonSuppressed(): boolean {
-    const Ctor = this.constructor as typeof Command
-    const names = Ctor.jsonSuppressedBy
-    if (names.length === 0) return false
-
-    if (this.parsedFlags) {
-      return names.some(name => {
-        const value = this.parsedFlags?.[name]
-        return value !== undefined && value !== false
-      })
-    }
-
-    const passThrough = this.argv.indexOf('--')
-    const argv = passThrough === -1 ? this.argv : this.argv.slice(0, passThrough)
-    return names.some(name => {
-      const flag = (Ctor.flags as Record<string, {aliases?: string[]; char?: string; charAliases?: string[]}> | undefined)?.[name]
-      const longNames = [name, ...(flag?.aliases ?? [])].map(n => `--${n}`)
-      const chars = new Set([flag?.char, ...(flag?.charAliases ?? [])].filter(Boolean).map(c => `-${c}`))
-      return argv.some(arg => longNames.some(n => arg === n || arg.startsWith(`${n}=`)) || chars.has(arg))
+    const {jsonSuppressedBy} = this.constructor as typeof Command
+    return jsonSuppressedBy.some(name => {
+      const value = this.parsedFlags?.[name]
+      return value !== undefined && value !== false && !this.parsedFlagMetadata?.[name]?.setFromDefault
     })
   }
 }
 
-function isDebugEnabled(): boolean {
-  const herokuDebug = process.env.HEROKU_DEBUG?.toLowerCase()
-  return Boolean(process.env.DEBUG) || herokuDebug === '1' || herokuDebug === 'true'
+/** Whether the environment variable is `1` or `true`, in any case. */
+function isEnvTrue(name: string): boolean {
+  const value = process.env[name]?.toLowerCase()
+  return value === '1' || value === 'true'
 }
