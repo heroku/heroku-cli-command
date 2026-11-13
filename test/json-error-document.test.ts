@@ -169,8 +169,37 @@ describe('redactSecrets', () => {
     expect(redactSecrets('postgres://user:p%40ss@host:5432/db')).to.equal('postgres://[REDACTED]@host:5432/db')
   })
 
-  it('leaves URLs without credentials alone', () => {
-    expect(redactSecrets('see https://devcenter.heroku.com/articles/x')).to.equal('see https://devcenter.heroku.com/articles/x')
+  it('redacts every parameter of a Digest or unknown-scheme Authorization value', () => {
+    expect(redactSecrets('Authorization: Digest username="u", response="deadbeef0123"')).to.equal('Authorization: Digest [REDACTED]')
+    expect(redactSecrets('Authorization: AWS4-HMAC-SHA256 Credential=AKID/x, Signature=fe5f80')).to.equal('Authorization: [REDACTED]')
+  })
+
+  it('redacts an Authorization header in inspected request options', () => {
+    expect(redactSecrets("{ headers: { authorization: 'Bearer abc', host: 'api.heroku.com' } }"))
+      .to.equal("{ headers: { authorization: 'Bearer [REDACTED]', host: 'api.heroku.com' } }")
+  })
+
+  it('redacts a PEM private key and keeps its BEGIN line', () => {
+    expect(redactSecrets('bad key -----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEA1x+/9z\n-----END RSA PRIVATE KEY-----\nretry'))
+      .to.equal('bad key -----BEGIN RSA PRIVATE KEY-----[REDACTED]\nretry')
+  })
+
+  it('redacts a URL password inside a JSON string without touching the next field', () => {
+    expect(redactSecrets('{"url":"postgres://u:p@h/db","email":"x@y.com"}')).to.equal('{"url":"postgres://[REDACTED]@h/db","email":"x@y.com"}')
+  })
+
+  it('redacts an exact secret and the pattern around it without doubling the replacement', () => {
+    expect(redactSecrets(`(Authorization: Bearer ${LEGACY_TOKEN})`, [LEGACY_TOKEN])).to.equal('(Authorization: Bearer [REDACTED])')
+  })
+
+  it('leaves URLs without credentials and prose alone', () => {
+    for (const text of [
+      'see https://devcenter.heroku.com/articles/x',
+      'Basic dynos are not available in this region',
+      'Bearer tokens expire after eight hours',
+    ]) {
+      expect(redactSecrets(text)).to.equal(text)
+    }
   })
 })
 
@@ -179,5 +208,16 @@ describe('debugErrorText', () => {
     const text = debugErrorText(Object.assign(new Error('boom'), {token: LEGACY_TOKEN}), [LEGACY_TOKEN])
     expect(text).to.contain('at ')
     expect(text).to.not.contain(LEGACY_TOKEN)
+  })
+
+  it('redacts credentials in the inspected error properties', () => {
+    const err = Object.assign(new Error('boom'), {
+      databaseUrl: 'postgres://u:s3cret@h/db',
+      headers: {authorization: 'Bearer HRKU-abc123'},
+    })
+    const text = debugErrorText(err)
+    expect(text).to.not.contain('s3cret')
+    expect(text).to.not.contain('HRKU-abc123')
+    expect(text).to.contain("authorization: 'Bearer [REDACTED]'")
   })
 })

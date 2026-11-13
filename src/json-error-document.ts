@@ -1,3 +1,4 @@
+import {CREDENTIAL_PATTERNS, Scrubber} from '@heroku/js-blanket'
 import ansis from 'ansis'
 import {inspect} from 'node:util'
 
@@ -112,11 +113,15 @@ export type JsonErrorDocumentOptions = {
   secrets?: Array<string | undefined>;
 }
 
+const credentialScrubber = new Scrubber({patterns: CREDENTIAL_PATTERNS, replacement: REDACTED})
+
 /**
  * Redact secrets from text: each exact value in `secrets` (8 characters or
- * longer, so short values don't redact ordinary words), then patterns for Heroku tokens,
- * Authorization header values and URL credentials. Patterns can't catch legacy UUID-format tokens, which look like any
- * other id, so callers pass the loaded token as an exact value.
+ * longer, so short values don't redact ordinary words), then js-blanket's
+ * `CREDENTIAL_PATTERNS`: Heroku tokens, Authorization header values,
+ * `Bearer`/`Basic` credentials, URL passwords and PEM private keys. Patterns
+ * can't catch legacy UUID-format tokens, which look like any other id, so
+ * callers pass the loaded token as an exact value.
  */
 export function redactSecrets(text: string, secrets: Array<string | undefined> = []): string {
   let result = text
@@ -124,13 +129,7 @@ export function redactSecrets(text: string, secrets: Array<string | undefined> =
     if (secret && secret.length >= 8) result = result.split(secret).join(REDACTED)
   }
 
-  return result
-    // Heroku API tokens.
-    .replaceAll(/\bHRKU-[\w-]+/g, '[REDACTED]')
-    // Authorization header values.
-    .replaceAll(/\b(Bearer|Basic)\s+[\w.~+/=-]+/gi, '$1 [REDACTED]')
-    // Credentials in URLs, such as postgres://user:password@host.
-    .replaceAll(/\b([a-z][\d+.a-z-]*:\/\/)[^\s/:@]+:[^\s/@]+@/gi, '$1[REDACTED]@')
+  return credentialScrubber.scrub(result).data
 }
 
 /** The full error, stack included, for debug output on stderr. Secrets are redacted. */
