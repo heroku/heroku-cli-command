@@ -22,6 +22,7 @@ export type JsonErrorDocument = {
   exitCode?: number;
   /** The API error id, such as `not_found`. */
   id?: string;
+  /** The API's own message for a failed API request, otherwise the error's message. */
   message: string;
   /**
    * The error class name, such as `NotFoundError` or `NonExistentFlagsError`.
@@ -61,7 +62,7 @@ export const MAX_DOCUMENT_LENGTH = 16_384
 const REDACTED = '[REDACTED]'
 
 type ErrorFields = {
-  body?: {id?: unknown; resource?: unknown; url?: unknown};
+  body?: {id?: unknown; message?: unknown; resource?: unknown; url?: unknown};
   cause?: unknown;
   code?: unknown;
   http?: {headers?: Record<string, unknown>; statusCode?: unknown};
@@ -94,6 +95,15 @@ function nonErrorMessage(value: unknown): string {
 /** oclif's errors (CLIError, its parse errors) don't set `name`, so fall back to the class name. */
 function nameOf(e: Error): unknown {
   return e.name && e.name !== 'Error' ? e.name : e.constructor?.name
+}
+
+/**
+ * The API's message for a failed request. heroku-fetch's errors have fixed
+ * messages (`Resource not found`), and http-call's append the id and URL, so
+ * the body's message is the one both clients agree on.
+ */
+function messageOf(e: Error & ErrorFields): unknown {
+  return typeof e.body?.message === 'string' && e.body.message ? e.body.message : e.message
 }
 
 /** heroku-fetch keeps the fetch Response; http-call keeps the headers on `http`. */
@@ -163,7 +173,7 @@ export function toJsonErrorDocument(err: unknown, {exitCode, secrets = []}: Json
     const suggestions = read(() => e.suggestions)
     const cause = read(() => e.cause)
     const document: JsonErrorDocument = {
-      message: text(read(() => e.message), MAX_MESSAGE_LENGTH) ?? '',
+      message: text(read(() => messageOf(e)), MAX_MESSAGE_LENGTH) ?? '',
       name: text(read(() => nameOf(e))) || 'Error',
     }
     const code = text(read(() => e.code))

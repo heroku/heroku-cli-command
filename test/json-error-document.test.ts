@@ -42,8 +42,24 @@ describe('toJsonErrorDocument', () => {
     expect(document).to.include({
       id: 'not_found', name: 'HerokuAPIError', resource: 'app', statusCode: 404, url: 'https://devcenter.heroku.com/x',
     })
-    expect(document.message).to.contain('Couldn\'t find that app.')
+    expect(document.message).to.equal('Couldn\'t find that app.')
     expect(document).to.not.have.any.keys('body', 'http', 'app')
+  })
+
+  it('uses the API message over the fixed message of a heroku-fetch error', () => {
+    const err = Object.assign(new Error('Resource not found'), {
+      body: {id: 'not_found', message: `Couldn't find that app. Token ${LEGACY_TOKEN}`, resource: 'app'}, statusCode: 404,
+    })
+    expect(toJsonErrorDocument(err, {exitCode: 1, secrets: [LEGACY_TOKEN]})).to.include({
+      id: 'not_found', message: 'Couldn\'t find that app. Token [REDACTED]', resource: 'app', statusCode: 404,
+    })
+  })
+
+  it('keeps the error message when the body has no message', () => {
+    for (const body of [{id: 'not_found'}, {message: ''}, {message: 42}]) {
+      const err = Object.assign(new Error('Resource not found'), {body})
+      expect(toJsonErrorDocument(err, {exitCode: 1}).message).to.equal('Resource not found')
+    }
   })
 
   it('flattens a 401 API error', () => {
