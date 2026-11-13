@@ -54,7 +54,7 @@ const {body: resources} = await heroku.get('/apps')
 
 ### JSON output
 
-Commands with `static enableJsonFlag = true` print JSON under `--json` or `HEROKU_CONTENT_TYPE=json`. On success, stdout holds what `run()` returned. On failure, stdout holds an error document, the same shape for every command (the `ErrorDocument` type):
+Commands with `static enableJsonFlag = true` print JSON under `--json` or `HEROKU_CONTENT_TYPE=json`. On success, stdout holds what `run()` returned. On failure, stdout holds an error document, the same shape for every command (the `JsonErrorDocument` type):
 
 ```json
 {"error": {"message": "Couldn't find that app.", "name": "NotFoundError", "exitCode": 1, "statusCode": 404, "id": "not_found", "resource": "app", "requestId": "…"}}

@@ -8,10 +8,10 @@ import {ux} from '@oclif/core/ux'
 import {APIClient, type IOptions} from './api-client.js'
 import {
   debugErrorText,
-  type ErrorDocument,
+  type JsonErrorDocument,
   toError,
-  toErrorDocument,
-} from './error-document.js'
+  toJsonErrorDocument,
+} from './json-error-document.js'
 import {quietSpinners} from './quiet-spinners.js'
 
 /** The `code` of the error for `--prompt` under JSON output. */
@@ -187,14 +187,14 @@ export abstract class Command extends Base {
 
   /**
    * The `--json` error document, the same for every command: an allowlisted set
-   * of fields with secrets redacted. See {@link ErrorDocument}.
+   * of fields with secrets redacted. See {@link JsonErrorDocument}.
    */
-  public toErrorJson(err: unknown): {error: ErrorDocument} {
+  public toErrorJson(err: unknown): {error: JsonErrorDocument} {
     const fromError = (err as undefined | {exitCode?: unknown})?.exitCode
     // Report the code the process exits with: oclif's catch() sets process.exitCode
     // from the same sources before rendering the document.
     const exitCode = Number(process.exitCode ?? (typeof fromError === 'number' ? fromError : 1))
-    return {error: toErrorDocument(err, {exitCode, secrets: this.knownSecrets()})}
+    return {error: toJsonErrorDocument(err, {exitCode, secrets: this.knownSecrets()})}
   }
 
   /**

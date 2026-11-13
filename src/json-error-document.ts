@@ -12,9 +12,9 @@ import {inspect} from 'node:util'
  * people. New fields may be added, so ignore fields you don't know. The length
  * limits and redaction rules aren't part of the contract.
  */
-export type ErrorDocument = {
+export type JsonErrorDocument = {
   /** The error's cause, built the same way, up to {@link MAX_CAUSE_DEPTH} levels deep. */
-  cause?: ErrorDocument;
+  cause?: JsonErrorDocument;
   /** A machine-readable error code, such as `HEROKU_NONINTERACTIVE_LOGIN` or `ENOTFOUND`. */
   code?: string;
   /** The process exit code. Top level only. */
@@ -105,7 +105,7 @@ export function toError(value: unknown): Error {
   return value instanceof Error ? value : new Error(nonErrorMessage(value))
 }
 
-export type ErrorDocumentOptions = {
+export type JsonErrorDocumentOptions = {
   /** The exit code to report. */
   exitCode: number;
   /** Exact values to redact wherever they appear, such as the loaded API token. */
@@ -138,13 +138,13 @@ export function debugErrorText(err: unknown, secrets: Array<string | undefined> 
   return redactSecrets(inspect(err, {depth: 2}), secrets)
 }
 
-export function toErrorDocument(err: unknown, {exitCode, secrets = []}: ErrorDocumentOptions): ErrorDocument {
+export function toJsonErrorDocument(err: unknown, {exitCode, secrets = []}: JsonErrorDocumentOptions): JsonErrorDocument {
   const text = (value: unknown, max = MAX_SHORT_LENGTH): string | undefined => {
     if (typeof value !== 'string') return undefined
     return truncate(redactSecrets(ansis.strip(value), secrets), max)
   }
 
-  const build = (value: unknown, depth: number, seen: Set<unknown>): ErrorDocument => {
+  const build = (value: unknown, depth: number, seen: Set<unknown>): JsonErrorDocument => {
     if (!(value instanceof Error)) {
       return {message: text(nonErrorMessage(value), MAX_MESSAGE_LENGTH) ?? '', name: 'Error'}
     }
@@ -163,7 +163,7 @@ export function toErrorDocument(err: unknown, {exitCode, secrets = []}: ErrorDoc
     const statusCode = read(() => e.statusCode ?? e.http?.statusCode)
     const suggestions = read(() => e.suggestions)
     const cause = read(() => e.cause)
-    const document: ErrorDocument = {
+    const document: JsonErrorDocument = {
       message: text(read(() => e.message), MAX_MESSAGE_LENGTH) ?? '',
       name: text(read(() => nameOf(e))) || 'Error',
     }
@@ -201,7 +201,7 @@ function truncate(value: string, max: number): string {
 }
 
 /** Drop the deepest cause, then suggestions, then shorten the message, until the serialized document fits. */
-function fitToLimit(document: ErrorDocument): ErrorDocument {
+function fitToLimit(document: JsonErrorDocument): JsonErrorDocument {
   const tooLong = () => JSON.stringify(document).length > MAX_DOCUMENT_LENGTH
   while (tooLong() && document.cause) {
     let parent = document
