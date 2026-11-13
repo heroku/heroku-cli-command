@@ -3,7 +3,7 @@ import {setCredentialErrorReporter} from '@heroku/heroku-credential-manager'
 import {reportCredentialStoreError} from './credential-error-reporter.js'
 
 export * from './api-client.js'
-export {Command, Command as default} from './command.js'
+export {Command, Command as default, PROMPT_WITH_JSON_ERROR_CODE} from './command.js'
 export type * from './completion-types.js'
 // Public completion surface: the catalog the host CLI wires by id, plus the two
 // cache-key helpers. The individual Completion singletons and internal helpers
@@ -20,6 +20,7 @@ export type {AuthEntry} from './credential-manager.js'
 export * from './env-auth.js'
 export * as flags from './flags/index.js'
 export * from './git.js'
+export type {JsonErrorDocument} from './json-error-document.js'
 export {NONINTERACTIVE_LOGIN_ERROR_CODE} from './login.js'
 export * from './mutex.js'
 export * from './particleboard-client.js'

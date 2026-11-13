@@ -1,4 +1,4 @@
-/* eslint-disable n/no-extraneous-import, n/no-unpublished-import, import-x/no-extraneous-dependencies -- the fixture has its own package.json so it loads as a standalone oclif plugin; @oclif/core is resolved from the repo root, not this fixture's deps */
+/* eslint-disable n/no-extraneous-import, n/no-unpublished-import, import-x/no-extraneous-dependencies -- the fixture needs its own package.json to load as an oclif plugin, so import rules treat it as a separate package */
 import {Command} from '@oclif/core/command'
 
 import * as flags from '../../../../src/flags/index.js'
