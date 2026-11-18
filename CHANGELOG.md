@@ -10,6 +10,13 @@ With this major version release we will be improving the security by storing aut
 
 * remove dual write for credential storage ([#389](https://github.com/heroku/heroku-cli-command/issues/389)) ([e50b5be](https://github.com/heroku/heroku-cli-command/commit/e50b5be106f7997d85f7a5a53ff06ff1eadecb9c))
 
+## [13.2.7](https://github.com/heroku/heroku-cli-command/compare/command-v13.2.6...command-v13.2.7) (2026-11-18)
+
+
+### Dependencies
+
+* bump fast-xml-parser from 5.11.2 to 5.12.0 ([#460](https://github.com/heroku/heroku-cli-command/issues/460)) ([deb11e2](https://github.com/heroku/heroku-cli-command/commit/deb11e2eefca7475b4c0e2f8eb15ae0ff102241d))
+
 ## [13.2.6](https://github.com/heroku/heroku-cli-command/compare/command-v13.2.5...command-v13.2.6) (2026-11-05)
 
 
